@@ -63,7 +63,7 @@
       "name": "lrgp-rs",
       "repository": "https://github.com/ratspeak/lrgp-rs.git",
       "path": "../lrgp-rs",
-      "commit": "88c8665e1e7e1ad710e53e8da6425f3dbe4f5856",
+      "commit": "f08b9dd040b07dd47dd7b97b8ee3a1042cd01b5a",
       "version": "0.4.1",
       "integrationTag": "ratspeak-v1.0.30"
     }
