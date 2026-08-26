@@ -23,6 +23,18 @@
             appId: appId,
             displayName: typeof adapter.displayName === 'string' ? adapter.displayName : '',
             icon: typeof adapter.icon === 'string' ? adapter.icon : '?',
+            participantLabel: typeof adapter.participantLabel === 'string'
+                ? adapter.participantLabel
+                : 'vs',
+            participantPickerLabel: typeof adapter.participantPickerLabel === 'string'
+                ? adapter.participantPickerLabel
+                : 'Opponent',
+            challengeLabel: typeof adapter.challengeLabel === 'string'
+                ? adapter.challengeLabel
+                : 'challenge',
+            challengeVerb: typeof adapter.challengeVerb === 'string'
+                ? adapter.challengeVerb
+                : 'challenge',
             themeClass: typeof adapter.themeClass === 'string' ? adapter.themeClass : 'games-theme-unknown',
             boardSelector: typeof adapter.boardSelector === 'string' ? adapter.boardSelector : '',
             actions: Object.freeze(Array.isArray(adapter.actions) ? adapter.actions.slice() : []),
@@ -38,6 +50,9 @@
                 : null,
             bindControls: typeof adapter.bindControls === 'function' ? adapter.bindControls : null,
             onSessionDelta: typeof adapter.onSessionDelta === 'function' ? adapter.onSessionDelta : null,
+            restartLabel: typeof adapter.restartLabel === 'function' ? adapter.restartLabel : null,
+            canRestart: typeof adapter.canRestart === 'function' ? adapter.canRestart : null,
+            restartPayload: typeof adapter.restartPayload === 'function' ? adapter.restartPayload : null,
             celebrationOptions: typeof adapter.celebrationOptions === 'function'
                 ? adapter.celebrationOptions
                 : null,

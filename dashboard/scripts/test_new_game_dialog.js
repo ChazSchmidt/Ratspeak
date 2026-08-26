@@ -44,8 +44,15 @@ assert(!fourSource.includes('\\u283F'),
     'Four in a Row must not fall back to the ambiguous six-dot Braille glyph');
 assert(indexSource.indexOf('conway_life_view.js') < indexSource.indexOf('games_tab.js'),
     'the Conway adapter must load before the games tab consumes the registry');
-assert(source.includes("app_id: 'conway_life'") && source.includes("display_name: 'Life Torch'"),
-    'the offline manifest fallback must keep Life Torch discoverable');
+assert(source.includes("var restartActionId = 'restart:' + session.game_id") &&
+    source.includes('if (!_beginSessionAction(restartActionId)) return;'),
+    'continuation controls must suppress rapid duplicate world branches');
+assert(/\.life-playback\s*\{[\s\S]*?flex-wrap:\s*wrap/.test(gamesCss),
+    'Life playback controls must wrap on narrow landscape screens');
+assert(/max-height:\s*620px[\s\S]*?\.games-detail-board\s*\{[\s\S]*?overflow-y:\s*auto/.test(gamesCss),
+    'short landscape game details must remain vertically reachable');
+assert(source.includes("app_id: 'conway_life'") && source.includes('display_name: "Conway\'s Game of Life"'),
+    "the offline manifest fallback must keep Conway's Game of Life discoverable");
 assert(!/data-app-id="chess"[^}]*ble-accent-fg/.test(gamesCss),
     'the Chess choice must use the theme accent instead of connectivity blue');
 

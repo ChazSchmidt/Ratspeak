@@ -23,6 +23,10 @@ var bound = 0;
 var fleet = views.register('fleet', {
     displayName: 'Fleet',
     icon: '\u2693',
+    participantLabel: 'with',
+    participantPickerLabel: 'Collaborator',
+    challengeLabel: 'invitation',
+    challengeVerb: 'invite',
     themeClass: 'games-theme-fleet',
     boardSelector: '.fleet-board',
     actions: ['challenge', 'accept', 'move', 'resign'],
@@ -41,6 +45,10 @@ var fleet = views.register('fleet', {
 assert.strictEqual(views.has('fleet'), true);
 assert.strictEqual(views.get('fleet'), fleet);
 assert.strictEqual(fleet.displayName, 'Fleet');
+assert.strictEqual(fleet.participantLabel, 'with');
+assert.strictEqual(fleet.participantPickerLabel, 'Collaborator');
+assert.strictEqual(fleet.challengeLabel, 'invitation');
+assert.strictEqual(fleet.challengeVerb, 'invite');
 assert.deepStrictEqual(Array.from(fleet.actions), ['challenge', 'accept', 'move', 'resign']);
 assert.strictEqual(Object.isFrozen(fleet.actions), true);
 assert.strictEqual(fleet.renderBoard({ game_id: 'third-game' }), '<div>third-game</div>');
@@ -78,6 +86,10 @@ views.register('cards', {
     renderBoard: function() { return ''; },
     bindBoard: function() {},
 });
+assert.strictEqual(views.get('cards').participantLabel, 'vs');
+assert.strictEqual(views.get('cards').participantPickerLabel, 'Opponent');
+assert.strictEqual(views.get('cards').challengeLabel, 'challenge');
+assert.strictEqual(views.get('cards').challengeVerb, 'challenge');
 assert.deepStrictEqual(Array.from(views.listIds()), ['cards', 'fleet']);
 assert.deepStrictEqual(Array.from(views.supportedManifests(null)), []);
 

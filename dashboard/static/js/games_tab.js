@@ -78,6 +78,25 @@
         return RS.games && RS.games.views ? RS.games.views.get(appId) : null;
     }
 
+    function _challengeLabel(appId) {
+        var view = _gameView(appId);
+        return view ? view.challengeLabel : 'challenge';
+    }
+
+    function _challengeVerb(appId) {
+        var view = _gameView(appId);
+        return view ? view.challengeVerb : 'challenge';
+    }
+
+    function _participantPickerLabel(appId) {
+        var view = _gameView(appId);
+        return view ? view.participantPickerLabel : 'Opponent';
+    }
+
+    function _titleCaseWord(value) {
+        return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+    }
+
     function _gameViewContext(session, root) {
         return {
             root: root || document,
@@ -204,11 +223,13 @@
                     default:                 return 'Waiting...';
                 }
             }
-            return 'Challenge!';
+            return _titleCaseWord(_challengeLabel(_appId(session))) + '!';
         }
         if (status === 'declined') {
             if (session.cancelled_by_initiator) {
-                return _isMe(session, session.challenger) ? 'Cancelled' : 'Challenge cancelled';
+                return _isMe(session, session.challenger)
+                    ? 'Cancelled'
+                    : _titleCaseWord(_challengeLabel(_appId(session))) + ' cancelled';
             }
             return _isMe(session, session.challenger) ? 'Declined' : 'You declined';
         }
@@ -583,6 +604,7 @@
         var statusTxt = _statusText(session);
         var statusCls = _statusClass(session);
         var themeClass = gameView ? gameView.themeClass : 'games-theme-unknown';
+        var participantLabel = gameView ? gameView.participantLabel : 'vs';
 
         var html = '';
 
@@ -595,7 +617,7 @@
                 '<span class="games-detail-icon">' + _gameIconMarkup(appId) + '</span>' +
                 '<span class="games-detail-copy">' +
                     '<span class="games-detail-title">' + escapeHtml(_gameName(appId)) + '</span>' +
-                    '<span class="games-detail-vs">vs ' + ratspeakDisplayNameHtml(_contactName(session.contact_hash), session.contact_hash) + '</span>' +
+                    '<span class="games-detail-vs">' + escapeHtml(participantLabel) + ' ' + ratspeakDisplayNameHtml(_contactName(session.contact_hash), session.contact_hash) + '</span>' +
                 '</span>' +
             '</div>' +
             _renderDetailMeta(session) +
@@ -1477,22 +1499,38 @@
     function _renderControls(session) {
         var status = session.status;
         var html = '';
+        var view = _gameView(_appId(session));
+        var participant = view && view.participantPickerLabel
+            ? view.participantPickerLabel.toLowerCase()
+            : 'opponent';
 
         if (status === 'pending') {
             if (!_isMe(session, session.challenger)) {
                 html += '<button class="nr-btn games-ctrl-accept" id="games-accept-btn">Accept</button>';
                 html += '<button class="nr-btn nr-btn-danger" id="games-decline-btn">Decline</button>';
             } else {
-                html += '<span class="games-ctrl-waiting">Waiting for opponent to respond...</span>';
+                html += '<span class="games-ctrl-waiting">Waiting for ' +
+                    escapeHtml(participant) + ' to respond...</span>';
                 html += '<button class="nr-btn nr-btn-secondary" id="games-cancel-btn">Cancel</button>';
             }
         } else if (status === 'active') {
-            var view = _gameView(_appId(session));
             html += view && view.renderActiveControls
                 ? view.renderActiveControls(session)
                 : _renderStandardActiveControls(session, '');
         } else if (status === 'completed' || status === 'declined' || status === 'expired') {
-            html += '<button class="nr-btn" id="games-rematch-btn">Rematch</button>';
+            var canRestart = !view || !view.canRestart || view.canRestart(session, _allSessions);
+            if (canRestart) {
+                var restartLabel = view && view.restartLabel
+                    ? view.restartLabel(session)
+                    : (view && view.challengeLabel !== 'challenge'
+                        ? 'New ' + view.challengeLabel
+                        : 'Rematch');
+                html += '<button class="nr-btn" id="games-rematch-btn">' +
+                    escapeHtml(_titleCaseWord(restartLabel)) + '</button>';
+            } else {
+                html += '<span class="games-ctrl-waiting">Waiting for ' +
+                    escapeHtml(participant) + ' to continue...</span>';
+            }
         }
 
         return html;
@@ -1513,15 +1551,16 @@
         });
         _bindBtn('games-cancel-btn', function() {
             var btn = document.getElementById('games-cancel-btn');
+            var challengeLabel = _challengeLabel(_appId(session));
             var doCancel = function() {
                 if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
                 _sendAction(session, 'decline');
             };
             if (typeof rsConfirm === 'function') {
                 rsConfirm({
-                    message: 'Cancel this challenge? Your opponent will be notified.',
-                    title: 'Cancel challenge',
-                    confirmText: 'Cancel challenge',
+                    message: 'Cancel this ' + challengeLabel + '? The other player will be notified.',
+                    title: 'Cancel ' + challengeLabel,
+                    confirmText: 'Cancel ' + challengeLabel,
                     danger: true,
                 }).then(function(ok) { if (ok) doCancel(); });
             } else if (typeof showToast === 'function') {
@@ -1543,7 +1582,25 @@
             }
         });
         _bindBtn('games-rematch-btn', function() {
-            startNewGame(session.app_id || session.game || 'ttt', session.contact_hash);
+            var btn = document.getElementById('games-rematch-btn');
+            var restartActionId = 'restart:' + session.game_id;
+            if (!_beginSessionAction(restartActionId)) return;
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+            var view = _gameView(_appId(session));
+            var payload = view && view.restartPayload
+                ? view.restartPayload(session, _allSessions)
+                : {};
+            if (payload === null) {
+                _finishSessionAction(restartActionId);
+                renderDetail();
+                return;
+            }
+            startNewGame(
+                session.app_id || session.game || 'ttt',
+                session.contact_hash,
+                payload,
+                restartActionId
+            );
         });
         _bindBtn('games-draw-offer-btn', function() {
             var payload = {};
@@ -1785,7 +1842,7 @@
                 { app_id: 'ttt', display_name: 'Tic-Tac-Toe', icon: 'ttt', session_type: 'turn_based' },
                 { app_id: 'chess', display_name: 'Chess', icon: 'chess', session_type: 'turn_based' },
                 { app_id: 'four_in_a_row', display_name: 'Four in a Row', icon: 'four_in_a_row', session_type: 'turn_based' },
-                { app_id: 'conway_life', display_name: 'Life Torch', icon: 'conway_life', session_type: 'single_round' },
+                { app_id: 'conway_life', display_name: "Conway's Game of Life", icon: '\uD83D\uDC7E', session_type: 'single_round' },
             ];
         }
         manifests.sort(function(a, b) {
@@ -1812,7 +1869,7 @@
             '<div class="bottom-sheet-header">' +
                 '<div>' +
                     '<div class="bottom-sheet-title" id="games-new-sheet-title">New game</div>' +
-                    '<div class="games-sheet-subtitle">Choose what to play and who to challenge.</div>' +
+                    '<div class="games-sheet-subtitle" id="games-sheet-subtitle">Choose what to play and who to challenge.</div>' +
                 '</div>' +
                 '<button type="button" class="bottom-sheet-close" id="games-sheet-close" aria-label="Close">&times;</button>' +
             '</div>' +
@@ -1837,6 +1894,17 @@
 
         var selectedHash = null;
         var selectedAppId = manifests[0] ? manifests[0].app_id : 'ttt';
+        var updateChallengeVocabulary = function() {
+            var label = _challengeLabel(selectedAppId);
+            var subtitle = document.getElementById('games-sheet-subtitle');
+            var send = document.getElementById('games-sheet-send');
+            var participant = document.getElementById('games-sheet-opponent-label');
+            if (subtitle) subtitle.textContent = 'Choose what to play and who to ' +
+                _challengeVerb(selectedAppId) + '.';
+            if (send) send.textContent = 'Send ' + _titleCaseWord(label);
+            if (participant) participant.textContent = _participantPickerLabel(selectedAppId);
+        };
+        updateChallengeVocabulary();
 
         if (sheet) {
             sheet._ratspeakDismiss = function() {
@@ -1853,6 +1921,7 @@
                     this.classList.add('selected');
                     this.setAttribute('aria-pressed', 'true');
                     selectedAppId = this.dataset.appId || 'ttt';
+                    updateChallengeVocabulary();
                 });
             });
 
@@ -1939,14 +2008,18 @@
         });
     }
 
-    function startNewGame(appId, contactHash) {
+    function startNewGame(appId, contactHash, challengePayload, sourceActionId) {
         var arr = new Uint8Array(8);
         crypto.getRandomValues(arr);
         var sessionId = '';
         for (var i = 0; i < arr.length; i++) {
             sessionId += ('0' + arr[i].toString(16)).slice(-2);
         }
-        if (!_beginSessionAction(sessionId)) return;
+        if (!_beginSessionAction(sessionId)) {
+            _finishSessionAction(sourceActionId);
+            if (sourceActionId) renderDetail();
+            return;
+        }
 
         RS.invoke('send_game_action', {
             args: {
@@ -1954,28 +2027,33 @@
                 session_id: sessionId,
                 app_id: appId,
                 command: 'challenge',
-                payload: {},
+                payload: challengePayload || {},
             }
         }).then(function(ack) {
             _finishSessionAction(sessionId);
             if (ack && ack.ok === false) {
+                _finishSessionAction(sourceActionId);
+                if (sourceActionId) renderDetail();
                 // game_action_result owns rejection feedback. Avoid showing
                 // the same backend failure twice via both IPC completion and
                 // the event stream.
                 return;
             }
             _selectedSessionId = (ack && ack.session_id) ? ack.session_id : sessionId;
-            RS.invoke('get_all_game_sessions').then(function(sessions) {
+            return RS.invoke('get_all_game_sessions').then(function(sessions) {
                 if (Array.isArray(sessions)) {
                     _allSessions = sessions;
                     renderSessionList();
                     renderDetail();
+                    _finishSessionAction(sourceActionId);
                 }
             }).catch(function() {});
         }).catch(function() {
             _finishSessionAction(sessionId);
+            _finishSessionAction(sourceActionId);
+            if (sourceActionId) renderDetail();
             if (typeof showToast === 'function') {
-                showToast('Could not send the challenge', 'toast-error', 4000);
+                showToast('Could not send the ' + _challengeLabel(appId), 'toast-error', 4000);
             }
         });
     }
@@ -2065,14 +2143,15 @@
 
         var isNew = !prev;
         if (isNew && record.status === 'pending' && !_isMe(record, record.challenger)) {
+            var challengeLabel = _challengeLabel(_appId(record));
             if (appForeground && typeof currentView !== 'undefined' && currentView !== 'games') {
-                if (typeof showToast === 'function') showToast('Game challenge from ' + _contactName(record.contact_hash), 'toast-action', 5000, function() { window.openGameSession(record.game_id); });
+                if (typeof showToast === 'function') showToast('Game ' + challengeLabel + ' from ' + _contactName(record.contact_hash), 'toast-action', 5000, function() { window.openGameSession(record.game_id); });
                 if (typeof haptic === 'function') haptic('success');
             }
             if (!window.__TAURI_INTERNALS__ && !appForeground && typeof rsNotify !== 'undefined') {
                 rsNotify.send({
-                    title: 'Game challenge',
-                    body: _contactName(record.contact_hash) + ' challenged you to a game'
+                    title: 'Game ' + challengeLabel,
+                    body: _contactName(record.contact_hash) + ' sent you a game ' + challengeLabel
                 });
             }
         }

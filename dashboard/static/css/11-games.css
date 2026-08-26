@@ -944,6 +944,13 @@
     color: var(--status-online-fg);
     font-weight: var(--type-weight-semibold);
 }
+.life-playback {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 32px;
+}
 
 /* Four in a Row uses a signal matrix rather than a physical toy-board
    metaphor. Its two sides remain distinguishable without relying on color:
@@ -1503,7 +1510,10 @@
 }
 
 @media (max-height: 620px) and (orientation: landscape) {
-    .games-detail-board { padding: var(--space-3); }
+    .games-detail-board {
+        padding: var(--space-3);
+        overflow-y: auto;
+    }
     .chess-captured-tray { display: none; }
     .chess-player-row { min-height: 22px; font-size: var(--text-xs); }
     .ttt-player-label { display: none; }
@@ -1517,7 +1527,7 @@
         width: min(calc(100vh - 154px), 470px, 68vw);
     }
     .life-board-wrap {
-        width: min(calc(100vh - 154px), 390px, 58vw);
+        width: min(240px, 50vw);
     }
     @supports (height: 100svh) {
         .ttt-board-wrap {
@@ -1530,7 +1540,7 @@
             width: min(calc(100svh - 154px), 470px, 68vw);
         }
         .life-board-wrap {
-            width: min(calc(100svh - 154px), 390px, 58vw);
+            width: min(240px, 50vw);
         }
     }
 }
