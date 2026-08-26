@@ -114,7 +114,7 @@ assert(pendingHtml.includes('aria-rowindex="1" aria-colindex="1"'));
 assert(pendingHtml.includes('aria-rowindex="16" aria-colindex="16"'));
 assert(pendingHtml.includes('Row 1, column 1: alive'));
 assert(pendingHtml.includes('Row 1, column 2: dead'));
-assert(pendingHtml.includes('Life Spark received · accept to evolve 24 generations'));
+assert(pendingHtml.includes('Life Torch invitation received · accept to evolve 24 generations'));
 assert.deepStrictEqual(
     Array.from(adapter.detailChips(session())),
     ['Generation 7', '4 live cells']
@@ -153,7 +153,7 @@ initiator.metadata.claimant = 'them';
 initiator.metadata.awaiting_award = true;
 assert.strictEqual(
     adapter.activeStatusText(initiator, viewContext()),
-    'Claim verified · hand off the torch'
+    'Evolution verified · pass the Life Torch'
 );
 assert(adapter.renderActiveControls(initiator).includes('id="games-life-award-btn"'));
 
@@ -179,7 +179,7 @@ claimant.metadata.claimant = 'me';
 claimant.metadata.awaiting_award = true;
 assert.strictEqual(
     adapter.activeStatusText(claimant, viewContext()),
-    'Waiting for <Sender> to hand off the torch'
+    'Waiting for <Sender> to pass the Life Torch'
 );
 assert(adapter.renderActiveControls(claimant).includes('Waiting for the sender'));
 var claimantBound = false;

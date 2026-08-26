@@ -175,18 +175,18 @@
                 session.initiator || session.challenger || _meta(session, 'initiator', '')
             ));
             html += '<div class="life-state-note">' +
-                (incoming ? 'Life Spark received · accept to evolve 24 generations' :
-                    'Life Spark sent · waiting for a claim') +
+                (incoming ? 'Life Torch invitation received · accept to evolve 24 generations' :
+                    'Life Torch invitation sent · waiting for a response') +
             '</div>';
         } else if (session.status === 'active') {
             html += '<div class="life-state-note">' +
-                (_isLocalInitiator(session) ? 'Evolution verified · ready to hand off' :
-                    'Evolution submitted · waiting for the handoff') +
+                (_isLocalInitiator(session) ? 'Evolution verified · ready to pass the Life Torch' :
+                    'Evolution submitted · waiting for the Life Torch') +
             '</div>';
         } else if (session.status === 'completed') {
             html += '<div class="life-state-note complete">' +
                 (_meta(session, 'holder', '') === _localIdentity(session) ?
-                    'You received the Life Torch' : 'Life Torch handed off') +
+                    'You received the Life Torch' : 'Life Torch passed') +
             '</div>';
         }
         if (frames) {
@@ -341,10 +341,10 @@
     }
 
     function _activeStatusText(session, context) {
-        if (_isLocalInitiator(session)) return 'Claim verified · hand off the torch';
+        if (_isLocalInitiator(session)) return 'Evolution verified · pass the Life Torch';
         var initiator = session.initiator || session.challenger || '';
         var name = context && context.contactName ? context.contactName(initiator) : 'Sender';
-        return 'Waiting for ' + name + ' to hand off the torch';
+        return 'Waiting for ' + name + ' to pass the Life Torch';
     }
 
     function _detailChips(session) {
@@ -398,9 +398,9 @@
     function _renderActiveControls(session) {
         if (_isLocalInitiator(session)) {
             return '<button class="nr-btn games-ctrl-accept" id="games-life-award-btn">' +
-                'Hand off torch</button>';
+                'Pass the Life Torch</button>';
         }
-        return '<span class="games-ctrl-waiting">Waiting for the sender to hand off the torch...</span>';
+        return '<span class="games-ctrl-waiting">Waiting for the sender to pass the Life Torch...</span>';
     }
 
     function _bindControls(session, controls) {
