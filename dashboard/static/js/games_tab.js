@@ -251,6 +251,11 @@
 
     function _statusClass(session) {
         var status = session.status;
+        var view = _gameView(_appId(session));
+        if (view && view.statusClass) {
+            var customClass = view.statusClass(session, _gameViewContext(session));
+            if (customClass) return customClass;
+        }
 
         if (status === 'pending') {
             if (_isMe(session, session.challenger)) {
@@ -1780,6 +1785,7 @@
                 { app_id: 'ttt', display_name: 'Tic-Tac-Toe', icon: 'ttt', session_type: 'turn_based' },
                 { app_id: 'chess', display_name: 'Chess', icon: 'chess', session_type: 'turn_based' },
                 { app_id: 'four_in_a_row', display_name: 'Four in a Row', icon: 'four_in_a_row', session_type: 'turn_based' },
+                { app_id: 'conway_life', display_name: 'Life Torch', icon: 'conway_life', session_type: 'single_round' },
             ];
         }
         manifests.sort(function(a, b) {

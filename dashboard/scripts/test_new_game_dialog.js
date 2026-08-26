@@ -22,6 +22,7 @@ var fourSource = fs.readFileSync(
     path.join(dashboardRoot, 'static', 'js', 'four_in_a_row_view.js'),
     'utf8'
 );
+var indexSource = fs.readFileSync(path.join(dashboardRoot, 'index.html'), 'utf8');
 
 assert(source.includes('Choose what to play and who to challenge.'));
 assert(source.includes("setAttribute('role', 'dialog')"));
@@ -41,11 +42,15 @@ assert(source.includes('games-four-icon-mark') &&
     'Four in a Row must use a stable four-disc mark');
 assert(!fourSource.includes('\\u283F'),
     'Four in a Row must not fall back to the ambiguous six-dot Braille glyph');
+assert(indexSource.indexOf('conway_life_view.js') < indexSource.indexOf('games_tab.js'),
+    'the Conway adapter must load before the games tab consumes the registry');
+assert(source.includes("app_id: 'conway_life'") && source.includes("display_name: 'Life Torch'"),
+    'the offline manifest fallback must keep Life Torch discoverable');
 assert(!/data-app-id="chess"[^}]*ble-accent-fg/.test(gamesCss),
     'the Chess choice must use the theme accent instead of connectivity blue');
 
-assert(/\.games-sheet-game-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/.test(gamesCss),
-    'the three built-in games must form one balanced desktop row');
+assert(/\.games-sheet-game-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/.test(gamesCss),
+    'the four built-in games must form one balanced desktop row');
 assert(/\.games-sheet-game-card\.selected\s*\{[\s\S]*?border-color:\s*var\(--accent\)/.test(gamesCss),
     'selected games must retain a clear theme-native state');
 assert(!/\.games-sheet-game-card\.selected\s*\{[^}]*inset\s+0\s+0\s+0\s+1px/s.test(gamesCss),
@@ -53,8 +58,8 @@ assert(!/\.games-sheet-game-card\.selected\s*\{[^}]*inset\s+0\s+0\s+0\s+1px/s.te
 assert(/\.games-sheet-contact-list\.is-empty\s*\{/.test(gamesCss) &&
     /\.games-sheet-open-contacts\s*\{/.test(gamesCss),
     'the empty opponent state must be intentionally designed');
-assert(/\.games-sheet-game-grid\s*\{[\s\S]*?repeat\(3,\s*minmax\(0,\s*1fr\)\)/.test(responsiveCss),
-    'mobile must retain all three compact game choices without an orphan row');
+assert(/\.games-sheet-game-grid\s*\{[\s\S]*?repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(responsiveCss),
+    'mobile must retain all four game choices in a balanced two-column grid');
 assert(/\.games-sheet-footer\s*\{[\s\S]*?width:\s*100%[\s\S]*?flex-wrap:\s*nowrap/.test(responsiveCss),
     'mobile challenge actions must remain inside the viewport');
 assert(/\.bottom-sheet\.open\.games-new-dialog\s*\{[\s\S]*?overflow-y:\s*hidden/.test(responsiveCss),

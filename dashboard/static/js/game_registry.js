@@ -31,6 +31,7 @@
             activeStatusText: typeof adapter.activeStatusText === 'function'
                 ? adapter.activeStatusText
                 : null,
+            statusClass: typeof adapter.statusClass === 'function' ? adapter.statusClass : null,
             detailChips: typeof adapter.detailChips === 'function' ? adapter.detailChips : null,
             renderActiveControls: typeof adapter.renderActiveControls === 'function'
                 ? adapter.renderActiveControls

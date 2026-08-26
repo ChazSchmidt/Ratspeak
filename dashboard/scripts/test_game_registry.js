@@ -32,6 +32,7 @@ var fleet = views.register('fleet', {
     },
     bindBoard: function() { bound += 1; },
     activeStatusText: function() { return 'Your salvo'; },
+    statusClass: function() { return 'status-fleet'; },
     detailChips: function() { return ['Fleet 2']; },
     renderActiveControls: function() { return '<button>Scan</button>'; },
     bindControls: function() { bound += 1; },
@@ -47,6 +48,7 @@ fleet.bindBoard({});
 assert.strictEqual(rendered, 1);
 assert.strictEqual(bound, 1);
 assert.strictEqual(fleet.activeStatusText({}), 'Your salvo');
+assert.strictEqual(fleet.statusClass({}), 'status-fleet');
 assert.deepStrictEqual(Array.from(fleet.detailChips({})), ['Fleet 2']);
 assert.strictEqual(fleet.renderActiveControls({}), '<button>Scan</button>');
 fleet.bindControls({});
