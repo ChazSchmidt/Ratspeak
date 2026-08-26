@@ -2032,8 +2032,6 @@
         }).then(function(ack) {
             _finishSessionAction(sessionId);
             if (ack && ack.ok === false) {
-                _finishSessionAction(sourceActionId);
-                if (sourceActionId) renderDetail();
                 // game_action_result owns rejection feedback. Avoid showing
                 // the same backend failure twice via both IPC completion and
                 // the event stream.
@@ -2045,16 +2043,16 @@
                     _allSessions = sessions;
                     renderSessionList();
                     renderDetail();
-                    _finishSessionAction(sourceActionId);
                 }
             }).catch(function() {});
         }).catch(function() {
             _finishSessionAction(sessionId);
-            _finishSessionAction(sourceActionId);
-            if (sourceActionId) renderDetail();
             if (typeof showToast === 'function') {
                 showToast('Could not send the ' + _challengeLabel(appId), 'toast-error', 4000);
             }
+        }).finally(function() {
+            _finishSessionAction(sourceActionId);
+            if (sourceActionId) renderDetail();
         });
     }
 
