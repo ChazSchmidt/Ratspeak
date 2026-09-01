@@ -19,7 +19,7 @@
     "sourceCommit": "fc78e4926c696a921f308d238ef1b620e0db0078"
   },
   "snapshotSource": {
-    "commit": "f6cde58329a8fc385d4e882d27b06b7d962e611a",
+    "commit": "a5029e20dc73c524ebde4c218ac454475d2c0380",
     "capturedOn": "2026-08-30",
     "review": {
       "areas": [
@@ -45,7 +45,7 @@
         "Rust workspace and metadata/manifest contract checks cover the six generated application-internal crate snapshots",
         "gateway, node, verifier, and wallet unit/test gates are covered where available in the current workspace",
         "Linux native custody is feature-gated and requires GTK/Secret Service host validation; Android device validation remains separate",
-        "live Sepolia transport and finalized receipt end-to-end evidence remain operational validation work"
+        "one Linux standalone-gateway Sepolia smoke lifecycle reached locally verified finalized-receipt success; broader platform and physical-route validation remains separate"
       ]
     }
   },

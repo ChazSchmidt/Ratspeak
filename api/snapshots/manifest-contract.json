@@ -15,10 +15,13 @@
           "dep:alloy-primitives",
           "dep:gtk",
           "dep:ratspeak-eth-node",
+          "dep:ratspeak-eth-verifier",
           "dep:ratspeak-eth-wallet",
           "dep:ratspeak-eth-wallet-linux",
+          "dep:reqwest",
           "dep:rns-identity",
-          "dep:rustix"
+          "dep:rustix",
+          "dep:rustls"
         ],
         "lxst-voice": [
           "ratspeak-tauri/lxst-voice"
@@ -75,6 +78,17 @@
           "sourceKind": "path"
         },
         {
+          "name": "ratspeak-eth-verifier",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.31",
+          "optional": true,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
           "name": "ratspeak-eth-wallet",
           "rename": null,
           "kind": null,
@@ -86,6 +100,20 @@
           "sourceKind": "path"
         },
         {
+          "name": "reqwest",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.13.4",
+          "optional": true,
+          "defaultFeatures": false,
+          "features": [
+            "blocking",
+            "rustls-no-provider"
+          ],
+          "sourceKind": "registry"
+        },
+        {
           "name": "rns-identity",
           "rename": null,
           "kind": null,
@@ -95,6 +123,21 @@
           "defaultFeatures": true,
           "features": [],
           "sourceKind": "path"
+        },
+        {
+          "name": "rustls",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.23.37",
+          "optional": true,
+          "defaultFeatures": false,
+          "features": [
+            "ring",
+            "std",
+            "tls12"
+          ],
+          "sourceKind": "registry"
         },
         {
           "name": "serde",
@@ -919,6 +962,17 @@
           "sourceKind": "registry"
         },
         {
+          "name": "tracing",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
           "name": "url",
           "rename": null,
           "kind": null,
@@ -1116,6 +1170,30 @@
           "defaultFeatures": true,
           "features": [
             "full"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "tracing",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "tracing-subscriber",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.3",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "env-filter"
           ],
           "sourceKind": "registry"
         },
