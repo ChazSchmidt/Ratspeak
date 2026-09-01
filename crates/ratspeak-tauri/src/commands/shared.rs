@@ -396,11 +396,67 @@ pub(crate) fn emit_hub_interfaces(state: &AppState, ifaces: serde_json::Value) {
     state.emit_to_all("hub_interfaces_update", ifaces);
 }
 
-pub(crate) async fn hydrate_contact_identity_for_send(state: &AppState, dest_hash: &str) -> bool {
+pub fn validated_contact_public_key(
+    state: &AppState,
+    identity_id: &str,
+    dest_hash: &str,
+) -> Option<[u8; 64]> {
+    let dest_hash = dest_hash.trim().to_ascii_lowercase();
+    if !validate_hex(&dest_hash, 32, 32) {
+        return None;
+    }
+    let contact = db::get_contact(&state.db, &dest_hash, identity_id)?;
+
+    let pubkey_hex = contact
+        .get("identity_pubkey")
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| validate_hex(s, 128, 128))?;
+    let Ok(pubkey_bytes) = hex::decode(pubkey_hex) else {
+        return None;
+    };
+    if pubkey_bytes.len() != 64 {
+        return None;
+    }
+    let mut public_key = [0u8; 64];
+    public_key.copy_from_slice(&pubkey_bytes);
+
+    let Ok(identity) = Identity::from_public_key(&public_key) else {
+        tracing::warn!(
+            reason = "invalid_public_key",
+            "contact identity public key is invalid"
+        );
+        return None;
+    };
+    let expected_lxmf =
+        Destination::hash_from_name_and_identity(LXMF_APP_NAME, Some(&identity.hash));
+    if hex::encode(expected_lxmf) != dest_hash {
+        tracing::warn!(
+            reason = "destination_mismatch",
+            "contact identity public key does not match LXMF destination"
+        );
+        return None;
+    }
+    Some(public_key)
+}
+
+/// Whether this profile has a contact whose public identity exactly derives
+/// the requested LXMF delivery destination. This is read-only and does not
+/// imply that a Reticulum route is presently available.
+pub fn has_valid_contact_identity(state: &AppState, identity_id: &str, dest_hash: &str) -> bool {
+    validated_contact_public_key(state, identity_id, dest_hash).is_some()
+}
+
+pub async fn hydrate_contact_identity_for_send(state: &AppState, dest_hash: &str) -> bool {
     let dest_hash = dest_hash.trim().to_ascii_lowercase();
     if !validate_hex(&dest_hash, 32, 32) {
         return false;
     }
+
+    let identity_id = active_identity_id(state);
+    let Some(public_key) = validated_contact_public_key(state, &identity_id, &dest_hash) else {
+        return false;
+    };
 
     if state
         .lxmf
@@ -413,51 +469,6 @@ pub(crate) async fn hydrate_contact_identity_for_send(state: &AppState, dest_has
         .unwrap_or(false)
     {
         return true;
-    }
-
-    let identity_id = active_identity_id(state);
-    let dest_for_db = dest_hash.clone();
-    let contact = match db::spawn_db(state.db.clone(), move |p| {
-        db::get_contact(&p, &dest_for_db, &identity_id)
-    })
-    .await
-    {
-        Ok(Some(contact)) => contact,
-        _ => return false,
-    };
-
-    let Some(pubkey_hex) = contact
-        .get("identity_pubkey")
-        .and_then(|v| v.as_str())
-        .map(str::trim)
-        .filter(|s| validate_hex(s, 128, 128))
-    else {
-        return false;
-    };
-    let Ok(pubkey_bytes) = hex::decode(pubkey_hex) else {
-        return false;
-    };
-    if pubkey_bytes.len() != 64 {
-        return false;
-    }
-    let mut public_key = [0u8; 64];
-    public_key.copy_from_slice(&pubkey_bytes);
-
-    let Ok(identity) = Identity::from_public_key(&public_key) else {
-        tracing::warn!(
-            reason = "invalid_public_key",
-            "contact identity public key is invalid"
-        );
-        return false;
-    };
-    let expected_lxmf =
-        Destination::hash_from_name_and_identity(LXMF_APP_NAME, Some(&identity.hash));
-    if hex::encode(expected_lxmf) != dest_hash {
-        tracing::warn!(
-            reason = "destination_mismatch",
-            "contact identity public key does not match LXMF destination"
-        );
-        return false;
     }
 
     let identity_changed = state.lxmf.lock().ok().and_then(|mut lxmf| {
@@ -805,6 +816,53 @@ mod tests {
             Arc::new(ratspeak_core::NoopEmitter),
             Arc::new(ratspeak_core::NoopNotifier),
         )
+    }
+
+    #[test]
+    fn valid_contact_identity_requires_exact_public_destination_binding() {
+        let temp = tempfile::tempdir().unwrap();
+        let state = state_for_config(DashboardConfig::from_env_and_defaults(
+            temp.path().to_path_buf(),
+        ));
+        let profile_identity = "11111111111111111111111111111111";
+        let service = Identity::new();
+        let destination = hex::encode(Destination::hash_from_name_and_identity(
+            LXMF_APP_NAME,
+            Some(&service.hash),
+        ));
+        assert!(!has_valid_contact_identity(
+            &state,
+            profile_identity,
+            &destination
+        ));
+
+        db::save_contact_with_identity_pubkey(
+            &state.db,
+            &destination,
+            Some("Sepolia Service"),
+            Some(&hex::encode(Identity::new().get_public_key())),
+            "trusted",
+            profile_identity,
+        );
+        assert!(!has_valid_contact_identity(
+            &state,
+            profile_identity,
+            &destination
+        ));
+
+        db::save_contact_with_identity_pubkey(
+            &state.db,
+            &destination,
+            Some("Sepolia Service"),
+            Some(&hex::encode(service.get_public_key())),
+            "trusted",
+            profile_identity,
+        );
+        assert!(has_valid_contact_identity(
+            &state,
+            profile_identity,
+            &destination
+        ));
     }
 
     #[test]

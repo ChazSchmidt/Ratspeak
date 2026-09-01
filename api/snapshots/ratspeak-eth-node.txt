@@ -1,0 +1,464 @@
+pub mod ratspeak_eth_node
+pub use ratspeak_eth_node::MAX_MANUAL_CHECKPOINT_FILE_BYTES
+pub enum ratspeak_eth_node::AccountAssurance
+pub ratspeak_eth_node::AccountAssurance::CurrentVerified(ratspeak_eth_node::AccountEvidence)
+pub ratspeak_eth_node::AccountAssurance::Stale(ratspeak_eth_node::AccountEvidence)
+pub ratspeak_eth_node::AccountAssurance::Unknown
+impl ratspeak_eth_node::AccountAssurance
+pub const fn ratspeak_eth_node::AccountAssurance::evidence(&self) -> core::option::Option<&ratspeak_eth_node::AccountEvidence>
+pub enum ratspeak_eth_node::AssuranceEventKind
+pub ratspeak_eth_node::AssuranceEventKind::CheckpointApproved
+pub ratspeak_eth_node::AssuranceEventKind::CheckpointRevoked
+pub ratspeak_eth_node::AssuranceEventKind::CheckpointSourceAttested
+pub ratspeak_eth_node::AssuranceEventKind::FinalizedReceiptFailed
+pub ratspeak_eth_node::AssuranceEventKind::FinalizedReceiptSucceeded
+pub ratspeak_eth_node::AssuranceEventKind::GatewayAcknowledged
+pub ratspeak_eth_node::AssuranceEventKind::LocalSignatureRecorded
+pub ratspeak_eth_node::AssuranceEventKind::RpcAccepted
+pub ratspeak_eth_node::AssuranceEventKind::TransportDelivered
+impl core::convert::From<ratspeak_eth_node::NonAuthoritativeTransactionObservation> for ratspeak_eth_node::AssuranceEventKind
+pub fn ratspeak_eth_node::AssuranceEventKind::from(ratspeak_eth_node::NonAuthoritativeTransactionObservation) -> Self
+pub enum ratspeak_eth_node::AssuranceSubjectKind
+pub ratspeak_eth_node::AssuranceSubjectKind::Checkpoint
+pub ratspeak_eth_node::AssuranceSubjectKind::Transaction
+pub enum ratspeak_eth_node::BulkEvidenceReviewDecision
+pub ratspeak_eth_node::BulkEvidenceReviewDecision::Approve
+pub ratspeak_eth_node::BulkEvidenceReviewDecision::Deny
+pub enum ratspeak_eth_node::BulkEvidenceReviewResolution
+pub ratspeak_eth_node::BulkEvidenceReviewResolution::Approved
+pub ratspeak_eth_node::BulkEvidenceReviewResolution::Denied
+pub enum ratspeak_eth_node::CheckpointApprovalBasis
+pub ratspeak_eth_node::CheckpointApprovalBasis::ExplicitUserApproval
+pub ratspeak_eth_node::CheckpointApprovalBasis::ProviderAgreement
+pub enum ratspeak_eth_node::CheckpointPolicyError
+pub ratspeak_eth_node::CheckpointPolicyError::BootstrapContainsUpdates
+pub ratspeak_eth_node::CheckpointPolicyError::BootstrapEpochMismatch
+pub ratspeak_eth_node::CheckpointPolicyError::CheckpointAlreadyInstalled
+pub ratspeak_eth_node::CheckpointPolicyError::CheckpointRollback
+pub ratspeak_eth_node::CheckpointPolicyError::CorruptApprovalPolicy
+pub ratspeak_eth_node::CheckpointPolicyError::DuplicateProviderObservation
+pub ratspeak_eth_node::CheckpointPolicyError::EpochRootConflict
+pub ratspeak_eth_node::CheckpointPolicyError::FutureCheckpoint
+pub ratspeak_eth_node::CheckpointPolicyError::FutureObservation
+pub ratspeak_eth_node::CheckpointPolicyError::InsufficientOperatorAgreement
+pub ratspeak_eth_node::CheckpointPolicyError::InvalidCandidate
+pub ratspeak_eth_node::CheckpointPolicyError::InvalidLocalClock
+pub ratspeak_eth_node::CheckpointPolicyError::InvalidProviderConfiguration
+pub ratspeak_eth_node::CheckpointPolicyError::NoApprovedCheckpoint
+pub ratspeak_eth_node::CheckpointPolicyError::ProviderMismatch
+pub ratspeak_eth_node::CheckpointPolicyError::ReviewAlreadyExists
+pub ratspeak_eth_node::CheckpointPolicyError::ReviewChanged
+pub ratspeak_eth_node::CheckpointPolicyError::ReviewExpired
+pub ratspeak_eth_node::CheckpointPolicyError::ReviewQueueFull
+pub ratspeak_eth_node::CheckpointPolicyError::ReviewSuperseded
+pub ratspeak_eth_node::CheckpointPolicyError::ReviewUnavailable
+pub ratspeak_eth_node::CheckpointPolicyError::RevokedCheckpoint
+pub ratspeak_eth_node::CheckpointPolicyError::RootEpochConflict
+pub ratspeak_eth_node::CheckpointPolicyError::StaleCheckpoint
+pub ratspeak_eth_node::CheckpointPolicyError::StaleObservation
+pub ratspeak_eth_node::CheckpointPolicyError::Store(ratspeak_eth_node::NodeStoreError)
+pub ratspeak_eth_node::CheckpointPolicyError::UnconfiguredProvider
+pub ratspeak_eth_node::CheckpointPolicyError::Verification(ratspeak_eth_verifier::VerifyError)
+pub enum ratspeak_eth_node::CheckpointSourceKind
+pub ratspeak_eth_node::CheckpointSourceKind::AuthenticatedRatspeakIdentity
+pub ratspeak_eth_node::CheckpointSourceKind::BeaconApi
+pub ratspeak_eth_node::CheckpointSourceKind::ExplicitUser
+pub ratspeak_eth_node::CheckpointSourceKind::ManualFile
+pub ratspeak_eth_node::CheckpointSourceKind::ManualQr
+pub ratspeak_eth_node::CheckpointSourceKind::ManualUrl
+pub enum ratspeak_eth_node::EvidenceKind
+pub ratspeak_eth_node::EvidenceKind::AccountProof
+pub ratspeak_eth_node::EvidenceKind::ConsensusBootstrap
+pub ratspeak_eth_node::EvidenceKind::ExecutionHeader
+pub ratspeak_eth_node::EvidenceKind::ReceiptProof
+pub ratspeak_eth_node::EvidenceKind::SignedTransaction
+pub enum ratspeak_eth_node::ManualCheckpointInstallError<E>
+pub ratspeak_eth_node::ManualCheckpointInstallError::Cancelled
+pub ratspeak_eth_node::ManualCheckpointInstallError::NativeApproval(E)
+pub ratspeak_eth_node::ManualCheckpointInstallError::Policy(ratspeak_eth_node::CheckpointPolicyError)
+impl<E> core::convert::From<ratspeak_eth_node::NodeStoreError> for ratspeak_eth_node::ManualCheckpointInstallError<E>
+pub fn ratspeak_eth_node::ManualCheckpointInstallError<E>::from(ratspeak_eth_node::NodeStoreError) -> Self
+pub enum ratspeak_eth_node::ManualCheckpointReviewResolution
+pub ratspeak_eth_node::ManualCheckpointReviewResolution::Approved
+pub ratspeak_eth_node::ManualCheckpointReviewResolution::Denied
+pub enum ratspeak_eth_node::ManualCheckpointSource
+pub ratspeak_eth_node::ManualCheckpointSource::File
+pub ratspeak_eth_node::ManualCheckpointSource::Qr
+pub ratspeak_eth_node::ManualCheckpointSource::Url
+pub enum ratspeak_eth_node::MessageRequestStatus
+pub ratspeak_eth_node::MessageRequestStatus::AwaitingBulkApproval
+pub ratspeak_eth_node::MessageRequestStatus::Cancelled
+pub ratspeak_eth_node::MessageRequestStatus::Completed
+pub ratspeak_eth_node::MessageRequestStatus::Expired
+pub ratspeak_eth_node::MessageRequestStatus::Pending
+pub ratspeak_eth_node::MessageRequestStatus::PendingVerification
+pub ratspeak_eth_node::MessageRequestStatus::Ready
+pub enum ratspeak_eth_node::MessagingEvidenceKind
+pub ratspeak_eth_node::MessagingEvidenceKind::AccountProof
+pub ratspeak_eth_node::MessagingEvidenceKind::AccountStatePackage
+pub ratspeak_eth_node::MessagingEvidenceKind::Consensus
+pub ratspeak_eth_node::MessagingEvidenceKind::ExecutionHeader
+pub ratspeak_eth_node::MessagingEvidenceKind::FinalizedReceiptPackage
+pub ratspeak_eth_node::MessagingEvidenceKind::ReceiptProof
+pub enum ratspeak_eth_node::NodeMessageOutcome
+pub ratspeak_eth_node::NodeMessageOutcome::BulkApprovalRequired(ratspeak_eth_node::EvidenceManifest)
+pub ratspeak_eth_node::NodeMessageOutcome::Duplicate
+pub ratspeak_eth_node::NodeMessageOutcome::EvidencePending(ratspeak_eth_node::PendingMessageEvidence)
+pub ratspeak_eth_node::NodeMessageOutcome::IgnoredUnauthenticated
+pub ratspeak_eth_node::NodeMessageOutcome::ManifestAccepted(ratspeak_eth_node::EvidenceManifest)
+pub ratspeak_eth_node::NodeMessageOutcome::RelayObserved
+pub ratspeak_eth_node::NodeMessageOutcome::RelayObserved::observation: ratspeak_eth_node::RelayObservation
+pub ratspeak_eth_node::NodeMessageOutcome::RelayObserved::tx_hash: [u8; 32]
+pub enum ratspeak_eth_node::NonAuthoritativeTransactionObservation
+pub ratspeak_eth_node::NonAuthoritativeTransactionObservation::GatewayAcknowledged
+pub ratspeak_eth_node::NonAuthoritativeTransactionObservation::RpcAccepted
+pub ratspeak_eth_node::NonAuthoritativeTransactionObservation::TransportDelivered
+impl core::convert::From<ratspeak_eth_node::NonAuthoritativeTransactionObservation> for ratspeak_eth_node::AssuranceEventKind
+pub fn ratspeak_eth_node::AssuranceEventKind::from(ratspeak_eth_node::NonAuthoritativeTransactionObservation) -> Self
+pub enum ratspeak_eth_node::OperationStatus
+pub ratspeak_eth_node::OperationStatus::Cancelled
+pub ratspeak_eth_node::OperationStatus::Interrupted
+pub ratspeak_eth_node::OperationStatus::Prepared
+pub ratspeak_eth_node::OperationStatus::Signed
+pub ratspeak_eth_node::OperationStatus::Signed::tx_hash: [u8; 32]
+pub enum ratspeak_eth_node::OutboundMessageKind
+pub ratspeak_eth_node::OutboundMessageKind::BulkApproval
+pub ratspeak_eth_node::OutboundMessageKind::EvidenceRequest
+pub ratspeak_eth_node::OutboundMessageKind::SignedTransactionRelay
+pub enum ratspeak_eth_node::PendingEvidenceImportOutcome
+pub ratspeak_eth_node::PendingEvidenceImportOutcome::AlreadyCompleted
+pub ratspeak_eth_node::PendingEvidenceImportOutcome::Imported
+pub enum ratspeak_eth_node::RecordOutcome
+pub ratspeak_eth_node::RecordOutcome::Inserted
+pub ratspeak_eth_node::RecordOutcome::Replay
+pub enum ratspeak_eth_node::RelayObservation
+pub ratspeak_eth_node::RelayObservation::GatewayAccepted
+pub ratspeak_eth_node::RelayObservation::RpcAccepted
+pub ratspeak_eth_node::RelayObservation::RpcRejected
+pub enum ratspeak_eth_node::TransactionAssurance
+pub ratspeak_eth_node::TransactionAssurance::FinalizedFailure(ratspeak_eth_node::StoredReceiptRecord)
+pub ratspeak_eth_node::TransactionAssurance::FinalizedSuccess(ratspeak_eth_node::StoredReceiptRecord)
+pub ratspeak_eth_node::TransactionAssurance::NeedsReverification(ratspeak_eth_node::StoredReceiptRecord)
+pub ratspeak_eth_node::TransactionAssurance::Signed
+pub ratspeak_eth_node::TransactionAssurance::Signed::non_authoritative_observations: alloc::vec::Vec<ratspeak_eth_node::NonAuthoritativeTransactionObservation>
+pub struct ratspeak_eth_node::AccountEvidence
+impl ratspeak_eth_node::AccountEvidence
+pub const fn ratspeak_eth_node::AccountEvidence::age_seconds(&self) -> u64
+pub const fn ratspeak_eth_node::AccountEvidence::balance(&self) -> alloy_primitives::aliases::U256
+pub const fn ratspeak_eth_node::AccountEvidence::block_hash(&self) -> [u8; 32]
+pub const fn ratspeak_eth_node::AccountEvidence::block_number(&self) -> u64
+pub const fn ratspeak_eth_node::AccountEvidence::chain_evidence_at_unix(&self) -> u64
+pub const fn ratspeak_eth_node::AccountEvidence::checkpoint_root(&self) -> [u8; 32]
+pub const fn ratspeak_eth_node::AccountEvidence::local_verification_age_seconds(&self) -> u64
+pub const fn ratspeak_eth_node::AccountEvidence::nonce(&self) -> u64
+pub const fn ratspeak_eth_node::AccountEvidence::proof_hash(&self) -> [u8; 32]
+pub const fn ratspeak_eth_node::AccountEvidence::state_root(&self) -> [u8; 32]
+pub struct ratspeak_eth_node::ApprovedCheckpointAnchor<'a>
+impl ratspeak_eth_node::ApprovedCheckpointAnchor<'_>
+pub fn ratspeak_eth_node::ApprovedCheckpointAnchor<'_>::verify_consensus_bootstrap(&self, &ratspeak_eth_verifier::Verifier, &[u8]) -> core::result::Result<ratspeak_eth_verifier::consensus::VerifiedExecutionHeader, ratspeak_eth_node::CheckpointPolicyError>
+pub struct ratspeak_eth_node::CheckpointApproval
+pub struct ratspeak_eth_node::CheckpointBootstrapPolicy
+impl ratspeak_eth_node::CheckpointBootstrapPolicy
+pub fn ratspeak_eth_node::CheckpointBootstrapPolicy::active_anchor<'a>(&self, &'a ratspeak_eth_node::EthereumNodeStore) -> core::result::Result<ratspeak_eth_node::ApprovedCheckpointAnchor<'a>, ratspeak_eth_node::CheckpointPolicyError>
+pub fn ratspeak_eth_node::CheckpointBootstrapPolicy::install_manual_candidate<'a, A: ratspeak_eth_node::NativeCheckpointApproval>(&self, &'a mut ratspeak_eth_node::EthereumNodeStore, &ratspeak_eth_node::CheckpointCandidate, &mut A) -> core::result::Result<ratspeak_eth_node::ApprovedCheckpointAnchor<'a>, ratspeak_eth_node::ManualCheckpointInstallError<<A as ratspeak_eth_node::NativeCheckpointApproval>::Error>>
+pub fn ratspeak_eth_node::CheckpointBootstrapPolicy::install_provider_agreement<'a>(&self, &'a mut ratspeak_eth_node::EthereumNodeStore, &[ratspeak_eth_node::CheckpointCandidate]) -> core::result::Result<ratspeak_eth_node::ApprovedCheckpointAnchor<'a>, ratspeak_eth_node::CheckpointPolicyError>
+pub fn ratspeak_eth_node::CheckpointBootstrapPolicy::new(alloc::vec::Vec<ratspeak_eth_node::ConfiguredCheckpointProvider>) -> core::result::Result<Self, ratspeak_eth_node::CheckpointPolicyError>
+pub fn ratspeak_eth_node::CheckpointBootstrapPolicy::pending_manual_checkpoint_reviews(&self, &mut ratspeak_eth_node::EthereumNodeStore) -> core::result::Result<alloc::vec::Vec<ratspeak_eth_node::PendingManualCheckpointReview>, ratspeak_eth_node::CheckpointPolicyError>
+pub fn ratspeak_eth_node::CheckpointBootstrapPolicy::resolve_manual_checkpoint_review<A: ratspeak_eth_node::NativeCheckpointApproval>(&self, &mut ratspeak_eth_node::EthereumNodeStore, &ratspeak_eth_node::PendingManualCheckpointReview, &mut A) -> core::result::Result<ratspeak_eth_node::ManualCheckpointReviewResolution, ratspeak_eth_node::ManualCheckpointInstallError<<A as ratspeak_eth_node::NativeCheckpointApproval>::Error>>
+pub fn ratspeak_eth_node::CheckpointBootstrapPolicy::stage_manual_candidate(&self, &mut ratspeak_eth_node::EthereumNodeStore, &ratspeak_eth_node::CheckpointCandidate) -> core::result::Result<ratspeak_eth_node::PendingManualCheckpointReview, ratspeak_eth_node::CheckpointPolicyError>
+pub fn ratspeak_eth_node::CheckpointBootstrapPolicy::stage_manual_checkpoint_file(&self, &mut ratspeak_eth_node::EthereumNodeStore, &[u8]) -> core::result::Result<ratspeak_eth_node::PendingManualCheckpointReview, ratspeak_eth_node::CheckpointPolicyError>
+pub struct ratspeak_eth_node::CheckpointCandidate
+impl ratspeak_eth_node::CheckpointCandidate
+pub fn ratspeak_eth_node::CheckpointCandidate::from_manual_source(ratspeak_eth_node::ManualCheckpointSource, [u8; 32], u64, [u8; 32], alloc::vec::Vec<u8>, u64) -> Self
+pub fn ratspeak_eth_node::CheckpointCandidate::from_provider(ratspeak_eth_node::ConfiguredCheckpointProvider, u64, [u8; 32], alloc::vec::Vec<u8>, u64) -> Self
+impl core::fmt::Debug for ratspeak_eth_node::CheckpointCandidate
+pub fn ratspeak_eth_node::CheckpointCandidate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_node::CheckpointSourceAttestation
+impl ratspeak_eth_node::CheckpointSourceAttestation
+pub fn ratspeak_eth_node::CheckpointSourceAttestation::new(ratspeak_eth_node::CheckpointSourceKind, [u8; 32], [u8; 32], u64) -> Self
+pub fn ratspeak_eth_node::CheckpointSourceAttestation::observation_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::CheckpointSourceAttestation::observed_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::CheckpointSourceAttestation::operator_fingerprint(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::CheckpointSourceAttestation::source_fingerprint(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::CheckpointSourceAttestation::source_kind(&self) -> ratspeak_eth_node::CheckpointSourceKind
+pub struct ratspeak_eth_node::ConfiguredCheckpointProvider
+impl ratspeak_eth_node::ConfiguredCheckpointProvider
+pub fn ratspeak_eth_node::ConfiguredCheckpointProvider::new([u8; 32], [u8; 32]) -> core::result::Result<Self, ratspeak_eth_node::CheckpointPolicyError>
+pub fn ratspeak_eth_node::ConfiguredCheckpointProvider::operator_fingerprint(self) -> [u8; 32]
+pub fn ratspeak_eth_node::ConfiguredCheckpointProvider::source_fingerprint(self) -> [u8; 32]
+pub struct ratspeak_eth_node::CorrelatedEvidence
+impl ratspeak_eth_node::CorrelatedEvidence
+pub fn ratspeak_eth_node::CorrelatedEvidence::bytes(&self) -> &[u8]
+pub fn ratspeak_eth_node::CorrelatedEvidence::digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::CorrelatedEvidence::kind(&self) -> ratspeak_eth_node::MessagingEvidenceKind
+pub fn ratspeak_eth_node::CorrelatedEvidence::request_id(&self) -> [u8; 16]
+pub struct ratspeak_eth_node::EthereumNodeStore
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::account_assurance(&self, ratspeak_eth_wallet::WalletAccount, u64, u64) -> ratspeak_eth_node::Result<ratspeak_eth_node::AccountAssurance>
+pub fn ratspeak_eth_node::EthereumNodeStore::authorize_and_store<C: ratspeak_eth_node::PlatformTransferCustody, K: ratspeak_eth_node::FieldNodeClock>(&mut self, ratspeak_eth_node::PreparedFieldTransfer, &mut C, &mut K) -> ratspeak_eth_node::Result<ratspeak_eth_node::StoredSignedTransaction>
+pub fn ratspeak_eth_node::EthereumNodeStore::cancel_operation(&mut self, ratspeak_eth_wallet::OperationId) -> ratspeak_eth_node::Result<ratspeak_eth_node::OperationStatus>
+pub fn ratspeak_eth_node::EthereumNodeStore::cancel_operation_if_present(&mut self, ratspeak_eth_wallet::OperationId) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::OperationStatus>>
+pub fn ratspeak_eth_node::EthereumNodeStore::operation_status(&self, ratspeak_eth_wallet::OperationId) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::OperationStatus>>
+pub fn ratspeak_eth_node::EthereumNodeStore::prepare_native_transfer(&mut self, ratspeak_eth_wallet::WalletAccount, ratspeak_eth_node::FieldTransferRequest, ratspeak_eth_wallet::OperationId, u64, u64, u64) -> ratspeak_eth_node::Result<ratspeak_eth_node::PreparedFieldTransfer>
+pub fn ratspeak_eth_node::EthereumNodeStore::reconcile_interrupted_operations(&mut self) -> ratspeak_eth_node::Result<usize>
+pub fn ratspeak_eth_node::EthereumNodeStore::transaction_assurance(&self, [u8; 32]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::TransactionAssurance>>
+pub fn ratspeak_eth_node::EthereumNodeStore::transaction_assurance_reverified(&self, [u8; 32]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::TransactionAssurance>>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::account_at_checkpoint(&self, u64, [u8; 32], [u8; 20]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::StoredAccountRecord>>
+pub fn ratspeak_eth_node::EthereumNodeStore::install_wallet_account(&mut self, ratspeak_eth_wallet::WalletAccount) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+pub fn ratspeak_eth_node::EthereumNodeStore::open_in_profile(impl core::convert::AsRef<std::path::Path>) -> ratspeak_eth_node::Result<Self>
+pub fn ratspeak_eth_node::EthereumNodeStore::path(&self) -> &std::path::Path
+pub fn ratspeak_eth_node::EthereumNodeStore::record_verified_account(&mut self, &ratspeak_eth_verifier::VerifiedAccount, &[u8]) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+pub fn ratspeak_eth_node::EthereumNodeStore::wallet_account(&self) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_wallet::WalletAccount>>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::cancel_message_request(&mut self, [u8; 16]) -> ratspeak_eth_node::Result<()>
+pub fn ratspeak_eth_node::EthereumNodeStore::create_evidence_request(&mut self, ratspeak_eth_node::OutboundEvidenceRequest) -> ratspeak_eth_node::Result<alloc::vec::Vec<u8>>
+pub fn ratspeak_eth_node::EthereumNodeStore::create_signed_transaction_relay(&mut self, [u8; 16], [u8; 16], &ratspeak_eth_node::StoredSignedTransaction, u64, u64) -> ratspeak_eth_node::Result<alloc::vec::Vec<u8>>
+pub fn ratspeak_eth_node::EthereumNodeStore::discard_pending_message_evidence(&mut self, [u8; 16]) -> ratspeak_eth_node::Result<()>
+pub fn ratspeak_eth_node::EthereumNodeStore::ensure_gateway_replacement_allowed(&mut self, [u8; 16], u64) -> ratspeak_eth_node::Result<()>
+pub fn ratspeak_eth_node::EthereumNodeStore::handle_attachment_from_trusted_lxmf_adapter(&mut self, [u8; 16], [u8; 16], &[u8], u64) -> ratspeak_eth_node::Result<ratspeak_eth_node::NodeMessageOutcome>
+pub fn ratspeak_eth_node::EthereumNodeStore::lease_next_outbound_message(&mut self, ratspeak_eth_node::OutboundMessageBinding, u64, u64) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::OutboundMessageLease>>
+pub fn ratspeak_eth_node::EthereumNodeStore::message_request_status(&self, [u8; 16]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::MessageRequestStatus>>
+pub fn ratspeak_eth_node::EthereumNodeStore::pending_bulk_evidence_reviews(&mut self, [u8; 16], u64) -> ratspeak_eth_node::Result<alloc::vec::Vec<ratspeak_eth_node::PendingBulkEvidenceReview>>
+pub fn ratspeak_eth_node::EthereumNodeStore::pending_message_evidence(&self, [u8; 16]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::PendingMessageEvidence>>
+pub fn ratspeak_eth_node::EthereumNodeStore::pending_message_evidence_ids(&self) -> ratspeak_eth_node::Result<alloc::vec::Vec<[u8; 16]>>
+pub fn ratspeak_eth_node::EthereumNodeStore::process_all_pending_message_evidence(&mut self) -> ratspeak_eth_node::Result<usize>
+pub fn ratspeak_eth_node::EthereumNodeStore::process_pending_message_evidence(&mut self, [u8; 16]) -> ratspeak_eth_node::Result<ratspeak_eth_node::PendingEvidenceImportOutcome>
+pub fn ratspeak_eth_node::EthereumNodeStore::release_outbound_message(&mut self, ratspeak_eth_node::OutboundMessageBinding, &ratspeak_eth_node::OutboundMessageLease, u64) -> ratspeak_eth_node::Result<()>
+pub fn ratspeak_eth_node::EthereumNodeStore::resolve_bulk_evidence_review(&mut self, &ratspeak_eth_node::PendingBulkEvidenceReview, ratspeak_eth_node::BulkEvidenceReviewDecision, u64) -> ratspeak_eth_node::Result<ratspeak_eth_node::BulkEvidenceReviewResolution>
+pub fn ratspeak_eth_node::EthereumNodeStore::settle_outbound_message_queued(&mut self, ratspeak_eth_node::OutboundMessageBinding, &ratspeak_eth_node::OutboundMessageLease, u64) -> ratspeak_eth_node::Result<()>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::checkpoint_approval(&self, u64, [u8; 32]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::StoredCheckpointApproval>>
+pub fn ratspeak_eth_node::EthereumNodeStore::record_checkpoint_approval(&mut self, &ratspeak_eth_node::CheckpointApproval) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::checkpoint_assurance_history(&self, u64, [u8; 32]) -> ratspeak_eth_node::Result<alloc::vec::Vec<ratspeak_eth_node::StoredAssuranceEvent>>
+pub fn ratspeak_eth_node::EthereumNodeStore::record_checkpoint_revocation(&mut self, u64, [u8; 32], [u8; 32], u64) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+pub fn ratspeak_eth_node::EthereumNodeStore::record_non_authoritative_transaction_observation(&mut self, u64, [u8; 32], ratspeak_eth_node::NonAuthoritativeTransactionObservation, [u8; 32], u64) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+pub fn ratspeak_eth_node::EthereumNodeStore::transaction_assurance_history(&self, u64, [u8; 32]) -> ratspeak_eth_node::Result<alloc::vec::Vec<ratspeak_eth_node::StoredAssuranceEvent>>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::execution_block(&self, u64, [u8; 32]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::StoredExecutionBlock>>
+pub fn ratspeak_eth_node::EthereumNodeStore::latest_finalized_header(&self, u64) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::StoredFinalizedHeader>>
+pub fn ratspeak_eth_node::EthereumNodeStore::record_verified_execution_block(&mut self, &ratspeak_eth_verifier::execution::VerifiedExecutionBlock, &[u8]) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+pub fn ratspeak_eth_node::EthereumNodeStore::record_verified_finalized_header(&mut self, &ratspeak_eth_verifier::consensus::VerifiedExecutionHeader, &[u8]) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::latest_signed_transaction(&self, u64) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::StoredSignedTransaction>>
+pub fn ratspeak_eth_node::EthereumNodeStore::signed_transaction(&self, u64, [u8; 32]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::StoredSignedTransaction>>
+pub fn ratspeak_eth_node::EthereumNodeStore::unconfirmed_signed_transactions(&self, u64) -> ratspeak_eth_node::Result<alloc::vec::Vec<ratspeak_eth_node::StoredSignedTransaction>>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::next_evidence_sync_generation(&self) -> ratspeak_eth_node::Result<u64>
+pub fn ratspeak_eth_node::EthereumNodeStore::plan_evidence_sync(&mut self, ratspeak_eth_node::EvidenceSyncTrigger) -> ratspeak_eth_node::Result<(ratspeak_eth_node::RecordOutcome, ratspeak_eth_node::EvidenceSyncPlan)>
+pub fn ratspeak_eth_node::EthereumNodeStore::plan_or_resume_evidence_sync(&mut self, ratspeak_eth_node::EvidenceSyncTrigger) -> ratspeak_eth_node::Result<(ratspeak_eth_node::RecordOutcome, ratspeak_eth_node::EvidenceSyncPlan)>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::receipt_by_transaction_hash(&self, u64, [u8; 32]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::StoredReceiptRecord>>
+pub fn ratspeak_eth_node::EthereumNodeStore::record_verified_finalized_receipt(&mut self, &ratspeak_eth_verifier::finalized_receipt::VerifiedFinalizedTxReceipt, &[u8], u64) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+pub fn ratspeak_eth_node::EthereumNodeStore::record_verified_receipt(&mut self, &ratspeak_eth_verifier::receipt::VerifiedTxReceipt, &[u8], u64) -> ratspeak_eth_node::Result<ratspeak_eth_node::RecordOutcome>
+impl ratspeak_eth_node::EthereumNodeStore
+pub fn ratspeak_eth_node::EthereumNodeStore::replay_record(&self, u64, ratspeak_eth_node::EvidenceKind, [u8; 32]) -> ratspeak_eth_node::Result<core::option::Option<ratspeak_eth_node::StoredReplayRecord>>
+pub struct ratspeak_eth_node::EvidenceManifest
+impl ratspeak_eth_node::EvidenceManifest
+pub fn ratspeak_eth_node::EvidenceManifest::digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::EvidenceManifest::encoded_size(&self) -> u32
+pub fn ratspeak_eth_node::EvidenceManifest::kind(&self) -> ratspeak_eth_node::MessagingEvidenceKind
+pub fn ratspeak_eth_node::EvidenceManifest::request_id(&self) -> [u8; 16]
+pub struct ratspeak_eth_node::EvidenceSyncPlan
+impl ratspeak_eth_node::EvidenceSyncPlan
+pub fn ratspeak_eth_node::EvidenceSyncPlan::account_request(&self) -> ratspeak_eth_node::PlannedEvidenceRequest
+pub fn ratspeak_eth_node::EvidenceSyncPlan::generation(&self) -> u64
+pub fn ratspeak_eth_node::EvidenceSyncPlan::receipt_requests(&self) -> &[ratspeak_eth_node::PlannedEvidenceRequest]
+pub fn ratspeak_eth_node::EvidenceSyncPlan::relay_requests(&self) -> &[ratspeak_eth_node::PlannedRelayRequest]
+pub fn ratspeak_eth_node::EvidenceSyncPlan::trigger_id(&self) -> [u8; 16]
+pub struct ratspeak_eth_node::EvidenceSyncTrigger
+impl ratspeak_eth_node::EvidenceSyncTrigger
+pub fn ratspeak_eth_node::EvidenceSyncTrigger::new([u8; 16], u64, [u8; 16], u32, u64, u64) -> Self
+pub struct ratspeak_eth_node::FieldTransferRequest
+impl ratspeak_eth_node::FieldTransferRequest
+pub const fn ratspeak_eth_node::FieldTransferRequest::new(alloy_primitives::bits::address::Address, alloy_primitives::aliases::U256, u128, u128) -> Self
+pub struct ratspeak_eth_node::ManualCheckpointReview<'a>
+impl ratspeak_eth_node::ManualCheckpointReview<'_>
+pub fn ratspeak_eth_node::ManualCheckpointReview<'_>::canonical_bootstrap_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::ManualCheckpointReview<'_>::checkpoint_epoch(&self) -> u64
+pub fn ratspeak_eth_node::ManualCheckpointReview<'_>::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::ManualCheckpointReview<'_>::observed_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::ManualCheckpointReview<'_>::source(&self) -> ratspeak_eth_node::ManualCheckpointSource
+pub fn ratspeak_eth_node::ManualCheckpointReview<'_>::source_fingerprint(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::ManualCheckpointReview<'_>::valid_until_unix(&self) -> u64
+pub struct ratspeak_eth_node::NodeStoreError(_)
+impl<E> core::convert::From<ratspeak_eth_node::NodeStoreError> for ratspeak_eth_node::ManualCheckpointInstallError<E>
+pub fn ratspeak_eth_node::ManualCheckpointInstallError<E>::from(ratspeak_eth_node::NodeStoreError) -> Self
+pub struct ratspeak_eth_node::OutboundEvidenceRequest
+impl ratspeak_eth_node::OutboundEvidenceRequest
+pub fn ratspeak_eth_node::OutboundEvidenceRequest::new([u8; 16], [u8; 16], ratspeak_eth_node::MessagingEvidenceKind, [u8; 32], u32, u64, u64) -> Self
+pub struct ratspeak_eth_node::OutboundMessageBinding
+impl ratspeak_eth_node::OutboundMessageBinding
+pub fn ratspeak_eth_node::OutboundMessageBinding::new([u8; 16], [u8; 16], u64) -> ratspeak_eth_node::Result<Self>
+impl core::fmt::Debug for ratspeak_eth_node::OutboundMessageBinding
+pub fn ratspeak_eth_node::OutboundMessageBinding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_node::OutboundMessageLease
+impl ratspeak_eth_node::OutboundMessageLease
+pub fn ratspeak_eth_node::OutboundMessageLease::attachment(&self) -> &[u8]
+pub fn ratspeak_eth_node::OutboundMessageLease::destination_hash(&self) -> [u8; 16]
+pub fn ratspeak_eth_node::OutboundMessageLease::kind(&self) -> ratspeak_eth_node::OutboundMessageKind
+pub fn ratspeak_eth_node::OutboundMessageLease::request_id(&self) -> [u8; 16]
+pub fn ratspeak_eth_node::OutboundMessageLease::source_hash(&self) -> [u8; 16]
+impl core::fmt::Debug for ratspeak_eth_node::OutboundMessageLease
+pub fn ratspeak_eth_node::OutboundMessageLease::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_node::PendingBulkEvidenceReview
+impl ratspeak_eth_node::PendingBulkEvidenceReview
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::binding_digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::checkpoint_epoch(&self) -> core::option::Option<u64>
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::checkpoint_root(&self) -> core::option::Option<[u8; 32]>
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::encoded_size(&self) -> u32
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::expected_gateway_source_hash(&self) -> [u8; 16]
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::expires_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::kind(&self) -> ratspeak_eth_node::MessagingEvidenceKind
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::manifest_digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::request_id(&self) -> [u8; 16]
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::subject(&self) -> [u8; 32]
+impl core::fmt::Debug for ratspeak_eth_node::PendingBulkEvidenceReview
+pub fn ratspeak_eth_node::PendingBulkEvidenceReview::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_node::PendingManualCheckpointReview
+impl ratspeak_eth_node::PendingManualCheckpointReview
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::canonical_bootstrap_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::checkpoint_epoch(&self) -> u64
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::expires_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::observed_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::source(&self) -> ratspeak_eth_node::ManualCheckpointSource
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::source_fingerprint(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::valid_until_unix(&self) -> u64
+impl core::fmt::Debug for ratspeak_eth_node::PendingManualCheckpointReview
+pub fn ratspeak_eth_node::PendingManualCheckpointReview::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_node::PendingMessageEvidence
+impl ratspeak_eth_node::PendingMessageEvidence
+pub fn ratspeak_eth_node::PendingMessageEvidence::bytes(&self) -> &[u8]
+pub fn ratspeak_eth_node::PendingMessageEvidence::digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::PendingMessageEvidence::kind(&self) -> ratspeak_eth_node::MessagingEvidenceKind
+pub fn ratspeak_eth_node::PendingMessageEvidence::received_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::PendingMessageEvidence::request_id(&self) -> [u8; 16]
+pub fn ratspeak_eth_node::PendingMessageEvidence::subject(&self) -> [u8; 32]
+pub struct ratspeak_eth_node::PlannedEvidenceRequest
+impl ratspeak_eth_node::PlannedEvidenceRequest
+pub fn ratspeak_eth_node::PlannedEvidenceRequest::kind(&self) -> ratspeak_eth_node::MessagingEvidenceKind
+pub fn ratspeak_eth_node::PlannedEvidenceRequest::request_id(&self) -> [u8; 16]
+pub fn ratspeak_eth_node::PlannedEvidenceRequest::subject(&self) -> [u8; 32]
+pub struct ratspeak_eth_node::PlannedRelayRequest
+impl ratspeak_eth_node::PlannedRelayRequest
+pub fn ratspeak_eth_node::PlannedRelayRequest::request_id(self) -> [u8; 16]
+pub fn ratspeak_eth_node::PlannedRelayRequest::tx_hash(self) -> [u8; 32]
+pub struct ratspeak_eth_node::PreparedFieldTransfer
+impl ratspeak_eth_node::PreparedFieldTransfer
+pub fn ratspeak_eth_node::PreparedFieldTransfer::canonical_signing_bytes(&self) -> &[u8]
+pub const fn ratspeak_eth_node::PreparedFieldTransfer::operation_id(&self) -> ratspeak_eth_wallet::OperationId
+pub const fn ratspeak_eth_node::PreparedFieldTransfer::review(&self) -> &ratspeak_eth_wallet::TransferReview
+impl core::fmt::Debug for ratspeak_eth_node::PreparedFieldTransfer
+pub fn ratspeak_eth_node::PreparedFieldTransfer::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_node::StoredAccountRecord
+impl ratspeak_eth_node::StoredAccountRecord
+pub fn ratspeak_eth_node::StoredAccountRecord::address(&self) -> [u8; 20]
+pub fn ratspeak_eth_node::StoredAccountRecord::balance(&self) -> alloy_primitives::aliases::U256
+pub fn ratspeak_eth_node::StoredAccountRecord::block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredAccountRecord::block_number(&self) -> u64
+pub fn ratspeak_eth_node::StoredAccountRecord::canonical_bundle(&self) -> core::option::Option<&[u8]>
+pub fn ratspeak_eth_node::StoredAccountRecord::chain_id(&self) -> u64
+pub fn ratspeak_eth_node::StoredAccountRecord::code_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredAccountRecord::network(&self) -> &str
+pub fn ratspeak_eth_node::StoredAccountRecord::nonce(&self) -> u64
+pub fn ratspeak_eth_node::StoredAccountRecord::proof_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredAccountRecord::state_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredAccountRecord::storage_root(&self) -> [u8; 32]
+pub struct ratspeak_eth_node::StoredAssuranceEvent
+impl ratspeak_eth_node::StoredAssuranceEvent
+pub fn ratspeak_eth_node::StoredAssuranceEvent::chain_id(&self) -> u64
+pub fn ratspeak_eth_node::StoredAssuranceEvent::event_kind(&self) -> ratspeak_eth_node::AssuranceEventKind
+pub fn ratspeak_eth_node::StoredAssuranceEvent::evidence_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredAssuranceEvent::network(&self) -> &str
+pub fn ratspeak_eth_node::StoredAssuranceEvent::observed_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::StoredAssuranceEvent::subject_key(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredAssuranceEvent::subject_kind(&self) -> ratspeak_eth_node::AssuranceSubjectKind
+pub struct ratspeak_eth_node::StoredCheckpointApproval
+impl ratspeak_eth_node::StoredCheckpointApproval
+pub fn ratspeak_eth_node::StoredCheckpointApproval::approval_basis(&self) -> ratspeak_eth_node::CheckpointApprovalBasis
+pub fn ratspeak_eth_node::StoredCheckpointApproval::approved_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::StoredCheckpointApproval::attestations(&self) -> &[ratspeak_eth_node::CheckpointSourceAttestation]
+pub fn ratspeak_eth_node::StoredCheckpointApproval::chain_id(&self) -> u64
+pub fn ratspeak_eth_node::StoredCheckpointApproval::checkpoint_epoch(&self) -> u64
+pub fn ratspeak_eth_node::StoredCheckpointApproval::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredCheckpointApproval::network(&self) -> &str
+pub fn ratspeak_eth_node::StoredCheckpointApproval::valid_until_unix(&self) -> u64
+pub struct ratspeak_eth_node::StoredExecutionBlock
+impl ratspeak_eth_node::StoredExecutionBlock
+pub fn ratspeak_eth_node::StoredExecutionBlock::canonical_bundle(&self) -> &[u8]
+pub fn ratspeak_eth_node::StoredExecutionBlock::chain_id(&self) -> u64
+pub fn ratspeak_eth_node::StoredExecutionBlock::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredExecutionBlock::consensus_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredExecutionBlock::execution_block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredExecutionBlock::execution_block_number(&self) -> u64
+pub fn ratspeak_eth_node::StoredExecutionBlock::network(&self) -> &str
+pub fn ratspeak_eth_node::StoredExecutionBlock::proof_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredExecutionBlock::provenance(&self) -> ratspeak_eth_verifier::consensus::ExecutionHeaderProvenance
+pub fn ratspeak_eth_node::StoredExecutionBlock::receipts_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredExecutionBlock::state_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredExecutionBlock::transactions_root(&self) -> [u8; 32]
+pub struct ratspeak_eth_node::StoredFinalizedHeader
+impl ratspeak_eth_node::StoredFinalizedHeader
+pub fn ratspeak_eth_node::StoredFinalizedHeader::beacon_transactions_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredFinalizedHeader::canonical_bundle(&self) -> &[u8]
+pub fn ratspeak_eth_node::StoredFinalizedHeader::chain_id(&self) -> u64
+pub fn ratspeak_eth_node::StoredFinalizedHeader::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredFinalizedHeader::execution_block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredFinalizedHeader::execution_block_number(&self) -> u64
+pub fn ratspeak_eth_node::StoredFinalizedHeader::finalized_slot(&self) -> u64
+pub fn ratspeak_eth_node::StoredFinalizedHeader::network(&self) -> &str
+pub fn ratspeak_eth_node::StoredFinalizedHeader::proof_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredFinalizedHeader::provenance(&self) -> ratspeak_eth_verifier::consensus::ExecutionHeaderProvenance
+pub fn ratspeak_eth_node::StoredFinalizedHeader::receipts_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredFinalizedHeader::state_root(&self) -> [u8; 32]
+pub struct ratspeak_eth_node::StoredReceiptRecord
+impl ratspeak_eth_node::StoredReceiptRecord
+pub fn ratspeak_eth_node::StoredReceiptRecord::block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredReceiptRecord::block_number(&self) -> u64
+pub fn ratspeak_eth_node::StoredReceiptRecord::canonical_bundle(&self) -> &[u8]
+pub fn ratspeak_eth_node::StoredReceiptRecord::chain_id(&self) -> u64
+pub fn ratspeak_eth_node::StoredReceiptRecord::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredReceiptRecord::consensus_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredReceiptRecord::cumulative_gas_used(&self) -> u64
+pub fn ratspeak_eth_node::StoredReceiptRecord::execution_header_proof_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredReceiptRecord::logs_count(&self) -> u64
+pub fn ratspeak_eth_node::StoredReceiptRecord::network(&self) -> &str
+pub fn ratspeak_eth_node::StoredReceiptRecord::proof_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredReceiptRecord::provenance(&self) -> ratspeak_eth_verifier::consensus::ExecutionHeaderProvenance
+pub fn ratspeak_eth_node::StoredReceiptRecord::succeeded(&self) -> bool
+pub fn ratspeak_eth_node::StoredReceiptRecord::tx_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredReceiptRecord::tx_index(&self) -> u64
+pub fn ratspeak_eth_node::StoredReceiptRecord::verified_at_unix(&self) -> u64
+pub struct ratspeak_eth_node::StoredReplayRecord
+impl ratspeak_eth_node::StoredReplayRecord
+pub fn ratspeak_eth_node::StoredReplayRecord::chain_id(&self) -> u64
+pub fn ratspeak_eth_node::StoredReplayRecord::evidence_kind(&self) -> ratspeak_eth_node::EvidenceKind
+pub fn ratspeak_eth_node::StoredReplayRecord::network(&self) -> &str
+pub fn ratspeak_eth_node::StoredReplayRecord::replay_key(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredReplayRecord::subject_key(&self) -> [u8; 32]
+pub struct ratspeak_eth_node::StoredSignedTransaction
+impl ratspeak_eth_node::StoredSignedTransaction
+pub fn ratspeak_eth_node::StoredSignedTransaction::chain_id(&self) -> u64
+pub fn ratspeak_eth_node::StoredSignedTransaction::intent_review_digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredSignedTransaction::network(&self) -> &str
+pub fn ratspeak_eth_node::StoredSignedTransaction::nonce(&self) -> u64
+pub fn ratspeak_eth_node::StoredSignedTransaction::raw_transaction(&self) -> &[u8]
+pub fn ratspeak_eth_node::StoredSignedTransaction::sender(&self) -> [u8; 20]
+pub fn ratspeak_eth_node::StoredSignedTransaction::signed_at_unix(&self) -> u64
+pub fn ratspeak_eth_node::StoredSignedTransaction::signing_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_node::StoredSignedTransaction::tx_hash(&self) -> [u8; 32]
+pub const ratspeak_eth_node::ETHEREUM_STORE_DIRECTORY: &str
+pub const ratspeak_eth_node::ETHEREUM_STORE_FILENAME: &str
+pub const ratspeak_eth_node::MAX_PENDING_BULK_EVIDENCE_REVIEWS: usize
+pub const ratspeak_eth_node::MAX_SYNC_TRANSACTIONS_PER_PLAN: usize
+pub trait ratspeak_eth_node::FieldNodeClock
+pub fn ratspeak_eth_node::FieldNodeClock::now_unix(&mut self) -> u64
+pub trait ratspeak_eth_node::NativeCheckpointApproval
+pub type ratspeak_eth_node::NativeCheckpointApproval::Error
+pub fn ratspeak_eth_node::NativeCheckpointApproval::review_and_approve(&mut self, &ratspeak_eth_node::ManualCheckpointReview<'_>) -> core::result::Result<bool, Self::Error>
+pub trait ratspeak_eth_node::PlatformTransferCustody
+pub type ratspeak_eth_node::PlatformTransferCustody::Error
+pub fn ratspeak_eth_node::PlatformTransferCustody::authorize_and_sign(&mut self, ratspeak_eth_wallet::PreparedTransfer) -> core::result::Result<ratspeak_eth_wallet::SignedTransfer, Self::Error>
+pub type ratspeak_eth_node::Result<T> = core::result::Result<T, ratspeak_eth_node::NodeStoreError>

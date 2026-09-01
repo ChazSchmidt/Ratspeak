@@ -1,0 +1,22 @@
+[package]
+name = "ratspeak-eth-wallet"
+description = "Platform-neutral Ethereum wallet policy and transaction signing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+alloy-consensus = { version = "=1.0.42", default-features = false, features = ["std", "k256"] }
+alloy-eips = { version = "=1.0.42", default-features = false, features = ["std", "k256"] }
+alloy-primitives = { version = "=1.6.0", default-features = false, features = ["std", "k256"] }
+alloy-signer = { version = "=1.0.42", default-features = false }
+alloy-signer-local = { version = "=1.0.42", default-features = false, features = ["mnemonic", "zeroize"] }
+bip39 = { version = "=2.2.2", features = ["rand", "zeroize"] }
+thiserror = { workspace = true }
+zeroize = "1"
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+static_assertions = "1"

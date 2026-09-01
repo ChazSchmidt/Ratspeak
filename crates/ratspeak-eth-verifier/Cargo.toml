@@ -1,0 +1,29 @@
+[package]
+name = "ratspeak-eth-verifier"
+description = "Transport-neutral Ethereum bundle parsing and pinned-checkpoint verification"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+alloy-consensus = { version = "=1.0.42", default-features = false }
+alloy-eip2930 = "=0.2.1"
+alloy-eip7702 = "=0.6.1"
+alloy-eips = { version = "=1.0.42", default-features = false }
+alloy-primitives = "=1.6.0"
+alloy-rlp = "=0.3.15"
+alloy-serde = "=1.0.42"
+alloy-trie = { version = "=0.9.5", features = ["ethereum"] }
+alloy-tx-macros = "=1.0.42"
+flate2 = "1"
+helios-consensus-core = { git = "https://github.com/a16z/helios.git", rev = "204c998a927348e1c000a664f08d5b37b1b0d924", package = "helios-consensus-core" }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["raw_value"] }
+sha2 = "0.10"
+ssz = { package = "ethereum_ssz", version = "0.9.1" }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+base64 = "0.22"

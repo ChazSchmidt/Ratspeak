@@ -11,6 +11,15 @@
         "default": [
           "lxst-voice"
         ],
+        "experimental-ethereum": [
+          "dep:alloy-primitives",
+          "dep:gtk",
+          "dep:ratspeak-eth-node",
+          "dep:ratspeak-eth-wallet",
+          "dep:ratspeak-eth-wallet-linux",
+          "dep:rns-identity",
+          "dep:rustix"
+        ],
         "lxst-voice": [
           "ratspeak-tauri/lxst-voice"
         ]
@@ -33,6 +42,17 @@
       ],
       "dependencies": [
         {
+          "name": "alloy-primitives",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.6.0",
+          "optional": true,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
           "name": "base64",
           "rename": null,
           "kind": null,
@@ -42,6 +62,39 @@
           "defaultFeatures": true,
           "features": [],
           "sourceKind": "registry"
+        },
+        {
+          "name": "ratspeak-eth-node",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.31",
+          "optional": true,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "ratspeak-eth-wallet",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.31",
+          "optional": true,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "rns-identity",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": true,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
         },
         {
           "name": "serde",
@@ -176,6 +229,20 @@
           "sourceKind": "registry"
         },
         {
+          "name": "rustix",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(any(target_os = \"android\", target_os = \"ios\", target_os = \"linux\", target_os = \"macos\"))",
+          "requirement": "=1.1.4",
+          "optional": true,
+          "defaultFeatures": true,
+          "features": [
+            "fs",
+            "process"
+          ],
+          "sourceKind": "registry"
+        },
+        {
           "name": "dirs",
           "rename": null,
           "kind": null,
@@ -244,6 +311,17 @@
           "kind": null,
           "target": "cfg(target_os = \"android\")",
           "requirement": "^0.11",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "getrandom",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"android\")",
+          "requirement": "=0.3.4",
           "optional": false,
           "defaultFeatures": true,
           "features": [],
@@ -332,6 +410,28 @@
           "defaultFeatures": true,
           "features": [],
           "sourceKind": "registry"
+        },
+        {
+          "name": "gtk",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=0.18.2",
+          "optional": true,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "ratspeak-eth-wallet-linux",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=1.0.31",
+          "optional": true,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
         },
         {
           "name": "block2",
@@ -587,6 +687,1023 @@
           "kind": null,
           "target": null,
           "requirement": "^0.1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        }
+      ]
+    },
+    {
+      "name": "ratspeak-eth-gateway",
+      "version": "1.0.31",
+      "rustVersion": "1.87",
+      "edition": "2024",
+      "features": {},
+      "targets": [
+        {
+          "name": "ratspeak_eth_gateway",
+          "kind": [
+            "lib"
+          ],
+          "crateTypes": [
+            "lib"
+          ],
+          "requiredFeatures": []
+        }
+      ],
+      "dependencies": [
+        {
+          "name": "alloy-consensus",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "k256"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-eips",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-primitives",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.6.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-rlp",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.3.15",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-rpc-types-eth",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "serde",
+            "std"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-trie",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.9.5",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "ethereum"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "lxmf-core",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "ratspeak-eth-verifier",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.0.31",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "reqwest",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.13.4",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "blocking",
+            "rustls-no-provider"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "rmpv",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "rns-crypto",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "rusqlite",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.32",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "bundled"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "rustls",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.23.37",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "ring",
+            "std",
+            "tls12"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "serde",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "derive"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "serde_json",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "sha2",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.10",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "thiserror",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "url",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        }
+      ]
+    },
+    {
+      "name": "ratspeak-eth-gateway-daemon",
+      "version": "1.0.31",
+      "rustVersion": "1.87",
+      "edition": "2024",
+      "features": {},
+      "targets": [
+        {
+          "name": "ratspeak_eth_gateway_daemon",
+          "kind": [
+            "lib"
+          ],
+          "crateTypes": [
+            "lib"
+          ],
+          "requiredFeatures": []
+        }
+      ],
+      "dependencies": [
+        {
+          "name": "base64",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.22",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "hex",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.4",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "libc",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "lxmf-core",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "ratspeak-eth-gateway",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.0.31",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "ratspeak-eth-verifier",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.0.31",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "rns-crypto",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "rns-identity",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "rns-link",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "rns-runtime",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "rns-transport",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.2.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "serde",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "derive"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "serde_json",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "thiserror",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "tokio",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "full"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "zeroize",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        }
+      ]
+    },
+    {
+      "name": "ratspeak-eth-node",
+      "version": "1.0.31",
+      "rustVersion": "1.87",
+      "edition": "2024",
+      "features": {},
+      "targets": [
+        {
+          "name": "ratspeak_eth_node",
+          "kind": [
+            "lib"
+          ],
+          "crateTypes": [
+            "lib"
+          ],
+          "requiredFeatures": []
+        }
+      ],
+      "dependencies": [
+        {
+          "name": "alloy-consensus",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "k256"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-eips",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-primitives",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.6.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-rlp",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.3.15",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "ratspeak-eth-verifier",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.0.31",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "ratspeak-eth-wallet",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1.0.31",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "rusqlite",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.32",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "bundled"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "sha2",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.10",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "thiserror",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        }
+      ]
+    },
+    {
+      "name": "ratspeak-eth-verifier",
+      "version": "1.0.31",
+      "rustVersion": "1.87",
+      "edition": "2024",
+      "features": {},
+      "targets": [
+        {
+          "name": "ratspeak_eth_verifier",
+          "kind": [
+            "lib"
+          ],
+          "crateTypes": [
+            "lib"
+          ],
+          "requiredFeatures": []
+        }
+      ],
+      "dependencies": [
+        {
+          "name": "alloy-consensus",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-eip2930",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.2.1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-eip7702",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.6.1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-eips",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-primitives",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.6.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-rlp",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.3.15",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-serde",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-trie",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=0.9.5",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "ethereum"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-tx-macros",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "flate2",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "serde",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "derive"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "serde_json",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "raw_value"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "sha2",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^0.10",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "thiserror",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "helios-consensus-core",
+          "rename": "helios-consensus-core",
+          "kind": null,
+          "target": null,
+          "requirement": "*",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "ethereum_ssz",
+          "rename": "ssz",
+          "kind": null,
+          "target": null,
+          "requirement": "^0.9.1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        }
+      ]
+    },
+    {
+      "name": "ratspeak-eth-wallet",
+      "version": "1.0.31",
+      "rustVersion": "1.87",
+      "edition": "2024",
+      "features": {},
+      "targets": [
+        {
+          "name": "ratspeak_eth_wallet",
+          "kind": [
+            "lib"
+          ],
+          "crateTypes": [
+            "lib"
+          ],
+          "requiredFeatures": []
+        }
+      ],
+      "dependencies": [
+        {
+          "name": "alloy-consensus",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "k256",
+            "std"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-eips",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "k256",
+            "std"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-primitives",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.6.0",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "k256",
+            "std"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-signer",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "alloy-signer-local",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=1.0.42",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "mnemonic",
+            "zeroize"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "bip39",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "=2.2.2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "rand",
+            "zeroize"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "thiserror",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "zeroize",
+          "rename": null,
+          "kind": null,
+          "target": null,
+          "requirement": "^1",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        }
+      ]
+    },
+    {
+      "name": "ratspeak-eth-wallet-linux",
+      "version": "1.0.31",
+      "rustVersion": "1.87",
+      "edition": "2024",
+      "features": {},
+      "targets": [
+        {
+          "name": "ratspeak_eth_wallet_linux",
+          "kind": [
+            "lib"
+          ],
+          "crateTypes": [
+            "lib"
+          ],
+          "requiredFeatures": []
+        }
+      ],
+      "dependencies": [
+        {
+          "name": "alloy-primitives",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=1.6.0",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "argon2",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=0.5.3",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "alloc",
+            "zeroize"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "gtk",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=0.18.2",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "ratspeak-eth-wallet",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=1.0.31",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "path"
+        },
+        {
+          "name": "ring",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=0.17.14",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "rustix",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=1.1.4",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [
+            "fs",
+            "process"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "secret-service",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=5.1.0",
+          "optional": false,
+          "defaultFeatures": false,
+          "features": [
+            "rt-async-io-crypto-rust"
+          ],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "thiserror",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=2.0.19",
+          "optional": false,
+          "defaultFeatures": true,
+          "features": [],
+          "sourceKind": "registry"
+        },
+        {
+          "name": "zeroize",
+          "rename": null,
+          "kind": null,
+          "target": "cfg(target_os = \"linux\")",
+          "requirement": "=1.9.0",
           "optional": false,
           "defaultFeatures": true,
           "features": [],

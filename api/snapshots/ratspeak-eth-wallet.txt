@@ -1,0 +1,101 @@
+pub mod ratspeak_eth_wallet
+pub enum ratspeak_eth_wallet::WalletError
+pub ratspeak_eth_wallet::WalletError::AuthorizationRejected
+pub ratspeak_eth_wallet::WalletError::Derivation
+pub ratspeak_eth_wallet::WalletError::EmptyReviewContext
+pub ratspeak_eth_wallet::WalletError::Expired
+pub ratspeak_eth_wallet::WalletError::ExpiryTooFar
+pub ratspeak_eth_wallet::WalletError::InvalidExpiry
+pub ratspeak_eth_wallet::WalletError::InvalidMnemonic
+pub ratspeak_eth_wallet::WalletError::InvalidOperationId
+pub ratspeak_eth_wallet::WalletError::InvalidSignedTransaction
+pub ratspeak_eth_wallet::WalletError::MaximumCostOverflow
+pub ratspeak_eth_wallet::WalletError::NotYetValid
+pub ratspeak_eth_wallet::WalletError::OversizedReviewContext
+pub ratspeak_eth_wallet::WalletError::PreparedTransferChanged
+pub ratspeak_eth_wallet::WalletError::PriorityFeeExceedsMaximum
+pub ratspeak_eth_wallet::WalletError::Recovery
+pub ratspeak_eth_wallet::WalletError::RecoveryPhraseTooLong
+pub ratspeak_eth_wallet::WalletError::SenderMismatch
+pub ratspeak_eth_wallet::WalletError::SignedFieldMismatch(&'static str)
+pub ratspeak_eth_wallet::WalletError::Signing
+pub ratspeak_eth_wallet::WalletError::UnsupportedChain(u64)
+pub ratspeak_eth_wallet::WalletError::WrongSigner
+pub ratspeak_eth_wallet::WalletError::ZeroMaximumFee
+pub ratspeak_eth_wallet::WalletError::ZeroValue
+pub struct ratspeak_eth_wallet::CancelledTransfer
+impl ratspeak_eth_wallet::CancelledTransfer
+pub const fn ratspeak_eth_wallet::CancelledTransfer::operation_id(&self) -> ratspeak_eth_wallet::OperationId
+pub const fn ratspeak_eth_wallet::CancelledTransfer::review_digest(&self) -> alloy_primitives::aliases::B256
+pub struct ratspeak_eth_wallet::OperationId(_)
+impl ratspeak_eth_wallet::OperationId
+pub const fn ratspeak_eth_wallet::OperationId::as_bytes(&self) -> &[u8; 16]
+pub fn ratspeak_eth_wallet::OperationId::new([u8; 16]) -> ratspeak_eth_wallet::Result<Self>
+pub struct ratspeak_eth_wallet::PreparedTransfer
+impl ratspeak_eth_wallet::PreparedTransfer
+pub fn ratspeak_eth_wallet::PreparedTransfer::authorize_and_sign<A: ratspeak_eth_wallet::TransferAuthorizer>(self, &ratspeak_eth_wallet::WalletSecret, &mut A, u64) -> ratspeak_eth_wallet::Result<ratspeak_eth_wallet::SignedTransfer>
+pub fn ratspeak_eth_wallet::PreparedTransfer::cancel(self) -> ratspeak_eth_wallet::CancelledTransfer
+pub fn ratspeak_eth_wallet::PreparedTransfer::canonical_signing_bytes(&self) -> &[u8]
+pub const fn ratspeak_eth_wallet::PreparedTransfer::review(&self) -> &ratspeak_eth_wallet::TransferReview
+impl core::fmt::Debug for ratspeak_eth_wallet::PreparedTransfer
+pub fn ratspeak_eth_wallet::PreparedTransfer::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_wallet::ReviewContext
+impl ratspeak_eth_wallet::ReviewContext
+pub const fn ratspeak_eth_wallet::ReviewContext::digest(&self) -> alloy_primitives::aliases::B256
+pub fn ratspeak_eth_wallet::ReviewContext::from_canonical_bytes(&[u8]) -> ratspeak_eth_wallet::Result<Self>
+pub struct ratspeak_eth_wallet::SignedTransfer
+impl ratspeak_eth_wallet::SignedTransfer
+pub fn ratspeak_eth_wallet::SignedTransfer::raw_transaction(&self) -> &[u8]
+pub const fn ratspeak_eth_wallet::SignedTransfer::review(&self) -> &ratspeak_eth_wallet::TransferReview
+pub const fn ratspeak_eth_wallet::SignedTransfer::tx_hash(&self) -> alloy_primitives::aliases::B256
+pub struct ratspeak_eth_wallet::TransferIntent
+impl ratspeak_eth_wallet::TransferIntent
+pub const fn ratspeak_eth_wallet::TransferIntent::new(u64, alloy_primitives::bits::address::Address, alloy_primitives::bits::address::Address, alloy_primitives::aliases::U256, u64, u128, u128) -> Self
+pub struct ratspeak_eth_wallet::TransferReview
+impl ratspeak_eth_wallet::TransferReview
+pub const fn ratspeak_eth_wallet::TransferReview::chain_id(&self) -> u64
+pub const fn ratspeak_eth_wallet::TransferReview::expires_at_unix(&self) -> u64
+pub const fn ratspeak_eth_wallet::TransferReview::from(&self) -> alloy_primitives::bits::address::Address
+pub const fn ratspeak_eth_wallet::TransferReview::gas_limit(&self) -> u64
+pub const fn ratspeak_eth_wallet::TransferReview::max_fee_per_gas(&self) -> u128
+pub const fn ratspeak_eth_wallet::TransferReview::max_priority_fee_per_gas(&self) -> u128
+pub const fn ratspeak_eth_wallet::TransferReview::maximum_total_cost(&self) -> alloy_primitives::aliases::U256
+pub const fn ratspeak_eth_wallet::TransferReview::network(&self) -> &'static str
+pub const fn ratspeak_eth_wallet::TransferReview::nonce(&self) -> u64
+pub const fn ratspeak_eth_wallet::TransferReview::operation_id(&self) -> ratspeak_eth_wallet::OperationId
+pub const fn ratspeak_eth_wallet::TransferReview::prepared_at_unix(&self) -> u64
+pub const fn ratspeak_eth_wallet::TransferReview::review_context(&self) -> ratspeak_eth_wallet::ReviewContext
+pub const fn ratspeak_eth_wallet::TransferReview::review_digest(&self) -> alloy_primitives::aliases::B256
+pub const fn ratspeak_eth_wallet::TransferReview::signing_hash(&self) -> alloy_primitives::aliases::B256
+pub const fn ratspeak_eth_wallet::TransferReview::to(&self) -> alloy_primitives::bits::address::Address
+pub const fn ratspeak_eth_wallet::TransferReview::value(&self) -> alloy_primitives::aliases::U256
+pub struct ratspeak_eth_wallet::WalletAccount
+impl ratspeak_eth_wallet::WalletAccount
+pub const fn ratspeak_eth_wallet::WalletAccount::address(&self) -> alloy_primitives::bits::address::Address
+pub const fn ratspeak_eth_wallet::WalletAccount::chain_id(&self) -> u64
+pub const fn ratspeak_eth_wallet::WalletAccount::derivation_path(&self) -> &'static str
+pub const fn ratspeak_eth_wallet::WalletAccount::network(&self) -> &'static str
+pub fn ratspeak_eth_wallet::WalletAccount::prepare_transfer(&self, ratspeak_eth_wallet::TransferIntent, ratspeak_eth_wallet::OperationId, ratspeak_eth_wallet::ReviewContext, u64, u64) -> ratspeak_eth_wallet::Result<ratspeak_eth_wallet::PreparedTransfer>
+pub const fn ratspeak_eth_wallet::WalletAccount::sepolia(alloy_primitives::bits::address::Address) -> Self
+pub struct ratspeak_eth_wallet::WalletSecret
+impl ratspeak_eth_wallet::WalletSecret
+pub fn ratspeak_eth_wallet::WalletSecret::account(&self) -> ratspeak_eth_wallet::Result<ratspeak_eth_wallet::WalletAccount>
+pub fn ratspeak_eth_wallet::WalletSecret::generate() -> ratspeak_eth_wallet::Result<Self>
+pub fn ratspeak_eth_wallet::WalletSecret::import_recovery_phrase(&str) -> ratspeak_eth_wallet::Result<Self>
+pub fn ratspeak_eth_wallet::WalletSecret::with_recovery_phrase<T>(&self, impl core::ops::function::FnOnce(&str) -> T) -> T
+pub fn ratspeak_eth_wallet::WalletSecret::word_count(&self) -> usize
+impl core::fmt::Debug for ratspeak_eth_wallet::WalletSecret
+pub fn ratspeak_eth_wallet::WalletSecret::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub const ratspeak_eth_wallet::CUSTODY_SECURITY_BOUNDARY: &str
+pub const ratspeak_eth_wallet::DEFAULT_DERIVATION_PATH: &str
+pub const ratspeak_eth_wallet::GENERATED_MNEMONIC_WORDS: usize
+pub const ratspeak_eth_wallet::MAX_PREPARED_LIFETIME_SECONDS: u64
+pub const ratspeak_eth_wallet::MAX_RECOVERY_PHRASE_BYTES: usize
+pub const ratspeak_eth_wallet::MAX_REVIEW_CONTEXT_BYTES: usize
+pub const ratspeak_eth_wallet::NATIVE_TRANSFER_GAS_LIMIT: u64
+pub const ratspeak_eth_wallet::SEPOLIA_CHAIN_ID: u64
+pub const ratspeak_eth_wallet::SEPOLIA_NETWORK: &str
+pub trait ratspeak_eth_wallet::TransferAuthorizer
+pub type ratspeak_eth_wallet::TransferAuthorizer::Error
+pub fn ratspeak_eth_wallet::TransferAuthorizer::authorize_transfer(&mut self, &ratspeak_eth_wallet::TransferReview) -> core::result::Result<(), Self::Error>
+pub type ratspeak_eth_wallet::Result<T> = core::result::Result<T, ratspeak_eth_wallet::WalletError>

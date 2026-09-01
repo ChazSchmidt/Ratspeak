@@ -47,6 +47,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebViewCompat
+import org.ratspeak.android.ethereum.EthereumCheckpointFileImportLauncher
+import org.ratspeak.android.ethereum.EthereumGatewayCardFileImportLauncher
+import org.ratspeak.android.ethereum.EthereumNativeWalletBridge
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -164,6 +167,26 @@ class MainActivity : TauriActivity() {
             handleGenericFileDocumentResult(result.resultCode, result.data)
         }
 
+    /** Registered with the ActivityResult API before any native picker launch. */
+    private val ethereumCheckpointFileDocumentLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            EthereumNativeWalletBridge.handleCheckpointFileResult(
+                this,
+                result.resultCode,
+                result.data,
+            )
+        }
+
+    /** Registered before any native gateway card picker launch. */
+    private val ethereumGatewayCardDocumentLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            EthereumNativeWalletBridge.handleGatewayCardResult(
+                this,
+                result.resultCode,
+                result.data,
+            )
+        }
+
     override fun onWebViewCreate(webView: WebView) {
         super.onWebViewCreate(webView)
         // Incoming call ringtones are app audio, not microphone capture.
@@ -250,6 +273,7 @@ class MainActivity : TauriActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         RatspeakAndroidObservers.attach(this)
+        EthereumNativeWalletBridge.attach(this)
 
         // Check for notification navigation intent
         handleNavigateIntent(intent)
@@ -315,6 +339,7 @@ class MainActivity : TauriActivity() {
 
     override fun onResume() {
         super.onResume()
+        EthereumNativeWalletBridge.resumed(this)
         RatspeakPlatformSupervisor.replay()
         // ACTION_REFRESH clears per-sender notifications in RatspeakService
         // and kicks the poll loop so lastKnownUnread is current before the
@@ -323,6 +348,7 @@ class MainActivity : TauriActivity() {
     }
 
     override fun onPause() {
+        EthereumNativeWalletBridge.paused(this)
         super.onPause()
         refreshServicePoll()
     }
@@ -338,6 +364,18 @@ class MainActivity : TauriActivity() {
             // to skip; the service will do its first poll as soon as it's up.
         }
     }
+
+    /** Native-only checkpoint import; the WebView supplies neither URI nor bytes. */
+    internal fun launchEthereumCheckpointFileImport(token: String): Boolean =
+        EthereumCheckpointFileImportLauncher.launch(token) { intent ->
+            ethereumCheckpointFileDocumentLauncher.launch(intent)
+        }
+
+    /** Native-only gateway card import; WebView receives no URI or bytes. */
+    internal fun launchEthereumGatewayCardImport(token: String): Boolean =
+        EthereumGatewayCardFileImportLauncher.launch(token) { intent ->
+            ethereumGatewayCardDocumentLauncher.launch(intent)
+        }
 
     @Suppress("DEPRECATION")
     private fun setTransparentSystemBars() {
@@ -361,6 +399,7 @@ class MainActivity : TauriActivity() {
     }
 
     override fun onDestroy() {
+        EthereumNativeWalletBridge.detach(this)
         RatspeakAndroidObservers.detach(this)
         // Ringtone is UI-owned. Rust-owned call and voice-memo sessions survive
         // Activity recreation and clean up only through their exact tokens.

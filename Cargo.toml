@@ -4,6 +4,12 @@ exclude = ["src-tauri"]
 members = [
     "crates/ratspeak-core",
     "crates/ratspeak-db",
+    "crates/ratspeak-eth-gateway",
+    "crates/ratspeak-eth-gateway-daemon",
+    "crates/ratspeak-eth-node",
+    "crates/ratspeak-eth-verifier",
+    "crates/ratspeak-eth-wallet",
+    "crates/ratspeak-eth-wallet-linux",
     "crates/ratspeak-runtime",
     "crates/ratspeak-tauri",
 ]
@@ -40,6 +46,12 @@ lxst-telephony = { path = "../rsLXST/crates/lxst-telephony", version = "0.2.0" }
 lrgp = { path = "../lrgp-rs", version = "0.4.1" }
 ratspeak-core = { path = "crates/ratspeak-core", version = "1.0.31" }
 ratspeak-db = { path = "crates/ratspeak-db", version = "1.0.31" }
+ratspeak-eth-gateway = { path = "crates/ratspeak-eth-gateway", version = "1.0.31" }
+ratspeak-eth-gateway-daemon = { path = "crates/ratspeak-eth-gateway-daemon", version = "1.0.31" }
+ratspeak-eth-node = { path = "crates/ratspeak-eth-node", version = "1.0.31" }
+ratspeak-eth-verifier = { path = "crates/ratspeak-eth-verifier", version = "1.0.31" }
+ratspeak-eth-wallet = { path = "crates/ratspeak-eth-wallet", version = "1.0.31" }
+ratspeak-eth-wallet-linux = { path = "crates/ratspeak-eth-wallet-linux", version = "1.0.31" }
 ratspeak-runtime = { path = "crates/ratspeak-runtime", version = "1.0.31" }
 ratspeak-tauri = { path = "crates/ratspeak-tauri", version = "1.0.31" }
 

@@ -315,10 +315,9 @@ fn channels_keep_hubs_live_only_and_wire_bounded_local_history_across_the_produc
     assert!(tauri_build.contains(r#""09-channels.css""#));
 
     assert!(nav_js.contains("var MOBILE_TAB_SLOTS = ['peers', 'message', 'channels', 'more'];"));
-    assert!(
-        nav_js
-            .contains("var MORE_VIEWS = ['contacts', 'identity', 'network', 'games', 'settings'];")
-    );
+    assert!(nav_js.contains(
+        "var MORE_VIEWS = ['contacts', 'identity', 'ethereum', 'network', 'games', 'settings'];"
+    ));
     assert!(!nav_js.contains("if (viewId === 'channels') return 'message';"));
     assert!(nav_js.contains("function setMessageUnreadSource"));
     assert!(nav_js.contains("var _messageUnreadSources = { direct: 0, channels: 0 };"));
@@ -6960,9 +6959,9 @@ fn mobile_contacts_tab_keeps_desktop_header_out_of_search_flow() {
 fn mobile_tab_swipe_uses_bottom_bar_slots_without_view_slide_animation() {
     let nav = read_source(repo_root().join("dashboard/static/js/nav.js")).expect("nav js");
     assert!(nav.contains("var MOBILE_TAB_SLOTS = ['peers', 'message', 'channels', 'more'];"));
-    assert!(
-        nav.contains("var MORE_VIEWS = ['contacts', 'identity', 'network', 'games', 'settings'];")
-    );
+    assert!(nav.contains(
+        "var MORE_VIEWS = ['contacts', 'identity', 'ethereum', 'network', 'games', 'settings'];"
+    ));
     assert!(nav.contains("function _mobileTabSlot(viewId)"));
     assert!(nav.contains("function _viewForMobileTabSlot(slot)"));
     assert!(nav.contains("function blockMobileNavigation(ms)"));
@@ -8590,7 +8589,7 @@ fn propagated_send_paths_run_relay_readiness_preflight() {
     assert!(messaging.contains("destination_identity_known(state, dest_hash)"));
     assert!(messaging.contains("Recipient identity key is not known yet"));
     assert!(shared.contains("hydrate_contact_identity_for_send"));
-    assert!(shared.contains("db::get_contact(&p, &dest_for_db, &identity_id)"));
+    assert!(shared.contains("db::get_contact(&state.db, &dest_hash, identity_id)"));
     assert!(shared.contains("mgr.update_remote_crypto(&dest_hash, &public_key, None)"));
     assert!(
         announce_handlers

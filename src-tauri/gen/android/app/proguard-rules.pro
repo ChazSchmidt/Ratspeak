@@ -30,6 +30,11 @@
 -keep class org.ratspeak.android.RatspeakCallAudio { *; }
 -keep class org.ratspeak.android.RatspeakVoiceMemoAudio { *; }
 
+# Experimental Ethereum native-only bridge. Rust resolves these exact class
+# and member names; none of them are JavaScript interfaces.
+-keep class org.ratspeak.android.ethereum.EthereumNativeWalletBridge { *; }
+-keep class org.ratspeak.android.ethereum.RustEthereumNativeWalletEngine { *; }
+
 # BLE permission bridge (JavaScript interface)
 -keepclassmembers class org.ratspeak.android.MainActivity$BlePermissionBridge {
     @android.webkit.JavascriptInterface <methods>;

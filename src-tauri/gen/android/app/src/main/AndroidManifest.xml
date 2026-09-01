@@ -14,6 +14,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <!-- BLE permissions (API 31+ / Android 12+) -->
@@ -100,6 +101,48 @@
                 <data android:host="channel" />
             </intent-filter>
         </activity>
+
+        <!-- Native-only experimental wallet ceremony. It is intentionally not
+             exported and receives only a process-memory request token. -->
+        <activity
+            android:name=".ethereum.EthereumWalletNativeActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+
+        <!-- Native-only bulk evidence approval; Intent carries only a
+             process-memory one-shot token and this component is never
+             externally launchable. -->
+        <activity
+            android:name=".ethereum.EthereumBulkEvidenceReviewActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+
+        <!-- Native-only manual checkpoint trust review. The Intent contains
+             only a process-memory one-shot token; it is never externally
+             launchable and has no wallet or biometric dependency. -->
+        <activity
+            android:name=".ethereum.EthereumCheckpointReviewActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+
+        <!-- Native-only RSEG1 gateway pairing review. The Intent contains
+             only a process-memory token and is never externally launchable. -->
+        <activity
+            android:name=".ethereum.EthereumGatewayCardReviewActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
 
         <service
             android:name=".RatspeakService"

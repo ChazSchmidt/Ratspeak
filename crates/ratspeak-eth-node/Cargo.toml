@@ -1,0 +1,25 @@
+[package]
+name = "ratspeak-eth-node"
+description = "Profile-local Ethereum state and field-node lifecycle"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+alloy-consensus = { version = "=1.0.42", default-features = false, features = ["k256"] }
+alloy-eips = { version = "=1.0.42", default-features = false }
+alloy-primitives = "=1.6.0"
+alloy-rlp = "=0.3.15"
+ratspeak-eth-verifier = { workspace = true }
+ratspeak-eth-wallet = { workspace = true }
+rusqlite = { workspace = true }
+sha2 = "0.10"
+thiserror = { workspace = true }
+
+[dev-dependencies]
+alloy-rlp = "=0.3.15"
+alloy-trie = { version = "=0.9.5", features = ["ethereum"] }
+base64 = "0.22"
+tempfile = "3"

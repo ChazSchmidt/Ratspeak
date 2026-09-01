@@ -1,0 +1,141 @@
+pub mod ratspeak_eth_gateway_daemon
+pub mod ratspeak_eth_gateway_daemon::checkpoint_card
+pub struct ratspeak_eth_gateway_daemon::checkpoint_card::CheckpointCardConfig
+pub ratspeak_eth_gateway_daemon::checkpoint_card::CheckpointCardConfig::authorization_path: core::option::Option<std::path::PathBuf>
+pub ratspeak_eth_gateway_daemon::checkpoint_card::CheckpointCardConfig::beacon_rpc_endpoint: alloc::string::String
+pub ratspeak_eth_gateway_daemon::checkpoint_card::CheckpointCardConfig::checkpoint_epoch: u64
+pub ratspeak_eth_gateway_daemon::checkpoint_card::CheckpointCardConfig::checkpoint_root: alloc::string::String
+pub ratspeak_eth_gateway_daemon::checkpoint_card::CheckpointCardConfig::output_path: std::path::PathBuf
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::checkpoint_card::CheckpointCardConfig
+pub fn ratspeak_eth_gateway_daemon::checkpoint_card::CheckpointCardConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn ratspeak_eth_gateway_daemon::checkpoint_card::run(&std::path::Path) -> core::result::Result<(), ratspeak_eth_gateway_daemon::DaemonError>
+pub mod ratspeak_eth_gateway_daemon::propagation
+pub enum ratspeak_eth_gateway_daemon::propagation::DownloadBatchResolution
+pub ratspeak_eth_gateway_daemon::propagation::DownloadBatchResolution::Resolved
+pub ratspeak_eth_gateway_daemon::propagation::DownloadBatchResolution::Retry
+pub struct ratspeak_eth_gateway_daemon::propagation::ConfiguredPropagationClient
+impl ratspeak_eth_gateway_daemon::propagation::ConfiguredPropagationClient
+pub fn ratspeak_eth_gateway_daemon::propagation::ConfiguredPropagationClient::cancel(&mut self)
+pub fn ratspeak_eth_gateway_daemon::propagation::ConfiguredPropagationClient::new(tokio::sync::mpsc::bounded::Sender<rns_transport::messages::TransportMessage>, rns_identity::identity::Identity, [u8; 16], &ratspeak_eth_gateway_daemon::ValidatedPropagationConfig, std::time::Instant) -> core::result::Result<Self, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::propagation::ConfiguredPropagationClient::resolve_batch(&mut self, ratspeak_eth_gateway_daemon::propagation::DownloadBatchResolution, std::time::Instant) -> bool
+pub fn ratspeak_eth_gateway_daemon::propagation::ConfiguredPropagationClient::tick(&mut self, std::time::Instant) -> core::option::Option<alloc::vec::Vec<alloc::vec::Vec<u8>>>
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::propagation::ConfiguredPropagationClient
+pub fn ratspeak_eth_gateway_daemon::propagation::ConfiguredPropagationClient::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub const ratspeak_eth_gateway_daemon::propagation::MAX_PROPAGATED_PLAINTEXT_BYTES: usize
+pub enum ratspeak_eth_gateway_daemon::DaemonError
+pub ratspeak_eth_gateway_daemon::DaemonError::AlreadyRunning
+pub ratspeak_eth_gateway_daemon::DaemonError::IdentityUnavailable
+pub ratspeak_eth_gateway_daemon::DaemonError::InvalidConfiguration
+pub ratspeak_eth_gateway_daemon::DaemonError::InvalidFilesystemBoundary
+pub ratspeak_eth_gateway_daemon::DaemonError::MessageRejected
+pub ratspeak_eth_gateway_daemon::DaemonError::ProviderUnavailable
+pub ratspeak_eth_gateway_daemon::DaemonError::ServiceUnavailable
+pub ratspeak_eth_gateway_daemon::DaemonError::TransportUnavailable
+pub enum ratspeak_eth_gateway_daemon::InboundRoute
+pub ratspeak_eth_gateway_daemon::InboundRoute::Direct
+pub ratspeak_eth_gateway_daemon::InboundRoute::Opportunistic
+pub ratspeak_eth_gateway_daemon::InboundRoute::Propagated
+pub enum ratspeak_eth_gateway_daemon::PropagatedMessageDisposition
+pub ratspeak_eth_gateway_daemon::PropagatedMessageDisposition::Resolved
+pub ratspeak_eth_gateway_daemon::PropagatedMessageDisposition::Retry
+pub enum ratspeak_eth_gateway_daemon::TransportObservation
+pub ratspeak_eth_gateway_daemon::TransportObservation::AcceptedForDelivery
+pub ratspeak_eth_gateway_daemon::TransportObservation::LyingAcknowledgementForTest
+pub ratspeak_eth_gateway_daemon::TransportObservation::Rejected
+pub struct ratspeak_eth_gateway_daemon::DaemonPolicyConfig
+pub ratspeak_eth_gateway_daemon::DaemonPolicyConfig::lease_seconds: u64
+pub ratspeak_eth_gateway_daemon::DaemonPolicyConfig::maximum_outbound_attempts: u8
+pub ratspeak_eth_gateway_daemon::DaemonPolicyConfig::maximum_requested_bytes: u64
+pub ratspeak_eth_gateway_daemon::DaemonPolicyConfig::maximum_requests: u32
+pub ratspeak_eth_gateway_daemon::DaemonPolicyConfig::outbound_retry_delay_ms: u64
+pub ratspeak_eth_gateway_daemon::DaemonPolicyConfig::retry_seconds: u64
+pub ratspeak_eth_gateway_daemon::DaemonPolicyConfig::scheduler_interval_ms: u64
+pub ratspeak_eth_gateway_daemon::DaemonPolicyConfig::window_seconds: u64
+impl core::default::Default for ratspeak_eth_gateway_daemon::DaemonPolicyConfig
+pub fn ratspeak_eth_gateway_daemon::DaemonPolicyConfig::default() -> Self
+pub struct ratspeak_eth_gateway_daemon::GatewayDaemon<P>
+impl<P: ratspeak_eth_gateway::execution::GatewayExecutionProvider> ratspeak_eth_gateway_daemon::GatewayDaemon<P>
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemon<P>::handle_packed<T: ratspeak_eth_gateway_daemon::OutboundLxmfTransport>(&mut self, &[u8], ratspeak_eth_gateway_daemon::InboundRoute, u64, &mut T) -> core::result::Result<usize, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemon<P>::handle_propagated_packed<T: ratspeak_eth_gateway_daemon::OutboundLxmfTransport>(&mut self, &[u8], u64, &mut T) -> ratspeak_eth_gateway_daemon::PropagatedMessageDisposition
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemon<P>::open(&ratspeak_eth_gateway_daemon::GatewayDaemonConfig, &rns_identity::identity::Identity, P) -> core::result::Result<Self, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemon<P>::resume_once<T: ratspeak_eth_gateway_daemon::OutboundLxmfTransport>(&mut self, u64, &mut T) -> core::result::Result<usize, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemon<P>::scheduler_interval(&self) -> core::time::Duration
+impl<P> core::fmt::Debug for ratspeak_eth_gateway_daemon::GatewayDaemon<P>
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemon<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway_daemon::GatewayDaemonConfig
+pub ratspeak_eth_gateway_daemon::GatewayDaemonConfig::durable_gateway_db: std::path::PathBuf
+pub ratspeak_eth_gateway_daemon::GatewayDaemonConfig::instance_lock_path: std::path::PathBuf
+pub ratspeak_eth_gateway_daemon::GatewayDaemonConfig::policy: ratspeak_eth_gateway_daemon::DaemonPolicyConfig
+pub ratspeak_eth_gateway_daemon::GatewayDaemonConfig::propagation: core::option::Option<ratspeak_eth_gateway_daemon::PropagationConfig>
+pub ratspeak_eth_gateway_daemon::GatewayDaemonConfig::provider: ratspeak_eth_gateway_daemon::ProviderConfig
+pub ratspeak_eth_gateway_daemon::GatewayDaemonConfig::requesters: alloc::vec::Vec<ratspeak_eth_gateway_daemon::RequesterConfig>
+pub ratspeak_eth_gateway_daemon::GatewayDaemonConfig::rns_config_dir: std::path::PathBuf
+pub ratspeak_eth_gateway_daemon::GatewayDaemonConfig::service_identity_path: std::path::PathBuf
+impl ratspeak_eth_gateway_daemon::GatewayDaemonConfig
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemonConfig::load(&std::path::Path) -> core::result::Result<Self, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemonConfig::validate(&self) -> core::result::Result<(), ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemonConfig::validated_propagation(&self) -> core::result::Result<core::option::Option<ratspeak_eth_gateway_daemon::ValidatedPropagationConfig>, ratspeak_eth_gateway_daemon::DaemonError>
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::GatewayDaemonConfig
+pub fn ratspeak_eth_gateway_daemon::GatewayDaemonConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway_daemon::InstanceLock(_)
+impl ratspeak_eth_gateway_daemon::InstanceLock
+pub fn ratspeak_eth_gateway_daemon::InstanceLock::acquire(&std::path::Path) -> core::result::Result<Self, ratspeak_eth_gateway_daemon::DaemonError>
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::InstanceLock
+pub fn ratspeak_eth_gateway_daemon::InstanceLock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::ops::drop::Drop for ratspeak_eth_gateway_daemon::InstanceLock
+pub fn ratspeak_eth_gateway_daemon::InstanceLock::drop(&mut self)
+pub struct ratspeak_eth_gateway_daemon::PropagationConfig
+pub ratspeak_eth_gateway_daemon::PropagationConfig::delivery_limit_kb: u32
+pub ratspeak_eth_gateway_daemon::PropagationConfig::maximum_messages_per_poll: usize
+pub ratspeak_eth_gateway_daemon::PropagationConfig::node_destination_hash: alloc::string::String
+pub ratspeak_eth_gateway_daemon::PropagationConfig::node_rns_public_key: alloc::string::String
+pub ratspeak_eth_gateway_daemon::PropagationConfig::node_stamp_cost: u8
+pub ratspeak_eth_gateway_daemon::PropagationConfig::node_transfer_limit_kb: u32
+pub ratspeak_eth_gateway_daemon::PropagationConfig::outbound_fallback: bool
+pub ratspeak_eth_gateway_daemon::PropagationConfig::poll_interval_seconds: u64
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::PropagationConfig
+pub fn ratspeak_eth_gateway_daemon::PropagationConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway_daemon::ProviderConfig
+pub ratspeak_eth_gateway_daemon::ProviderConfig::allow_loopback_http_for_development: bool
+pub ratspeak_eth_gateway_daemon::ProviderConfig::beacon_authorization_path: core::option::Option<std::path::PathBuf>
+pub ratspeak_eth_gateway_daemon::ProviderConfig::beacon_rpc_endpoint: alloc::string::String
+pub ratspeak_eth_gateway_daemon::ProviderConfig::checkpoint_epoch: u64
+pub ratspeak_eth_gateway_daemon::ProviderConfig::checkpoint_root: alloc::string::String
+pub ratspeak_eth_gateway_daemon::ProviderConfig::consensus_floor_path: std::path::PathBuf
+pub ratspeak_eth_gateway_daemon::ProviderConfig::execution_authorization_path: core::option::Option<std::path::PathBuf>
+pub ratspeak_eth_gateway_daemon::ProviderConfig::execution_rpc_endpoint: alloc::string::String
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::ProviderConfig
+pub fn ratspeak_eth_gateway_daemon::ProviderConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway_daemon::RequesterConfig
+pub ratspeak_eth_gateway_daemon::RequesterConfig::contact_card_path: core::option::Option<std::path::PathBuf>
+pub ratspeak_eth_gateway_daemon::RequesterConfig::ed25519_public_key: alloc::string::String
+pub ratspeak_eth_gateway_daemon::RequesterConfig::rns_public_key: core::option::Option<alloc::string::String>
+pub ratspeak_eth_gateway_daemon::RequesterConfig::source_hash: alloc::string::String
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::RequesterConfig
+pub fn ratspeak_eth_gateway_daemon::RequesterConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway_daemon::SealedOutboundLxmf
+impl ratspeak_eth_gateway_daemon::SealedOutboundLxmf
+pub fn ratspeak_eth_gateway_daemon::SealedOutboundLxmf::destination_hash(&self) -> [u8; 16]
+pub fn ratspeak_eth_gateway_daemon::SealedOutboundLxmf::packed_message(&self) -> &[u8]
+pub fn ratspeak_eth_gateway_daemon::SealedOutboundLxmf::propagation_fallback(&self) -> core::option::Option<&ratspeak_eth_gateway_daemon::SealedOutboundLxmf>
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::SealedOutboundLxmf
+pub fn ratspeak_eth_gateway_daemon::SealedOutboundLxmf::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway_daemon::ValidatedPropagationConfig
+pub ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::delivery_limit_kb: u32
+pub ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::maximum_messages_per_poll: usize
+pub ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::node_destination_hash: [u8; 16]
+pub ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::node_rns_public_key: [u8; 64]
+pub ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::node_stamp_cost: u8
+pub ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::node_transfer_limit_kb: u32
+pub ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::outbound_fallback: bool
+pub ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::poll_interval: core::time::Duration
+impl core::fmt::Debug for ratspeak_eth_gateway_daemon::ValidatedPropagationConfig
+pub fn ratspeak_eth_gateway_daemon::ValidatedPropagationConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub trait ratspeak_eth_gateway_daemon::OutboundLxmfTransport
+pub fn ratspeak_eth_gateway_daemon::OutboundLxmfTransport::send(&mut self, ratspeak_eth_gateway_daemon::SealedOutboundLxmf) -> core::result::Result<ratspeak_eth_gateway_daemon::TransportObservation, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::install_private_process_umask()
+pub fn ratspeak_eth_gateway_daemon::load_native_provider(&ratspeak_eth_gateway_daemon::ProviderConfig) -> core::result::Result<ratspeak_eth_gateway_daemon::NativeSepoliaProvider, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::load_or_create_service_identity(&std::path::Path) -> core::result::Result<rns_identity::identity::Identity, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::load_service_identity(&std::path::Path) -> core::result::Result<rns_identity::identity::Identity, ratspeak_eth_gateway_daemon::DaemonError>
+pub fn ratspeak_eth_gateway_daemon::validate_private_directory(&std::path::Path) -> core::result::Result<(), ratspeak_eth_gateway_daemon::DaemonError>
+pub type ratspeak_eth_gateway_daemon::NativeSepoliaProvider = ratspeak_eth_gateway::live_provider::LiveSepoliaGatewayProvider<ratspeak_eth_gateway::beacon::ReqwestBeaconHttpTransport, ratspeak_eth_gateway::provider::ReqwestGatewayHttpTransport, ratspeak_eth_gateway::provider::SystemUnixClock, ratspeak_eth_gateway::receipt_backend::CompleteBlockReceiptProofBackend<ratspeak_eth_gateway::provider::ReqwestGatewayHttpTransport>>

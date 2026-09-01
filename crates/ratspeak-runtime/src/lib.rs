@@ -43,6 +43,7 @@ pub use ratspeak_core::config;
 pub use ratspeak_db as db;
 pub use ratspeak_db::static_nodes;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
@@ -3903,6 +3904,9 @@ async fn execute_announce_burst(
 struct ExtractedAttachment {
     file_name: String,
     stored_name: String,
+    files_dir: Option<PathBuf>,
+    authenticated_size: u64,
+    authenticated_sha256: [u8; 32],
     is_image: bool,
 }
 
@@ -3913,6 +3917,7 @@ fn extract_and_save_attachment(
     if let Ok(Some((file_name, file_data))) = msg.first_file_attachment() {
         if let Ok(mut lxmf) = state.lxmf.lock() {
             if let Some(mgr) = lxmf.as_mut() {
+                let files_dir = mgr.files_dir();
                 let stored = match mgr.save_attachment(&file_name, file_data) {
                     Ok(stored) => stored,
                     Err(error) => {
@@ -3925,6 +3930,9 @@ fn extract_and_save_attachment(
                         return Some(ExtractedAttachment {
                             file_name,
                             stored_name: db::ATTACHMENT_UNAVAILABLE_STORED_NAME.to_string(),
+                            files_dir: None,
+                            authenticated_size: 0,
+                            authenticated_sha256: [0; 32],
                             is_image: false,
                         });
                     }
@@ -3937,6 +3945,9 @@ fn extract_and_save_attachment(
                 return Some(ExtractedAttachment {
                     file_name,
                     stored_name: stored,
+                    files_dir: Some(files_dir),
+                    authenticated_size: file_data.len() as u64,
+                    authenticated_sha256: rns_crypto::sha::sha256(file_data),
                     is_image: false,
                 });
             }
@@ -3948,6 +3959,7 @@ fn extract_and_save_attachment(
         let file_name = format!("image.{ext}");
         if let Ok(mut lxmf) = state.lxmf.lock() {
             if let Some(mgr) = lxmf.as_mut() {
+                let files_dir = mgr.files_dir();
                 let stored = match mgr.save_attachment(&file_name, image_data) {
                     Ok(stored) => stored,
                     Err(error) => {
@@ -3960,6 +3972,9 @@ fn extract_and_save_attachment(
                         return Some(ExtractedAttachment {
                             file_name,
                             stored_name: db::ATTACHMENT_UNAVAILABLE_STORED_NAME.to_string(),
+                            files_dir: None,
+                            authenticated_size: 0,
+                            authenticated_sha256: [0; 32],
                             is_image: true,
                         });
                     }
@@ -3972,6 +3987,9 @@ fn extract_and_save_attachment(
                 return Some(ExtractedAttachment {
                     file_name,
                     stored_name: stored,
+                    files_dir: Some(files_dir),
+                    authenticated_size: image_data.len() as u64,
+                    authenticated_sha256: rns_crypto::sha::sha256(image_data),
                     is_image: true,
                 });
             }
@@ -4099,6 +4117,50 @@ fn remove_inbound_media_after_persistence_failure(
         }
         if let Some(sanitized) = lxmf::sanitize_stored_file_name(stored_name) {
             let _ = std::fs::remove_file(files_dir.join(sanitized));
+        }
+    }
+}
+
+/// Hand a generated attachment reference to an optional feature observer only
+/// after the enclosing generic message row has committed successfully.
+async fn observe_persisted_inbound_attachment(
+    state: &AppState,
+    msg_id: &str,
+    identity_id: &str,
+    identity_session_generation: u64,
+    source_hash: [u8; 16],
+    signature_valid: bool,
+    attachment: Option<&ExtractedAttachment>,
+) -> state::InboundLxmfPostPersistenceDisposition {
+    let Some(attachment) = attachment.filter(|attachment| {
+        !attachment.is_image && attachment.stored_name != db::ATTACHMENT_UNAVAILABLE_STORED_NAME
+    }) else {
+        return state::InboundLxmfPostPersistenceDisposition::OrdinaryMessage;
+    };
+    let Some(observer) = state.inbound_lxmf_post_persistence_observer() else {
+        return state::InboundLxmfPostPersistenceDisposition::OrdinaryMessage;
+    };
+    let Some(files_dir) = attachment.files_dir.clone() else {
+        return state::InboundLxmfPostPersistenceDisposition::OrdinaryMessage;
+    };
+    let event = state::PersistedInboundLxmfAttachment {
+        message_id: msg_id.to_owned(),
+        identity_id: identity_id.to_owned(),
+        identity_session_generation,
+        source_hash,
+        signature_valid,
+        attachment: state::PersistedInboundAttachment {
+            files_dir,
+            stored_name: attachment.stored_name.clone(),
+            authenticated_size: attachment.authenticated_size,
+            authenticated_sha256: attachment.authenticated_sha256,
+        },
+    };
+    match tokio::task::spawn_blocking(move || observer.observe(event)).await {
+        Ok(disposition) => disposition,
+        Err(error) => {
+            tracing::warn!(%error, "post-persistence LXMF observer failed");
+            state::InboundLxmfPostPersistenceDisposition::OrdinaryMessage
         }
     }
 }
@@ -4986,6 +5048,45 @@ async fn process_inbound_lxmf(
             );
             return;
         }
+    }
+    let application_disposition = observe_persisted_inbound_attachment(
+        state,
+        &msg_id,
+        &identity_id,
+        activity_origin.identity_session_generation(),
+        msg.source_hash,
+        sig_valid == Some(true),
+        attachment_file.as_ref(),
+    )
+    .await;
+    if let state::InboundLxmfPostPersistenceDisposition::ClaimedApplication { application_id } =
+        application_disposition
+    {
+        let claim_message_id = msg_id.clone();
+        let claim_identity_id = identity_id.clone();
+        let claim_persisted = db::spawn_db(state.db.clone(), move |pool| {
+            db::claim_inbound_application_message(
+                &pool,
+                &claim_message_id,
+                &claim_identity_id,
+                application_id,
+            )
+        })
+        .await
+        .unwrap_or(false);
+        if claim_persisted {
+            tracing::debug!(
+                application_id,
+                msg_id = %short_id(&msg_id),
+                "retained application LXMF message outside human chat"
+            );
+            return;
+        }
+        tracing::warn!(
+            application_id,
+            msg_id = %short_id(&msg_id),
+            "application LXMF claim could not be persisted; retaining ordinary chat presentation"
+        );
     }
     {
         // Inbound message un-hides the conversation.
@@ -7608,6 +7709,222 @@ mod inbound_pipeline_tests {
         );
         msg.sign(signing).unwrap();
         msg.pack().unwrap()
+    }
+
+    fn packed_signed_inbound_attachment(
+        dest: [u8; 16],
+        src: [u8; 16],
+        file_name: &str,
+        bytes: &[u8],
+        signing: &rns_crypto::ed25519::Ed25519PrivateKey,
+    ) -> Vec<u8> {
+        let mut msg = lxmf_core::message_api::LxMessage::new(
+            dest,
+            src,
+            "",
+            "Attached file",
+            lxmf_core::message_api::DeliveryMethod::Direct,
+        );
+        msg.set_file_attachment_field(file_name, bytes).unwrap();
+        msg.sign(signing).unwrap();
+        msg.pack().unwrap()
+    }
+
+    #[derive(Default)]
+    struct RecordingPostPersistenceObserver {
+        db: Option<db::DbPool>,
+        events: std::sync::Mutex<Vec<(state::PersistedInboundLxmfAttachment, i64)>>,
+    }
+
+    impl state::InboundLxmfPostPersistenceObserver for RecordingPostPersistenceObserver {
+        fn observe(
+            &self,
+            event: state::PersistedInboundLxmfAttachment,
+        ) -> state::InboundLxmfPostPersistenceDisposition {
+            let rows = self
+                .db
+                .as_ref()
+                .expect("test database")
+                .get()
+                .unwrap()
+                .query_row("SELECT COUNT(*) FROM messages", [], |row| row.get(0))
+                .unwrap();
+            self.events.lock().unwrap().push((event, rows));
+            state::InboundLxmfPostPersistenceDisposition::OrdinaryMessage
+        }
+    }
+
+    struct ClaimingPostPersistenceObserver;
+
+    impl state::InboundLxmfPostPersistenceObserver for ClaimingPostPersistenceObserver {
+        fn observe(
+            &self,
+            _event: state::PersistedInboundLxmfAttachment,
+        ) -> state::InboundLxmfPostPersistenceDisposition {
+            state::InboundLxmfPostPersistenceDisposition::ClaimedApplication {
+                application_id: "test.protocol",
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn attachment_observer_runs_after_message_persistence_with_exact_authentication() {
+        let (state, _) = pipeline_state();
+        let observer = Arc::new(RecordingPostPersistenceObserver {
+            db: Some(state.db.clone()),
+            ..Default::default()
+        });
+        state
+            .install_inbound_lxmf_post_persistence_observer(observer.clone())
+            .unwrap();
+        let signing = rns_crypto::ed25519::Ed25519PrivateKey::generate();
+        let source = [0xA7; 16];
+        register_source_identity(&state, source, &signing);
+        let data = packed_signed_inbound_attachment(
+            local_dest(&state),
+            source,
+            "evidence.rseth",
+            b"persisted evidence",
+            &signing,
+        );
+
+        handle_decrypted_lxmf(&state, data, InboundLxmfSource::Propagated).await;
+
+        let events = observer.events.lock().unwrap();
+        assert_eq!(events.len(), 1);
+        let (event, rows_when_observed) = &events[0];
+        assert_eq!(*rows_when_observed, 1, "observer ran before DB commit");
+        assert_eq!(event.source_hash, source);
+        assert!(event.signature_valid);
+        assert_eq!(event.message_id.len(), 64);
+        assert!(event.attachment.files_dir.is_dir());
+        assert!(
+            event
+                .attachment
+                .files_dir
+                .join(&event.attachment.stored_name)
+                .is_file()
+        );
+    }
+
+    #[tokio::test]
+    async fn claimed_application_attachment_is_durable_but_not_emitted_as_chat() {
+        let (state, emitter) = pipeline_state();
+        state
+            .install_inbound_lxmf_post_persistence_observer(Arc::new(
+                ClaimingPostPersistenceObserver,
+            ))
+            .unwrap();
+        let signing = rns_crypto::ed25519::Ed25519PrivateKey::generate();
+        let source = [0xA6; 16];
+        register_source_identity(&state, source, &signing);
+        let data = packed_signed_inbound_attachment(
+            local_dest(&state),
+            source,
+            "protocol.bin",
+            b"authenticated application frame",
+            &signing,
+        );
+
+        handle_decrypted_lxmf(&state, data, InboundLxmfSource::Propagated).await;
+
+        let conn = state.db.get().unwrap();
+        let message_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM messages", [], |row| row.get(0))
+            .unwrap();
+        let claim_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM application_message_claims
+                 WHERE application_id = 'test.protocol'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(message_count, 1, "original LXMF record remains durable");
+        assert_eq!(claim_count, 1, "application claim is durable");
+        assert_eq!(emitter.count("lxmf_message"), 0);
+        assert!(
+            db::get_conversation(&state.db, &hex::encode(source), &local_identity(&state), 10)
+                .is_empty()
+        );
+    }
+
+    #[tokio::test]
+    async fn attachment_observer_never_runs_when_message_persistence_fails() {
+        let (state, _) = pipeline_state();
+        let observer = Arc::new(RecordingPostPersistenceObserver {
+            db: Some(state.db.clone()),
+            ..Default::default()
+        });
+        state
+            .install_inbound_lxmf_post_persistence_observer(observer.clone())
+            .unwrap();
+        state
+            .db
+            .get()
+            .unwrap()
+            .execute("DROP TABLE messages", [])
+            .unwrap();
+        let signing = rns_crypto::ed25519::Ed25519PrivateKey::generate();
+        let source = [0xA8; 16];
+        register_source_identity(&state, source, &signing);
+        let data = packed_signed_inbound_attachment(
+            local_dest(&state),
+            source,
+            "evidence.rseth",
+            b"must be rolled back",
+            &signing,
+        );
+
+        handle_decrypted_lxmf(&state, data, InboundLxmfSource::Propagated).await;
+
+        assert!(observer.events.lock().unwrap().is_empty());
+        let files_dir = state.lxmf.lock().unwrap().as_ref().unwrap().files_dir();
+        assert_eq!(std::fs::read_dir(files_dir).unwrap().count(), 0);
+    }
+
+    #[tokio::test]
+    async fn attachment_observer_keeps_the_files_root_captured_before_identity_replacement() {
+        let (state, _) = pipeline_state();
+        let observer = Arc::new(RecordingPostPersistenceObserver {
+            db: Some(state.db.clone()),
+            ..Default::default()
+        });
+        state
+            .install_inbound_lxmf_post_persistence_observer(observer.clone())
+            .unwrap();
+        let original_files_dir = state.lxmf.lock().unwrap().as_ref().unwrap().files_dir();
+        let replacement_root = std::env::temp_dir().join(format!(
+            "ratspeak-observer-replacement-{}-{}",
+            std::process::id(),
+            TEMP_PIPELINE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        let replacement = LxmfManager::load_or_create(&replacement_root, None, None).unwrap();
+        let replacement_files_dir = replacement.files_dir();
+        *state.lxmf.lock().unwrap() = Some(replacement);
+
+        observe_persisted_inbound_attachment(
+            &state,
+            &"12".repeat(32),
+            &local_identity(&state),
+            state.current_identity_session_generation(),
+            [0xA9; 16],
+            true,
+            Some(&ExtractedAttachment {
+                file_name: "evidence.rseth".to_owned(),
+                stored_name: "captured.rseth".to_owned(),
+                files_dir: Some(original_files_dir.clone()),
+                authenticated_size: 10,
+                authenticated_sha256: rns_crypto::sha::sha256(b"0123456789"),
+                is_image: false,
+            }),
+        )
+        .await;
+
+        let events = observer.events.lock().unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].0.attachment.files_dir, original_files_dir);
+        assert_ne!(events[0].0.attachment.files_dir, replacement_files_dir);
     }
 
     /// Blackholed-source gate (LXMRouter.py:1739-1741): a resolvable source

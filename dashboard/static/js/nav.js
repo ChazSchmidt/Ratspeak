@@ -41,12 +41,12 @@ function setMessageUnreadSource(source, count) {
     }
 }
 window.setMessageUnreadSource = setMessageUnreadSource;
-var VIEWS = ['dashboard', 'message', 'channels', 'contacts', 'identity', 'peers', 'network', 'games', 'settings'];
+var VIEWS = ['dashboard', 'message', 'channels', 'contacts', 'identity', 'ethereum', 'peers', 'network', 'games', 'settings'];
 
 // Tab-bar destinations use replaceState; MORE_VIEWS live under the hamburger.
-var TAB_VIEWS = ['peers', 'message', 'channels', 'contacts', 'identity', 'network', 'games', 'settings'];
+var TAB_VIEWS = ['peers', 'message', 'channels', 'contacts', 'identity', 'ethereum', 'network', 'games', 'settings'];
 var PRIMARY_TAB_VIEWS = ['peers', 'message', 'channels'];
-var MORE_VIEWS = ['contacts', 'identity', 'network', 'games', 'settings'];
+var MORE_VIEWS = ['contacts', 'identity', 'ethereum', 'network', 'games', 'settings'];
 var MOBILE_TAB_SLOTS = ['peers', 'message', 'channels', 'more'];
 var DEFAULT_MORE_VIEW = 'identity';
 var _lastMoreView = DEFAULT_MORE_VIEW;
@@ -500,6 +500,10 @@ var VIEW_LIFECYCLE = {
 
     identity: function() {
         if (typeof loadIdentities === 'function') loadIdentities();
+    },
+
+    ethereum: function() {
+        if (typeof loadEthereumWalletView === 'function') loadEthereumWalletView();
     },
 
     games: function() {

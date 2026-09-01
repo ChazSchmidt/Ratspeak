@@ -64,6 +64,10 @@ pub async fn build_conversations_payload(state: &AppState) -> Option<Value> {
                         m.direction
                  FROM messages m
                  WHERE m.identity_id = ?1
+                   AND NOT EXISTS (
+                       SELECT 1 FROM application_message_claims c
+                       WHERE c.message_id = m.id AND c.identity_id = m.identity_id
+                   )
                    AND m.rowid IN (
                        SELECT rowid FROM (
                            SELECT rowid,
@@ -73,6 +77,11 @@ pub async fn build_conversations_payload(state: &AppState) -> Option<Value> {
                                   ) AS rn
                            FROM messages
                            WHERE identity_id = ?1
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM application_message_claims c
+                                 WHERE c.message_id = messages.id
+                                   AND c.identity_id = messages.identity_id
+                             )
                        ) WHERE rn = 1
                    )
                    AND CASE WHEN m.direction = 'inbound' THEN m.source ELSE m.destination END
@@ -102,6 +111,11 @@ pub async fn build_conversations_payload(state: &AppState) -> Option<Value> {
             .prepare(
                 "SELECT source, COUNT(*) FROM messages
                  WHERE direction = 'inbound' AND state != 'read' AND identity_id = ?1
+                   AND NOT EXISTS (
+                       SELECT 1 FROM application_message_claims c
+                       WHERE c.message_id = messages.id
+                         AND c.identity_id = messages.identity_id
+                   )
                  GROUP BY source",
             )
             .ok()
@@ -337,5 +351,39 @@ mod tests {
             rows[0].get("is_contact").and_then(|v| v.as_bool()),
             Some(false)
         );
+    }
+
+    #[tokio::test]
+    async fn claimed_application_frame_cannot_replace_human_conversation_preview() {
+        let state = make_state();
+        let identity = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let local_lxmf = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        let peer = "11111111111111111111111111111111";
+        crate::db::save_identity(&state.db, identity, local_lxmf, "me", "Me");
+        crate::db::set_active_identity(&state.db, identity).unwrap();
+        for (id, content, timestamp) in [
+            ("human", "Hello from the service operator", 100.0),
+            ("protocol", "Attached file", 101.0),
+        ] {
+            crate::db::save_message(
+                &state.db, id, peer, local_lxmf, content, "", timestamp, "received", "inbound",
+                identity, "", "", "", "", "", "", None,
+            );
+        }
+        assert!(crate::db::claim_inbound_application_message(
+            &state.db,
+            "protocol",
+            identity,
+            "test.protocol"
+        ));
+
+        let payload = build_conversations_payload(&state).await.unwrap();
+        let rows = payload.as_array().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            rows[0].get("last_message").and_then(Value::as_str),
+            Some("Hello from the service operator")
+        );
+        assert_eq!(rows[0].get("unread").and_then(Value::as_i64), Some(1));
     }
 }

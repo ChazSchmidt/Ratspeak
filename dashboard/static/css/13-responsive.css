@@ -1959,6 +1959,38 @@
 }
 
 @media (max-width: 768px) {
+    .ethereum-page {
+        padding: var(--space-5);
+        padding-bottom: calc(62px + var(--sab) + var(--space-5));
+    }
+    .ethereum-page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-4);
+    }
+    .ethereum-setup-header { flex-wrap: wrap; gap: var(--space-3); }
+    .ethereum-setup-header > div:first-child { flex-basis: 100%; }
+    .ethereum-setup-summary { margin-left: auto; }
+    .ethereum-grid { grid-template-columns: minmax(0, 1fr); }
+    .ethereum-assurance-card { grid-column: auto; }
+    .ethereum-transaction-actions { align-items: stretch; flex-direction: column; }
+    .ethereum-transaction-stage-heading { align-items: flex-start; flex-direction: column; gap: var(--space-1); }
+    .ethereum-transaction-authority { text-align: left; }
+    .ethereum-transaction-source-contact { justify-content: flex-start; max-width: 100%; }
+    .ethereum-fee-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 380px) {
+    .ethereum-facts > div,
+    .ethereum-cost-summary {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-1);
+    }
+    .ethereum-facts dd,
+    .ethereum-cost-summary strong { text-align: left; }
+}
+
+@media (max-width: 768px) {
 
     .conn-row {
         padding: var(--space-6) var(--space-8);
