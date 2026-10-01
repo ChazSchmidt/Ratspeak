@@ -7,7 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use alloy_primitives::{keccak256, Address, B256, Bytes, U256};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 pub const BASE_CHAIN_ID: u64 = 8453;
 pub const ERC20_TRANSFER_SELECTOR: [u8; 4] = [0xa9, 0x05, 0x9c, 0xbb];
@@ -173,6 +173,16 @@ impl InstalledDefinition {
         if let Some(native) = raw.ratspeak {
             if native.kind != "nativeTransfer" {
                 return Err(Error::UnsupportedDefinition("unknown RatSpeak native kind"));
+            }
+            if native.definition_id.is_empty()
+                || !native
+                    .definition_id
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+            {
+                return Err(Error::UnsupportedDefinition(
+                    "native definition id contains unsafe characters",
+                ));
             }
             return Ok(Self {
                 raw: bytes.to_vec(),
