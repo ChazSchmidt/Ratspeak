@@ -1,6 +1,7 @@
 {
   "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
   "context": {
+    "$id": "RATSPEAK on Base",
     "contract": {
       "deployments": [
         {
@@ -13,14 +14,10 @@
   "metadata": {
     "owner": "Ratspeak",
     "contractName": "Ratspeak",
-    "constants": {
-      "ratspeakToken": {
-        "definitionId": "base-ratspeak-transfer-v1",
-        "symbol": "RATSPEAK",
-        "decimals": 18,
-        "network": "Base",
-        "source": "Base token metadata cross-checked against current token lists"
-      }
+    "token": {
+      "name": "Ratspeak",
+      "ticker": "RATSPEAK",
+      "decimals": 18
     }
   },
   "display": {
