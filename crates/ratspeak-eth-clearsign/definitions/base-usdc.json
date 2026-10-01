@@ -1,6 +1,7 @@
 {
   "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
   "context": {
+    "$id": "USDC on Base",
     "contract": {
       "deployments": [
         {
@@ -13,14 +14,10 @@
   "metadata": {
     "owner": "Circle",
     "contractName": "USD Coin",
-    "constants": {
-      "ratspeakToken": {
-        "definitionId": "base-usdc-transfer-v1",
-        "symbol": "USDC",
-        "decimals": 6,
-        "network": "Base",
-        "source": "Circle Base deployment metadata"
-      }
+    "token": {
+      "name": "USD Coin",
+      "ticker": "USDC",
+      "decimals": 6
     }
   },
   "display": {
