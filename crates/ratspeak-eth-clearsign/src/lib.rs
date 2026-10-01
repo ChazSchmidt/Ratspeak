@@ -103,6 +103,8 @@ struct Erc7730Definition {
 
 #[derive(Debug, Deserialize)]
 struct RawDefinition {
+    #[serde(default, rename = "$schema")]
+    schema: Option<String>,
     #[serde(default)]
     ratspeak: Option<RawRatspeak>,
     #[serde(default)]
@@ -188,6 +190,9 @@ impl InstalledDefinition {
             });
         }
 
+        if raw.schema.as_deref() != Some("https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json") {
+            return Err(Error::UnsupportedDefinition("ERC-7730 v2 schema marker required"));
+        }
         let context = raw.context.ok_or(Error::UnsupportedDefinition("missing context.contract"))?;
         if context.contract.deployments.len() != 1 {
             return Err(Error::UnsupportedDefinition("prototype requires exactly one deployment"));
@@ -408,6 +413,7 @@ impl DefinitionRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     const NATIVE: &[u8] = include_bytes!("../definitions/base-native-eth.json");
     const USDC: &[u8] = include_bytes!("../definitions/base-usdc.json");
@@ -505,6 +511,45 @@ mod tests {
         let x = r.review(&one).unwrap();
         assert_ne!(x.operation_hash, r.review(&recipient_changed).unwrap().operation_hash);
         assert_ne!(x.operation_hash, r.review(&amount_changed).unwrap().operation_hash);
+    }
+
+
+    #[test]
+    fn definitions_install_load_and_remove_from_directory() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let store = std::env::temp_dir().join(format!(
+            "ratspeak-clearsign-{}-{unique}",
+            std::process::id()
+        ));
+        let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("definitions/base-usdc.json");
+
+        DefinitionRegistry::install_file(&store, &source).unwrap();
+        let loaded = DefinitionRegistry::load_dir(&store).unwrap();
+        assert!(loaded.ids().any(|id| id == "base-usdc-transfer-v1"));
+
+        let recipient = address("2222222222222222222222222222222222222222");
+        assert!(loaded
+            .review(&op(
+                "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                transfer_input(recipient, U256::from(1_000_000u64)),
+            ))
+            .is_ok());
+
+        assert!(DefinitionRegistry::remove_file(&store, "base-usdc-transfer-v1").unwrap());
+        let reloaded = DefinitionRegistry::load_dir(&store).unwrap();
+        assert!(matches!(
+            reloaded.review(&op(
+                "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                transfer_input(recipient, U256::from(1_000_000u64)),
+            )),
+            Err(Error::NoMatchingDefinition)
+        ));
+
+        let _ = fs::remove_dir_all(store);
     }
 
     #[test]
