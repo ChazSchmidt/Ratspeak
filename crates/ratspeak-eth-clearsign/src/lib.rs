@@ -467,7 +467,7 @@ mod tests {
         for (contract, symbol, amount) in [
             ("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "USDC", U256::from(10_000_000u64)),
             ("877014E21c32feA108B6A1f45f367efc9a2d9B9F", "alUSDb", U256::from(5_000_000_000_000_000_000u64)),
-            ("f1e9Baa65d418A9025e1851DD2D37f1AD208bba3", "RATSPEAK", U256::from(100_000u64) * U256::from(10u64).pow(U256::from(18u64))),
+            ("f1e9Baa65d418A9025e1851DD2D37f1AD208bba3", "RATSPEAK", U256::from(100_000u64) * U256::from(1_000_000_000_000_000_000u128)),
         ] {
             let review = registry().review(&op(contract, transfer_input(recipient, amount))).unwrap();
             assert_eq!(review.asset_symbol, symbol);
