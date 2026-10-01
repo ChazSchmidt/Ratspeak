@@ -1,6 +1,7 @@
 {
   "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
   "context": {
+    "$id": "alUSDb on Base",
     "contract": {
       "deployments": [
         {
@@ -13,14 +14,10 @@
   "metadata": {
     "owner": "Alchemix",
     "contractName": "Alchemic USD Base",
-    "constants": {
-      "ratspeakToken": {
-        "definitionId": "base-alusdb-transfer-v1",
-        "symbol": "alUSDb",
-        "decimals": 18,
-        "network": "Base",
-        "source": "Alchemix V3 Base deployment"
-      }
+    "token": {
+      "name": "Alchemic USD Base",
+      "ticker": "alUSDb",
+      "decimals": 18
     }
   },
   "display": {
