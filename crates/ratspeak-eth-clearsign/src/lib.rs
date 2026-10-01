@@ -457,7 +457,7 @@ impl DefinitionRegistry {
         before != self.definitions.len()
     }
 
-    pub fn ids(&self) -> impl Iterator<Item=&str> {
+    pub fn ids(&self) -> impl Iterator<Item = &str> {
         self.definitions.iter().map(|d| d.definition_id())
     }
 
@@ -632,10 +632,22 @@ mod tests {
     fn unknown_contract_and_chain_fail_closed() {
         let recipient = address("2222222222222222222222222222222222222222");
         let r = registry();
-        assert!(matches!(r.review(&op("3333333333333333333333333333333333333333", transfer_input(recipient, U256::from(1)))), Err(Error::NoMatchingDefinition)));
-        let mut wrong_chain = op("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", transfer_input(recipient, U256::from(1)));
+        assert!(matches!(
+            r.review(&op(
+                "3333333333333333333333333333333333333333",
+                transfer_input(recipient, U256::from(1))
+            )),
+            Err(Error::NoMatchingDefinition)
+        ));
+        let mut wrong_chain = op(
+            "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            transfer_input(recipient, U256::from(1)),
+        );
         wrong_chain.chain_id = 1;
-        assert!(matches!(r.review(&wrong_chain), Err(Error::NoMatchingDefinition)));
+        assert!(matches!(
+            r.review(&wrong_chain),
+            Err(Error::NoMatchingDefinition)
+        ));
     }
 
     #[test]
@@ -643,7 +655,13 @@ mod tests {
         let r = registry();
         let mut input = vec![0x09, 0x5e, 0xa7, 0xb3];
         input.resize(68, 0);
-        assert!(matches!(r.review(&op("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", input.into())), Err(Error::UnsupportedFunction)));
+        assert!(matches!(
+            r.review(&op(
+                "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                input.into()
+            )),
+            Err(Error::UnsupportedFunction)
+        ));
     }
 
     #[test]
@@ -651,12 +669,27 @@ mod tests {
         let r = registry();
         let a = address("2222222222222222222222222222222222222222");
         let b = address("3333333333333333333333333333333333333333");
-        let one = op("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", transfer_input(a, U256::from(10_000_000u64)));
-        let recipient_changed = op("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", transfer_input(b, U256::from(10_000_000u64)));
-        let amount_changed = op("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", transfer_input(a, U256::from(11_000_000u64)));
+        let one = op(
+            "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            transfer_input(a, U256::from(10_000_000u64)),
+        );
+        let recipient_changed = op(
+            "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            transfer_input(b, U256::from(10_000_000u64)),
+        );
+        let amount_changed = op(
+            "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            transfer_input(a, U256::from(11_000_000u64)),
+        );
         let x = r.review(&one).unwrap();
-        assert_ne!(x.operation_hash, r.review(&recipient_changed).unwrap().operation_hash);
-        assert_ne!(x.operation_hash, r.review(&amount_changed).unwrap().operation_hash);
+        assert_ne!(
+            x.operation_hash,
+            r.review(&recipient_changed).unwrap().operation_hash
+        );
+        assert_ne!(
+            x.operation_hash,
+            r.review(&amount_changed).unwrap().operation_hash
+        );
     }
 
     #[test]
@@ -673,17 +706,29 @@ mod tests {
 
         DefinitionRegistry::install_file(&store, &source).unwrap();
         let loaded = DefinitionRegistry::load_dir(&store).unwrap();
-        assert!(loaded.ids().any(|id| id == "erc7730-8453-833589fcd6edb6e08f4c7c32d4f71b54bda02913-a9059cbb"));
+        assert!(
+            loaded
+                .ids()
+                .any(|id| id == "erc7730-8453-833589fcd6edb6e08f4c7c32d4f71b54bda02913-a9059cbb")
+        );
 
         let recipient = address("2222222222222222222222222222222222222222");
-        assert!(loaded
-            .review(&op(
-                "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-                transfer_input(recipient, U256::from(1_000_000u64)),
-            ))
-            .is_ok());
+        assert!(
+            loaded
+                .review(&op(
+                    "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    transfer_input(recipient, U256::from(1_000_000u64)),
+                ))
+                .is_ok()
+        );
 
-        assert!(DefinitionRegistry::remove_file(&store, "erc7730-8453-833589fcd6edb6e08f4c7c32d4f71b54bda02913-a9059cbb").unwrap());
+        assert!(
+            DefinitionRegistry::remove_file(
+                &store,
+                "erc7730-8453-833589fcd6edb6e08f4c7c32d4f71b54bda02913-a9059cbb"
+            )
+            .unwrap()
+        );
         let reloaded = DefinitionRegistry::load_dir(&store).unwrap();
         assert!(matches!(
             reloaded.review(&op(
@@ -701,6 +746,12 @@ mod tests {
         let recipient = address("2222222222222222222222222222222222222222");
         let mut r = registry();
         assert!(r.remove("erc7730-8453-833589fcd6edb6e08f4c7c32d4f71b54bda02913-a9059cbb"));
-        assert!(matches!(r.review(&op("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", transfer_input(recipient, U256::from(1)))), Err(Error::NoMatchingDefinition)));
+        assert!(matches!(
+            r.review(&op(
+                "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                transfer_input(recipient, U256::from(1))
+            )),
+            Err(Error::NoMatchingDefinition)
+        ));
     }
 }
