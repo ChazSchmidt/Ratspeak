@@ -44,12 +44,12 @@ The parser intentionally supports only
 selector `0xa9059cbb` and rejects every other function, including
 `approve(address,uint256)`.
 
-RatSpeak adds one namespaced metadata object
-(`metadata.constants.ratspeakToken`) containing offline symbol, decimals,
-network label, definition identity, and provenance. ERC-7730 itself does not
-standardize an offline trusted token-metadata installation policy. A production
-implementation should replace this prototype extension with a curated,
-signed/trusted metadata source.
+Token name, ticker, and decimals use ERC-7730 v2’s standard `metadata.token`
+object. RatSpeak derives a local definition ID from chain ID + contract address +
+selector, while the SHA-256-like role of exact version identity is filled by the
+Keccak-256 hash of the installed descriptor bytes. The user-installed descriptor
+is the offline trust source in this experiment; production still needs signed
+publisher/update policy.
 
 Native ETH has no contract context or calldata, so it uses a small RatSpeak
 native-transfer definition. It shares the same registry and review output but
@@ -119,8 +119,9 @@ bindings are recomputed. Any mutation causes
 
 The registry can load a directory of JSON definitions and has atomic-ish
 file-based `install_file` / `remove_file` helpers for the experiment.
-Definition identity replacement is explicit: installing the same
-`definitionId` replaces the in-memory version.
+Definition identity replacement is explicit: installing the same derived local
+ID replaces the in-memory version. Native definitions carry their own constrained
+RatSpeak-local ID.
 
 This is not yet a trust-distribution system. Production work still needs a
 signature/trust model for descriptor packages, rollback/version policy, and
