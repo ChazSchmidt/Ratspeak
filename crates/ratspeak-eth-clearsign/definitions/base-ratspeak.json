@@ -1,4 +1,5 @@
 {
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
   "context": {
     "contract": {
       "deployments": [
