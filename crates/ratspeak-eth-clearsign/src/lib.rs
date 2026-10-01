@@ -303,7 +303,7 @@ impl InstalledDefinition {
                     return Ok(None);
                 }
                 if !op.input.is_empty() {
-                    return Err(Error::NativeCalldata);
+                    return Ok(None);
                 }
                 if op.gas_limit != 21_000 {
                     return Err(Error::UnsafeNativeGasLimit);
