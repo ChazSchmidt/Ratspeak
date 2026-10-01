@@ -667,7 +667,6 @@ fn verify_signed_transaction(
     Ok(())
 }
 
-
 /// Exact EIP-1559 operation proposed by an untrusted remote preparer.
 ///
 /// This type contains transaction facts only. Human-readable meaning is derived
@@ -1502,7 +1501,9 @@ mod tests {
     fn usdc_registry() -> DefinitionRegistry {
         let mut registry = DefinitionRegistry::new();
         registry
-            .install_bytes(include_bytes!("../../ratspeak-eth-clearsign/definitions/base-usdc.json"))
+            .install_bytes(include_bytes!(
+                "../../ratspeak-eth-clearsign/definitions/base-usdc.json"
+            ))
             .unwrap();
         registry
     }
@@ -1516,7 +1517,11 @@ mod tests {
         calldata.into()
     }
 
-    fn base_usdc_intent(account: WalletAccount, recipient: Address, amount: U256) -> ClearSignedIntent {
+    fn base_usdc_intent(
+        account: WalletAccount,
+        recipient: Address,
+        amount: U256,
+    ) -> ClearSignedIntent {
         ClearSignedIntent {
             chain_id: 8453,
             from: account.address(),
@@ -1546,7 +1551,10 @@ mod tests {
             .unwrap();
         assert_eq!(prepared.review().clear_sign.asset_symbol, "USDC");
         assert_eq!(prepared.review().clear_sign.recipient, recipient);
-        assert_eq!(prepared.review().clear_sign.amount, U256::from(10_000_000u64));
+        assert_eq!(
+            prepared.review().clear_sign.amount,
+            U256::from(10_000_000u64)
+        );
         assert_eq!(
             keccak256(prepared.canonical_signing_bytes()),
             prepared.review().signing_hash
@@ -1628,5 +1636,4 @@ mod tests {
             Err(WalletError::ClearSignRejected)
         ));
     }
-
 }
