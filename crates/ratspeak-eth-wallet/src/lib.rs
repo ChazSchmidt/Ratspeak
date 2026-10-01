@@ -22,6 +22,7 @@ use alloy_primitives::{Address, B256, Bytes, TxKind, U256, keccak256};
 use alloy_signer::SignerSync;
 use alloy_signer_local::{MnemonicBuilder, PrivateKeySigner, coins_bip39::English};
 use bip39::{Language, Mnemonic};
+use ratspeak_eth_clearsign::{ClearSignReview, DefinitionRegistry, EvmOperation};
 use zeroize::Zeroizing;
 
 pub const SEPOLIA_CHAIN_ID: u64 = 11_155_111;
@@ -96,6 +97,10 @@ pub enum WalletError {
     SignedFieldMismatch(&'static str),
     #[error("signed transaction sender recovery failed")]
     Recovery,
+    #[error("no trusted clear-sign definition authorized this operation")]
+    ClearSignRejected,
+    #[error("clear-signed operation changed after review")]
+    ClearSignedOperationChanged,
 }
 
 /// A BIP-39 secret. It deliberately has no serialization or cloning surface.
@@ -657,6 +662,273 @@ fn verify_signed_transaction(
     }
     let recovered = signed.recover_signer().map_err(|_| WalletError::Recovery)?;
     if recovered != review.from {
+        return Err(WalletError::SignedFieldMismatch("recovered sender"));
+    }
+    Ok(())
+}
+
+
+/// Exact EIP-1559 operation proposed by an untrusted remote preparer.
+///
+/// This type contains transaction facts only. Human-readable meaning is derived
+/// locally from an installed clear-sign definition before a Prepared value can
+/// be created.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClearSignedIntent {
+    pub chain_id: u64,
+    pub from: Address,
+    pub to: Address,
+    pub value: U256,
+    pub input: Bytes,
+    pub nonce: u64,
+    pub gas_limit: u64,
+    pub max_fee_per_gas: u128,
+    pub max_priority_fee_per_gas: u128,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClearSignedTransferReview {
+    pub operation_id: OperationId,
+    pub clear_sign: ClearSignReview,
+    pub from: Address,
+    pub nonce: u64,
+    pub gas_limit: u64,
+    pub max_fee_per_gas: u128,
+    pub max_priority_fee_per_gas: u128,
+    pub prepared_at_unix: u64,
+    pub expires_at_unix: u64,
+    pub signing_hash: B256,
+    pub review_digest: B256,
+}
+
+/// One-shot clear-signed transaction. The canonical EIP-1559 signing bytes are
+/// created before user review and re-derived immediately before signing.
+pub struct PreparedClearSignedOperation {
+    tx: TxEip1559,
+    signing_bytes: Vec<u8>,
+    review: ClearSignedTransferReview,
+}
+
+impl fmt::Debug for PreparedClearSignedOperation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PreparedClearSignedOperation")
+            .field("review", &self.review)
+            .finish_non_exhaustive()
+    }
+}
+
+impl WalletAccount {
+    /// Prepare an arbitrary EIP-1559 operation only after a trusted installed
+    /// definition independently decodes its meaning.
+    pub fn prepare_clear_signed_operation(
+        &self,
+        intent: ClearSignedIntent,
+        definitions: &DefinitionRegistry,
+        operation_id: OperationId,
+        prepared_at_unix: u64,
+        expires_at_unix: u64,
+    ) -> Result<PreparedClearSignedOperation> {
+        if intent.from != self.address {
+            return Err(WalletError::SenderMismatch);
+        }
+        if intent.max_fee_per_gas == 0 {
+            return Err(WalletError::ZeroMaximumFee);
+        }
+        if intent.max_priority_fee_per_gas > intent.max_fee_per_gas {
+            return Err(WalletError::PriorityFeeExceedsMaximum);
+        }
+        validate_expiry(prepared_at_unix, expires_at_unix)?;
+
+        let clear_sign = definitions
+            .review(&EvmOperation {
+                chain_id: intent.chain_id,
+                to: intent.to,
+                value: intent.value,
+                input: intent.input.clone(),
+                gas_limit: intent.gas_limit,
+                max_fee_per_gas: intent.max_fee_per_gas,
+                max_priority_fee_per_gas: intent.max_priority_fee_per_gas,
+            })
+            .map_err(|_| WalletError::ClearSignRejected)?;
+
+        let tx = TxEip1559 {
+            chain_id: intent.chain_id,
+            nonce: intent.nonce,
+            gas_limit: intent.gas_limit,
+            max_fee_per_gas: intent.max_fee_per_gas,
+            max_priority_fee_per_gas: intent.max_priority_fee_per_gas,
+            to: TxKind::Call(intent.to),
+            value: intent.value,
+            access_list: AccessList::default(),
+            input: intent.input,
+        };
+        let signing_bytes = tx.encoded_for_signing();
+        let signing_hash = keccak256(&signing_bytes);
+        if signing_hash != tx.signature_hash() {
+            return Err(WalletError::ClearSignedOperationChanged);
+        }
+
+        let mut review = ClearSignedTransferReview {
+            operation_id,
+            clear_sign,
+            from: intent.from,
+            nonce: intent.nonce,
+            gas_limit: intent.gas_limit,
+            max_fee_per_gas: intent.max_fee_per_gas,
+            max_priority_fee_per_gas: intent.max_priority_fee_per_gas,
+            prepared_at_unix,
+            expires_at_unix,
+            signing_hash,
+            review_digest: B256::ZERO,
+        };
+        review.review_digest = compute_clear_signed_review_digest(&review, &signing_bytes);
+
+        Ok(PreparedClearSignedOperation {
+            tx,
+            signing_bytes,
+            review,
+        })
+    }
+}
+
+impl PreparedClearSignedOperation {
+    pub const fn review(&self) -> &ClearSignedTransferReview {
+        &self.review
+    }
+
+    pub fn canonical_signing_bytes(&self) -> &[u8] {
+        &self.signing_bytes
+    }
+
+    pub fn authorize_and_sign<A: ClearSignAuthorizer>(
+        self,
+        secret: &WalletSecret,
+        authorizer: &mut A,
+        now_unix: u64,
+    ) -> Result<SignedClearSignedOperation> {
+        if now_unix < self.review.prepared_at_unix {
+            return Err(WalletError::NotYetValid);
+        }
+        if now_unix >= self.review.expires_at_unix {
+            return Err(WalletError::Expired);
+        }
+
+        let recomputed = self.tx.encoded_for_signing();
+        let recomputed_hash = keccak256(&recomputed);
+        if recomputed != self.signing_bytes
+            || recomputed_hash != self.review.signing_hash
+            || recomputed_hash != self.tx.signature_hash()
+            || compute_clear_signed_review_digest(&self.review, &recomputed)
+                != self.review.review_digest
+        {
+            return Err(WalletError::ClearSignedOperationChanged);
+        }
+
+        authorizer
+            .authorize_clear_signed_operation(&self.review)
+            .map_err(|_| WalletError::AuthorizationRejected)?;
+
+        let signer = secret.signer()?;
+        if signer.address() != self.review.from {
+            return Err(WalletError::WrongSigner);
+        }
+        let signature = signer
+            .sign_hash_sync(&self.review.signing_hash)
+            .map_err(|_| WalletError::Signing)?;
+        let signed = self.tx.into_signed(signature);
+        let tx_hash = *signed.hash();
+        let mut raw_transaction = Vec::with_capacity(signed.eip2718_encoded_length());
+        signed.eip2718_encode(&mut raw_transaction);
+        verify_clear_signed_transaction(
+            &raw_transaction,
+            self.review.signing_hash,
+            self.review.from,
+            tx_hash,
+        )?;
+
+        Ok(SignedClearSignedOperation {
+            review: self.review,
+            raw_transaction,
+            tx_hash,
+        })
+    }
+}
+
+pub trait ClearSignAuthorizer {
+    type Error;
+
+    fn authorize_clear_signed_operation(
+        &mut self,
+        review: &ClearSignedTransferReview,
+    ) -> std::result::Result<(), Self::Error>;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignedClearSignedOperation {
+    review: ClearSignedTransferReview,
+    raw_transaction: Vec<u8>,
+    tx_hash: B256,
+}
+
+impl SignedClearSignedOperation {
+    pub const fn review(&self) -> &ClearSignedTransferReview {
+        &self.review
+    }
+
+    pub fn raw_transaction(&self) -> &[u8] {
+        &self.raw_transaction
+    }
+
+    pub const fn tx_hash(&self) -> B256 {
+        self.tx_hash
+    }
+}
+
+fn compute_clear_signed_review_digest(
+    review: &ClearSignedTransferReview,
+    signing_bytes: &[u8],
+) -> B256 {
+    let mut bytes = Vec::with_capacity(signing_bytes.len() + 256);
+    bytes.extend_from_slice(b"ratspeak.ethereum.clearsign-review.v1\0");
+    bytes.extend_from_slice(review.operation_id.as_bytes());
+    bytes.extend_from_slice(review.clear_sign.definition_hash.as_slice());
+    bytes.extend_from_slice(review.clear_sign.operation_hash.as_slice());
+    bytes.extend_from_slice(review.from.as_slice());
+    bytes.extend_from_slice(&review.nonce.to_be_bytes());
+    bytes.extend_from_slice(&review.gas_limit.to_be_bytes());
+    bytes.extend_from_slice(&review.max_fee_per_gas.to_be_bytes());
+    bytes.extend_from_slice(&review.max_priority_fee_per_gas.to_be_bytes());
+    bytes.extend_from_slice(&review.prepared_at_unix.to_be_bytes());
+    bytes.extend_from_slice(&review.expires_at_unix.to_be_bytes());
+    bytes.extend_from_slice(&(signing_bytes.len() as u64).to_be_bytes());
+    bytes.extend_from_slice(signing_bytes);
+    bytes.extend_from_slice(review.signing_hash.as_slice());
+    keccak256(bytes)
+}
+
+fn verify_clear_signed_transaction(
+    raw_transaction: &[u8],
+    expected_signing_hash: B256,
+    expected_sender: Address,
+    expected_tx_hash: B256,
+) -> Result<()> {
+    let mut remaining = raw_transaction;
+    let envelope = TxEnvelope::decode_2718(&mut remaining)
+        .map_err(|_| WalletError::InvalidSignedTransaction)?;
+    if !remaining.is_empty() {
+        return Err(WalletError::InvalidSignedTransaction);
+    }
+    let signed = envelope
+        .as_eip1559()
+        .ok_or(WalletError::SignedFieldMismatch("transaction type"))?;
+    if signed.signature_hash() != expected_signing_hash {
+        return Err(WalletError::SignedFieldMismatch("signing hash"));
+    }
+    if *signed.hash() != expected_tx_hash {
+        return Err(WalletError::SignedFieldMismatch("transaction hash"));
+    }
+    let recovered = signed.recover_signer().map_err(|_| WalletError::Recovery)?;
+    if recovered != expected_sender {
         return Err(WalletError::SignedFieldMismatch("recovered sender"));
     }
     Ok(())
