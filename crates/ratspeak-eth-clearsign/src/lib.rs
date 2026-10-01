@@ -6,7 +6,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use alloy_primitives::{keccak256, Address, B256, Bytes, U256};
+use alloy_primitives::{Address, B256, Bytes, U256, keccak256};
 use serde::Deserialize;
 
 pub const BASE_CHAIN_ID: u64 = 8453;
@@ -199,32 +199,60 @@ impl InstalledDefinition {
             });
         }
 
-        if raw.schema.as_deref() != Some("https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json") {
-            return Err(Error::UnsupportedDefinition("ERC-7730 v2 schema marker required"));
+        if raw.schema.as_deref()
+            != Some("https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json")
+        {
+            return Err(Error::UnsupportedDefinition(
+                "ERC-7730 v2 schema marker required",
+            ));
         }
-        let context = raw.context.ok_or(Error::UnsupportedDefinition("missing context.contract"))?;
+        let context = raw
+            .context
+            .ok_or(Error::UnsupportedDefinition("missing context.contract"))?;
         if context.contract.deployments.len() != 1 {
-            return Err(Error::UnsupportedDefinition("prototype requires exactly one deployment"));
+            return Err(Error::UnsupportedDefinition(
+                "prototype requires exactly one deployment",
+            ));
         }
         let deployment = &context.contract.deployments[0];
-        let contract: Address = deployment.address.parse().map_err(|_| Error::InvalidAddress)?;
-        let display = raw.display.ok_or(Error::UnsupportedDefinition("missing display.formats"))?;
+        let contract: Address = deployment
+            .address
+            .parse()
+            .map_err(|_| Error::InvalidAddress)?;
+        let display = raw
+            .display
+            .ok_or(Error::UnsupportedDefinition("missing display.formats"))?;
         if display.formats.len() != 1 {
-            return Err(Error::UnsupportedDefinition("prototype requires exactly one function format"));
+            return Err(Error::UnsupportedDefinition(
+                "prototype requires exactly one function format",
+            ));
         }
         let (fragment, format) = display.formats.iter().next().unwrap();
         let canonical = canonical_signature(fragment)?;
         let selector_hash = keccak256(canonical.as_bytes());
-        let selector = [selector_hash[0], selector_hash[1], selector_hash[2], selector_hash[3]];
+        let selector = [
+            selector_hash[0],
+            selector_hash[1],
+            selector_hash[2],
+            selector_hash[3],
+        ];
         if selector != ERC20_TRANSFER_SELECTOR || canonical != "transfer(address,uint256)" {
-            return Err(Error::UnsupportedDefinition("only ERC-20 transfer(address,uint256) is supported"));
+            return Err(Error::UnsupportedDefinition(
+                "only ERC-20 transfer(address,uint256) is supported",
+            ));
         }
         validate_transfer_format(format)?;
 
-        let metadata = raw.metadata.ok_or(Error::UnsupportedDefinition("missing metadata"))?;
-        let token = metadata.token.ok_or(Error::UnsupportedDefinition("missing metadata.token"))?;
+        let metadata = raw
+            .metadata
+            .ok_or(Error::UnsupportedDefinition("missing metadata"))?;
+        let token = metadata
+            .token
+            .ok_or(Error::UnsupportedDefinition("missing metadata.token"))?;
         if token.name.trim().is_empty() || token.ticker.trim().is_empty() {
-            return Err(Error::UnsupportedDefinition("token metadata must include name and ticker"));
+            return Err(Error::UnsupportedDefinition(
+                "token metadata must include name and ticker",
+            ));
         }
         let _ = metadata.owner;
         let _ = metadata.contract_name;
@@ -232,7 +260,10 @@ impl InstalledDefinition {
             "erc7730-{}-{}-{:02x}{:02x}{:02x}{:02x}",
             deployment.chain_id,
             alloy_primitives::hex::encode(contract.as_slice()),
-            selector[0], selector[1], selector[2], selector[3]
+            selector[0],
+            selector[1],
+            selector[2],
+            selector[3]
         );
 
         Ok(Self {
@@ -250,9 +281,15 @@ impl InstalledDefinition {
         })
     }
 
-    pub fn definition_id(&self) -> &str { &self.definition_id }
-    pub fn definition_hash(&self) -> B256 { self.definition_hash }
-    pub fn raw_bytes(&self) -> &[u8] { &self.raw }
+    pub fn definition_id(&self) -> &str {
+        &self.definition_id
+    }
+    pub fn definition_hash(&self) -> B256 {
+        self.definition_hash
+    }
+    pub fn raw_bytes(&self) -> &[u8] {
+        &self.raw
+    }
 
     fn review(&self, op: &EvmOperation) -> Result<Option<ClearSignReview>> {
         let maximum_fee_wei = U256::from(op.gas_limit)
@@ -262,10 +299,18 @@ impl InstalledDefinition {
 
         match &self.kind {
             DefinitionKind::Native(d) => {
-                if op.chain_id != d.chain_id { return Ok(None); }
-                if !op.input.is_empty() { return Err(Error::NativeCalldata); }
-                if op.gas_limit != 21_000 { return Err(Error::UnsafeNativeGasLimit); }
-                if op.value == U256::ZERO { return Ok(None); }
+                if op.chain_id != d.chain_id {
+                    return Ok(None);
+                }
+                if !op.input.is_empty() {
+                    return Err(Error::NativeCalldata);
+                }
+                if op.gas_limit != 21_000 {
+                    return Err(Error::UnsafeNativeGasLimit);
+                }
+                if op.value == U256::ZERO {
+                    return Ok(None);
+                }
                 Ok(Some(ClearSignReview {
                     definition_id: self.definition_id.clone(),
                     definition_hash: self.definition_hash,
@@ -280,14 +325,24 @@ impl InstalledDefinition {
                 }))
             }
             DefinitionKind::Erc7730(d) => {
-                if op.chain_id != d.chain_id || op.to != d.contract { return Ok(None); }
-                if op.value != U256::ZERO { return Err(Error::UnexpectedNativeValue); }
-                if op.input.len() < 4 { return Err(Error::MalformedCalldata); }
+                if op.chain_id != d.chain_id || op.to != d.contract {
+                    return Ok(None);
+                }
+                if op.value != U256::ZERO {
+                    return Err(Error::UnexpectedNativeValue);
+                }
+                if op.input.len() < 4 {
+                    return Err(Error::MalformedCalldata);
+                }
                 if op.input[..4] != d.selector {
                     return Err(Error::UnsupportedFunction);
                 }
-                if op.input.len() != 68 { return Err(Error::MalformedCalldata); }
-                if op.input[4..16].iter().any(|b| *b != 0) { return Err(Error::MalformedCalldata); }
+                if op.input.len() != 68 {
+                    return Err(Error::MalformedCalldata);
+                }
+                if op.input[4..16].iter().any(|b| *b != 0) {
+                    return Err(Error::MalformedCalldata);
+                }
                 let recipient = Address::from_slice(&op.input[16..36]);
                 let amount = U256::from_be_slice(&op.input[36..68]);
                 Ok(Some(ClearSignReview {
@@ -310,27 +365,44 @@ impl InstalledDefinition {
 fn validate_transfer_format(value: &serde_json::Value) -> Result<()> {
     let intent = value.get("intent").and_then(|v| v.as_str());
     let fields = value.get("fields").and_then(|v| v.as_array());
-    if intent != Some("Send") { return Err(Error::UnsupportedDefinition("transfer intent must be Send")); }
+    if intent != Some("Send") {
+        return Err(Error::UnsupportedDefinition("transfer intent must be Send"));
+    }
     let fields = fields.ok_or(Error::UnsupportedDefinition("transfer fields missing"))?;
-    let has_to = fields.iter().any(|f| f.get("path").and_then(|v| v.as_str()) == Some("to")
-        && f.get("format").and_then(|v| v.as_str()) == Some("addressName"));
-    let has_value = fields.iter().any(|f| f.get("path").and_then(|v| v.as_str()) == Some("value")
-        && f.get("format").and_then(|v| v.as_str()) == Some("tokenAmount"));
+    let has_to = fields.iter().any(|f| {
+        f.get("path").and_then(|v| v.as_str()) == Some("to")
+            && f.get("format").and_then(|v| v.as_str()) == Some("addressName")
+    });
+    let has_value = fields.iter().any(|f| {
+        f.get("path").and_then(|v| v.as_str()) == Some("value")
+            && f.get("format").and_then(|v| v.as_str()) == Some("tokenAmount")
+    });
     if !has_to || !has_value {
-        return Err(Error::UnsupportedDefinition("transfer definition must display recipient and token amount"));
+        return Err(Error::UnsupportedDefinition(
+            "transfer definition must display recipient and token amount",
+        ));
     }
     Ok(())
 }
 
 fn canonical_signature(fragment: &str) -> Result<String> {
-    let open = fragment.find('(').ok_or(Error::UnsupportedDefinition("invalid ABI fragment"))?;
-    let close = fragment.rfind(')').ok_or(Error::UnsupportedDefinition("invalid ABI fragment"))?;
-    if close <= open { return Err(Error::UnsupportedDefinition("invalid ABI fragment")); }
+    let open = fragment
+        .find('(')
+        .ok_or(Error::UnsupportedDefinition("invalid ABI fragment"))?;
+    let close = fragment
+        .rfind(')')
+        .ok_or(Error::UnsupportedDefinition("invalid ABI fragment"))?;
+    if close <= open {
+        return Err(Error::UnsupportedDefinition("invalid ABI fragment"));
+    }
     let name = &fragment[..open];
     let params = &fragment[open + 1..close];
     let mut types = Vec::new();
     for param in params.split(',') {
-        let ty = param.split_whitespace().next().ok_or(Error::UnsupportedDefinition("invalid ABI parameter"))?;
+        let ty = param
+            .split_whitespace()
+            .next()
+            .ok_or(Error::UnsupportedDefinition("invalid ABI parameter"))?;
         types.push(ty);
     }
     Ok(format!("{name}({})", types.join(",")))
@@ -365,19 +437,23 @@ pub struct DefinitionRegistry {
 }
 
 impl DefinitionRegistry {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub fn install_bytes(&mut self, bytes: &[u8]) -> Result<B256> {
         let definition = InstalledDefinition::parse(bytes)?;
         let hash = definition.definition_hash();
-        self.definitions.retain(|d| d.definition_id() != definition.definition_id());
+        self.definitions
+            .retain(|d| d.definition_id() != definition.definition_id());
         self.definitions.push(definition);
         Ok(hash)
     }
 
     pub fn remove(&mut self, definition_id: &str) -> bool {
         let before = self.definitions.len();
-        self.definitions.retain(|d| d.definition_id() != definition_id);
+        self.definitions
+            .retain(|d| d.definition_id() != definition_id);
         before != self.definitions.len()
     }
 
@@ -395,15 +471,23 @@ impl DefinitionRegistry {
                 Err(error) => hard_error = Some(error),
             }
         }
-        if matches.len() > 1 { return Err(Error::AmbiguousDefinition); }
-        if let Some(review) = matches.pop() { return Ok(review); }
-        if let Some(error) = hard_error { return Err(error); }
+        if matches.len() > 1 {
+            return Err(Error::AmbiguousDefinition);
+        }
+        if let Some(review) = matches.pop() {
+            return Ok(review);
+        }
+        if let Some(error) = hard_error {
+            return Err(error);
+        }
         Err(Error::NoMatchingDefinition)
     }
 
     pub fn load_dir(path: &Path) -> Result<Self> {
         let mut registry = Self::new();
-        if !path.exists() { return Ok(registry); }
+        if !path.exists() {
+            return Ok(registry);
+        }
         let mut entries: Vec<PathBuf> = fs::read_dir(path)?
             .filter_map(|e| e.ok().map(|e| e.path()))
             .filter(|p| p.extension().and_then(|x| x.to_str()) == Some("json"))
@@ -446,7 +530,9 @@ mod tests {
     const ALUSDB: &[u8] = include_bytes!("../definitions/base-alusdb.json");
     const RATSPEAK: &[u8] = include_bytes!("../definitions/base-ratspeak.json");
 
-    fn address(s: &str) -> Address { s.parse().unwrap() }
+    fn address(s: &str) -> Address {
+        s.parse().unwrap()
+    }
 
     fn transfer_input(to: Address, amount: U256) -> Bytes {
         let mut input = Vec::with_capacity(68);
@@ -471,7 +557,9 @@ mod tests {
 
     fn registry() -> DefinitionRegistry {
         let mut r = DefinitionRegistry::new();
-        for d in [NATIVE, USDC, ALUSDB, RATSPEAK] { r.install_bytes(d).unwrap(); }
+        for d in [NATIVE, USDC, ALUSDB, RATSPEAK] {
+            r.install_bytes(d).unwrap();
+        }
         r
     }
 
@@ -505,18 +593,35 @@ mod tests {
             max_fee_per_gas: 1_000_000_000,
             max_priority_fee_per_gas: 100_000_000,
         };
-        assert!(matches!(r.review(&operation), Err(Error::UnsafeNativeGasLimit)));
+        assert!(matches!(
+            r.review(&operation),
+            Err(Error::UnsafeNativeGasLimit)
+        ));
     }
 
     #[test]
     fn all_three_erc20_definitions_share_one_decoder() {
         let recipient = address("2222222222222222222222222222222222222222");
         for (contract, symbol, amount) in [
-            ("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "USDC", U256::from(10_000_000u64)),
-            ("877014E21c32feA108B6A1f45f367efc9a2d9B9F", "alUSDb", U256::from(5_000_000_000_000_000_000u64)),
-            ("f1e9Baa65d418A9025e1851DD2D37f1AD208bba3", "RATSPEAK", U256::from(100_000u64) * U256::from(1_000_000_000_000_000_000u128)),
+            (
+                "833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                "USDC",
+                U256::from(10_000_000u64),
+            ),
+            (
+                "877014E21c32feA108B6A1f45f367efc9a2d9B9F",
+                "alUSDb",
+                U256::from(5_000_000_000_000_000_000u64),
+            ),
+            (
+                "f1e9Baa65d418A9025e1851DD2D37f1AD208bba3",
+                "RATSPEAK",
+                U256::from(100_000u64) * U256::from(1_000_000_000_000_000_000u128),
+            ),
         ] {
-            let review = registry().review(&op(contract, transfer_input(recipient, amount))).unwrap();
+            let review = registry()
+                .review(&op(contract, transfer_input(recipient, amount)))
+                .unwrap();
             assert_eq!(review.asset_symbol, symbol);
             assert_eq!(review.recipient, recipient);
             assert_eq!(review.amount, amount);
@@ -554,7 +659,6 @@ mod tests {
         assert_ne!(x.operation_hash, r.review(&amount_changed).unwrap().operation_hash);
     }
 
-
     #[test]
     fn definitions_install_load_and_remove_from_directory() {
         let unique = SystemTime::now()
@@ -565,8 +669,7 @@ mod tests {
             "ratspeak-clearsign-{}-{unique}",
             std::process::id()
         ));
-        let source = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("definitions/base-usdc.json");
+        let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("definitions/base-usdc.json");
 
         DefinitionRegistry::install_file(&store, &source).unwrap();
         let loaded = DefinitionRegistry::load_dir(&store).unwrap();
