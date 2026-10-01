@@ -155,17 +155,14 @@ struct RawMetadata {
     owner: Option<String>,
     #[serde(default, rename = "contractName")]
     contract_name: Option<String>,
-    #[serde(default)]
-    constants: serde_json::Map<String, serde_json::Value>,
+    token: Option<TokenMeta>,
 }
 
 #[derive(Debug, Deserialize)]
 struct TokenMeta {
-    symbol: String,
+    name: String,
+    ticker: String,
     decimals: u8,
-    network: String,
-    #[serde(rename = "definitionId")]
-    definition_id: String,
 }
 
 impl InstalledDefinition {
@@ -213,21 +210,28 @@ impl InstalledDefinition {
         validate_transfer_format(format)?;
 
         let metadata = raw.metadata.ok_or(Error::UnsupportedDefinition("missing metadata"))?;
-        let token = metadata.constants.get("ratspeakToken")
-            .ok_or(Error::UnsupportedDefinition("missing metadata.constants.ratspeakToken"))?;
-        let token: TokenMeta = serde_json::from_value(token.clone())?;
+        let token = metadata.token.ok_or(Error::UnsupportedDefinition("missing metadata.token"))?;
+        if token.name.trim().is_empty() || token.ticker.trim().is_empty() {
+            return Err(Error::UnsupportedDefinition("token metadata must include name and ticker"));
+        }
         let _ = metadata.owner;
         let _ = metadata.contract_name;
+        let definition_id = format!(
+            "erc7730-{}-{}-{:02x}{:02x}{:02x}{:02x}",
+            deployment.chain_id,
+            alloy_primitives::hex::encode(contract.as_slice()),
+            selector[0], selector[1], selector[2], selector[3]
+        );
 
         Ok(Self {
             raw: bytes.to_vec(),
             definition_hash,
-            definition_id: token.definition_id,
+            definition_id,
             kind: DefinitionKind::Erc7730(Erc7730Definition {
                 chain_id: deployment.chain_id,
                 contract,
-                network: token.network,
-                symbol: token.symbol,
+                network: network_label(deployment.chain_id),
+                symbol: token.ticker,
                 decimals: token.decimals,
                 selector,
             }),
@@ -317,6 +321,15 @@ fn canonical_signature(fragment: &str) -> Result<String> {
         types.push(ty);
     }
     Ok(format!("{name}({})", types.join(",")))
+}
+
+fn network_label(chain_id: u64) -> String {
+    match chain_id {
+        1 => "Ethereum".to_owned(),
+        BASE_CHAIN_ID => "Base".to_owned(),
+        11_155_111 => "Sepolia".to_owned(),
+        other => format!("EIP-155 {other}"),
+    }
 }
 
 pub fn hash_operation(op: &EvmOperation) -> B256 {
@@ -529,7 +542,7 @@ mod tests {
 
         DefinitionRegistry::install_file(&store, &source).unwrap();
         let loaded = DefinitionRegistry::load_dir(&store).unwrap();
-        assert!(loaded.ids().any(|id| id == "base-usdc-transfer-v1"));
+        assert!(loaded.ids().any(|id| id == "erc7730-8453-833589fcd6edb6e08f4c7c32d4f71b54bda02913-a9059cbb"));
 
         let recipient = address("2222222222222222222222222222222222222222");
         assert!(loaded
@@ -539,7 +552,7 @@ mod tests {
             ))
             .is_ok());
 
-        assert!(DefinitionRegistry::remove_file(&store, "base-usdc-transfer-v1").unwrap());
+        assert!(DefinitionRegistry::remove_file(&store, "erc7730-8453-833589fcd6edb6e08f4c7c32d4f71b54bda02913-a9059cbb").unwrap());
         let reloaded = DefinitionRegistry::load_dir(&store).unwrap();
         assert!(matches!(
             reloaded.review(&op(
@@ -556,7 +569,7 @@ mod tests {
     fn removing_definition_makes_operation_unsignable() {
         let recipient = address("2222222222222222222222222222222222222222");
         let mut r = registry();
-        assert!(r.remove("base-usdc-transfer-v1"));
+        assert!(r.remove("erc7730-8453-833589fcd6edb6e08f4c7c32d4f71b54bda02913-a9059cbb"));
         assert!(matches!(r.review(&op("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", transfer_input(recipient, U256::from(1)))), Err(Error::NoMatchingDefinition)));
     }
 }
