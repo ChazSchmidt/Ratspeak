@@ -1,0 +1,10 @@
+{
+  "ratspeak": {
+    "definitionId": "base-native-eth-v1",
+    "kind": "nativeTransfer",
+    "chainId": 8453,
+    "network": "Base",
+    "symbol": "ETH",
+    "decimals": 18
+  }
+}

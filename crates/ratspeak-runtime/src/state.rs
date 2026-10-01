@@ -37,11 +37,87 @@ const BLE_RNODE_ACTIVITY_OPERATION_TTL: Duration = Duration::from_secs(240);
 // while still reclaiming abandoned session-local leases.
 const RNODE_LIFECYCLE_OPERATION_TTL: Duration = Duration::from_secs(15 * 60);
 const MAX_PENDING_LXMF_CLIENT_SENDS: usize = 256;
+// Zero is reserved as an invalid/uninstalled identity-session fence by
+// persisted feature protocols. A newly constructed runtime is its first live
+// process session, so it must begin at a usable non-zero generation.
+const INITIAL_IDENTITY_SESSION_GENERATION: u64 = 1;
 pub const LXMF_SMALL_ATTACHMENT_BUDGET_BYTES: usize = 8 * 1024 * 1024;
 pub const LXMF_DELIVERY_LIMIT_1_MB_KB: usize = 1000;
 pub const LXMF_DELIVERY_LIMIT_1_MB_BYTES: usize = LXMF_DELIVERY_LIMIT_1_MB_KB * 1000;
 pub const LXMF_DELIVERY_LIMIT_MAX_KB: usize = 128 * 1000;
 pub const LXMF_DELIVERY_LIMIT_MAX_BYTES: usize = LXMF_DELIVERY_LIMIT_MAX_KB * 1000;
+
+/// A generic reference to a file attachment whose LXMF message row has
+/// already been committed to the Ratspeak database.
+///
+/// Consumers must still treat the path as untrusted local input: the file can
+/// be removed or replaced after this snapshot is made. The authenticated size
+/// and digest bind reopened bytes to the signed message without copying large
+/// Resource payloads through the runtime or introducing a feature dependency.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PersistedInboundAttachment {
+    pub files_dir: PathBuf,
+    pub stored_name: String,
+    pub authenticated_size: u64,
+    pub authenticated_sha256: [u8; 32],
+}
+
+impl PersistedInboundAttachment {
+    pub fn from_authenticated_bytes(files_dir: PathBuf, stored_name: String, bytes: &[u8]) -> Self {
+        Self {
+            files_dir,
+            stored_name,
+            authenticated_size: bytes.len().min(u64::MAX as usize) as u64,
+            authenticated_sha256: rns_crypto::sha::sha256(bytes),
+        }
+    }
+
+    /// Rebind bytes reopened from mutable local storage to the exact attachment
+    /// that was present in the signature-verified `LxMessage`.
+    pub fn matches_authenticated_bytes(&self, bytes: &[u8]) -> bool {
+        self.authenticated_size == bytes.len() as u64
+            && self.authenticated_sha256 == rns_crypto::sha::sha256(bytes)
+    }
+}
+
+/// Minimal post-persistence observation for an accepted inbound LXMF file.
+///
+/// `signature_valid` belongs to this exact message and `source_hash` is the
+/// real 16-byte `LxMessage::source_hash`. The observer is called only after
+/// the generic message row and attachment reference are durable.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PersistedInboundLxmfAttachment {
+    pub message_id: String,
+    /// Exact local identity that owned the durable message row.
+    pub identity_id: String,
+    /// Runtime lifecycle generation captured when inbound processing began.
+    pub identity_session_generation: u64,
+    pub source_hash: [u8; 16],
+    pub signature_valid: bool,
+    pub attachment: PersistedInboundAttachment,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InboundLxmfPostPersistenceDisposition {
+    /// Keep presenting this row as an ordinary human message.
+    OrdinaryMessage,
+    /// Retain the LXMF row and attachment for the named application while
+    /// excluding it from human chat surfaces.
+    ClaimedApplication { application_id: &'static str },
+}
+
+/// Optional application observer for accepted, persisted LXMF attachments.
+///
+/// This interface deliberately knows nothing about Ethereum or any other
+/// feature protocol. Returning a claim is trusted only after the observer has
+/// authenticated and accepted this exact persisted message; the runtime must
+/// durably record the claim before suppressing chat presentation.
+pub trait InboundLxmfPostPersistenceObserver: Send + Sync {
+    fn observe(
+        &self,
+        attachment: PersistedInboundLxmfAttachment,
+    ) -> InboundLxmfPostPersistenceDisposition;
+}
 
 fn unix_time_ms() -> u64 {
     std::time::SystemTime::now()
@@ -450,6 +526,17 @@ impl IdentitySwitchLock {
         }
     }
 
+    /// Acquire the lifecycle fence from a dedicated blocking worker. Callers
+    /// must never invoke this on an async executor thread.
+    pub fn blocking_lock(&self) -> IdentitySwitchGuard<'_> {
+        let guard = self.inner.blocking_lock();
+        self.epoch.fetch_add(1, Ordering::SeqCst);
+        IdentitySwitchGuard {
+            _guard: guard,
+            epoch: &self.epoch,
+        }
+    }
+
     pub(crate) fn epoch(&self) -> u64 {
         self.epoch.load(Ordering::SeqCst)
     }
@@ -558,6 +645,11 @@ pub struct AppState {
     /// writes. Protocol-state mutations take `lxmf` only long enough to
     /// capture a coherent snapshot; filesystem work must never hold `lxmf`.
     pub lxmf_persistence_lock: tokio::sync::Mutex<()>,
+    /// Optional feature observer invoked only after an inbound message row is
+    /// durable. Installation is process-scoped and independent of identity
+    /// lifecycle replacement.
+    inbound_lxmf_post_persistence_observer:
+        RwLock<Option<Arc<dyn InboundLxmfPostPersistenceObserver>>>,
     /// Public identity keys captured when a local identity is unlocked. Contact
     /// card export is read-only and must not queue behind the LXMF router lock.
     local_identity_public_keys: RwLock<HashMap<String, [u8; 64]>>,
@@ -734,6 +826,8 @@ pub struct AppState {
     pub rns_config_lock: Mutex<()>,
     pub identity_switch_lock: IdentitySwitchLock,
     pub ble_peer_enable_lock: tokio::sync::Mutex<()>,
+    /// Process-local identity lifecycle fence. Zero is never a live session;
+    /// identity replacement advances this monotonically within the process.
     pub identity_session_generation: AtomicU64,
     /// Secret handed to the next protected-identity load (hardware PIN or
     /// software passcode, consumed by `init_rns_lxmf`). Never persisted.
@@ -851,6 +945,7 @@ impl AppState {
             channel_hub_control_lock: tokio::sync::Mutex::new(()),
             lxmf: Mutex::new(None),
             lxmf_persistence_lock: tokio::sync::Mutex::new(()),
+            inbound_lxmf_post_persistence_observer: RwLock::new(None),
             local_identity_public_keys: RwLock::new(HashMap::new()),
             #[cfg(feature = "lxst-voice")]
             lxst_voice: Mutex::new(None),
@@ -935,13 +1030,40 @@ impl AppState {
             rns_config_lock: Mutex::new(()),
             identity_switch_lock: IdentitySwitchLock::new(),
             ble_peer_enable_lock: tokio::sync::Mutex::new(()),
-            identity_session_generation: AtomicU64::new(0),
+            identity_session_generation: AtomicU64::new(INITIAL_IDENTITY_SESSION_GENERATION),
             hw_pending_pin: Mutex::new(None),
             hw_locked: RwLock::new(None),
             hw_last_error: Mutex::new(None),
             hw_lock_gen: AtomicU64::new(0),
             active_identity_cache: Mutex::new(None),
         }
+    }
+
+    /// Install one process-scoped observer for already-persisted inbound LXMF
+    /// attachments. Refuse replacement so an unrelated feature cannot silently
+    /// take over another observer's security boundary.
+    pub fn install_inbound_lxmf_post_persistence_observer(
+        &self,
+        observer: Arc<dyn InboundLxmfPostPersistenceObserver>,
+    ) -> Result<(), &'static str> {
+        let mut installed = self
+            .inbound_lxmf_post_persistence_observer
+            .write()
+            .map_err(|_| "post-persistence observer unavailable")?;
+        if installed.is_some() {
+            return Err("post-persistence observer already installed");
+        }
+        *installed = Some(observer);
+        Ok(())
+    }
+
+    pub(crate) fn inbound_lxmf_post_persistence_observer(
+        &self,
+    ) -> Option<Arc<dyn InboundLxmfPostPersistenceObserver>> {
+        self.inbound_lxmf_post_persistence_observer
+            .read()
+            .ok()
+            .and_then(|observer| observer.clone())
     }
 
     /// Take the PIN staged for the next hardware-identity load (one-shot).
@@ -3193,6 +3315,23 @@ mod tests {
     }
 
     #[test]
+    fn identity_session_generation_starts_live_and_advances_monotonically() {
+        let state = make_state();
+        assert_eq!(
+            state.current_identity_session_generation(),
+            INITIAL_IDENTITY_SESSION_GENERATION
+        );
+        assert_eq!(
+            state.bump_identity_session_generation(),
+            INITIAL_IDENTITY_SESSION_GENERATION + 1
+        );
+        assert_eq!(
+            state.current_identity_session_generation(),
+            INITIAL_IDENTITY_SESSION_GENERATION + 1
+        );
+    }
+
+    #[test]
     fn android_ble_rnode_auto_resume_defaults_on_and_updates_atomically() {
         let state = make_state();
         assert!(state.android_ble_rnode_auto_resume_enabled());
@@ -3764,6 +3903,39 @@ mod tests {
         state.bump_identity_session_generation();
         assert!(!state.is_current_activity_request_fence_after_identity_lock(after_runtime_reset));
         drop(identity_guard);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn blocking_identity_fence_never_stalls_the_async_executor() {
+        let state = Arc::new(make_state());
+        let worker_state = Arc::clone(&state);
+        let (acquired_tx, acquired_rx) = tokio::sync::oneshot::channel();
+        let (release_tx, release_rx) = tokio::sync::oneshot::channel();
+        let worker = tokio::task::spawn_blocking(move || {
+            let _guard = worker_state.identity_switch_lock.blocking_lock();
+            acquired_tx.send(()).unwrap();
+            release_rx.blocking_recv().unwrap();
+        });
+        acquired_rx.await.unwrap();
+
+        tokio::time::timeout(std::time::Duration::from_millis(100), async {
+            tokio::task::yield_now().await;
+        })
+        .await
+        .expect("blocking identity owner must not occupy the async executor");
+        assert!(
+            tokio::time::timeout(
+                std::time::Duration::from_millis(10),
+                state.identity_switch_lock.lock(),
+            )
+            .await
+            .is_err(),
+            "identity replacement must still serialize with the blocking handoff"
+        );
+
+        release_tx.send(()).unwrap();
+        worker.await.unwrap();
+        drop(state.identity_switch_lock.lock().await);
     }
 
     #[tokio::test]

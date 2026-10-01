@@ -8,7 +8,7 @@ use tokio::task::JoinError;
 
 pub type DbPool = Pool<SqliteConnectionManager>;
 
-const SCHEMA_VERSION: i64 = 43;
+const SCHEMA_VERSION: i64 = 44;
 
 pub const PEER_SERVICE_LXMF_DELIVERY: &str = ratspeak_core::LXMF_DELIVERY_APP_NAME;
 pub const PEER_SERVICE_LXST_TELEPHONY: &str = "lxst.telephony";
@@ -193,6 +193,24 @@ CREATE INDEX IF NOT EXISTS idx_contacts_dest_identity ON contacts(dest_hash, ide
 CREATE INDEX IF NOT EXISTS idx_messages_identity_state ON messages(identity_id, state);
 CREATE INDEX IF NOT EXISTS idx_messages_source_identity ON messages(source, identity_id, timestamp ASC);
 CREATE INDEX IF NOT EXISTS idx_messages_dest_identity ON messages(destination, identity_id, timestamp ASC);
+
+-- Authenticated application protocols may retain the original LXMF record
+-- without presenting machine traffic as human chat. Claims are created only
+-- after the installed application observer accepts the already-persisted
+-- inbound message.
+CREATE TABLE IF NOT EXISTS application_message_claims (
+    message_id TEXT NOT NULL,
+    identity_id TEXT NOT NULL,
+    application_id TEXT NOT NULL CHECK (
+        length(application_id) BETWEEN 1 AND 64
+    ),
+    claimed_at REAL NOT NULL,
+    PRIMARY KEY (message_id, identity_id),
+    FOREIGN KEY (message_id, identity_id)
+        REFERENCES messages(id, identity_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_application_message_claims_identity
+    ON application_message_claims(identity_id, claimed_at DESC);
 
 CREATE TABLE IF NOT EXISTS hidden_conversations (
     dest_hash TEXT NOT NULL,
@@ -1830,6 +1848,29 @@ fn run_migrations(conn: &Connection, from_version: i64) -> Result<(), rusqlite::
         })?;
     }
 
+    if from_version < 44 {
+        migration_step(conn, 44, |conn| {
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS application_message_claims (
+                    message_id TEXT NOT NULL,
+                    identity_id TEXT NOT NULL,
+                    application_id TEXT NOT NULL CHECK (
+                        length(application_id) BETWEEN 1 AND 64
+                    ),
+                    claimed_at REAL NOT NULL,
+                    PRIMARY KEY (message_id, identity_id),
+                    FOREIGN KEY (message_id, identity_id)
+                        REFERENCES messages(id, identity_id) ON DELETE CASCADE
+                 );
+                 CREATE INDEX IF NOT EXISTS idx_application_message_claims_identity
+                    ON application_message_claims(identity_id, claimed_at DESC);
+                 UPDATE schema_version SET version = 44;",
+            )?;
+            tracing::info!("Migrated to schema version 44 (application-owned LXMF presentation)");
+            Ok(())
+        })?;
+    }
+
     Ok(())
 }
 
@@ -2004,6 +2045,7 @@ pub fn update_identity_status(pool: &DbPool, hash_hex: &str, status: &str) -> Re
 /// Inventory-checked in tests: a new user-data table must be added here (or
 /// explicitly exempted in the test) before it can ship.
 pub const RESET_TABLES: &[&str] = &[
+    "application_message_claims",
     "messages",
     "contacts",
     "identities",
@@ -2033,6 +2075,10 @@ pub const RESET_TABLES: &[&str] = &[
 /// interpolation), children before parents. Inventory-checked in tests
 /// against every table carrying an `identity_id` column.
 const IDENTITY_CASCADE: &[(&str, &str)] = &[
+    (
+        "application_message_claims",
+        "DELETE FROM application_message_claims WHERE identity_id = ?1",
+    ),
     (
         "app_actions",
         "DELETE FROM app_actions WHERE identity_id = ?1",
@@ -2133,10 +2179,27 @@ pub fn save_contact_with_identity_pubkey(
     trust: &str,
     identity_id: &str,
 ) {
-    let conn = match pool.get() {
-        Ok(c) => c,
-        Err(_) => return,
-    };
+    let _ = try_save_contact_with_identity_pubkey(
+        pool,
+        dest_hash,
+        display_name,
+        identity_pubkey,
+        trust,
+        identity_id,
+    );
+}
+
+/// Fallible contact persistence for operations that must not report success
+/// unless the profile-scoped Contact row is durable.
+pub fn try_save_contact_with_identity_pubkey(
+    pool: &DbPool,
+    dest_hash: &str,
+    display_name: Option<&str>,
+    identity_pubkey: Option<&str>,
+    trust: &str,
+    identity_id: &str,
+) -> Result<(), String> {
+    let conn = pool.get().map_err(|error| format!("pool: {error}"))?;
     let now = now_ts();
     let exists: bool = conn
         .query_row(
@@ -2144,7 +2207,7 @@ pub fn save_contact_with_identity_pubkey(
             params![dest_hash, identity_id],
             |row| row.get::<_, i64>(0),
         )
-        .unwrap_or(0)
+        .map_err(|error| format!("read contact: {error}"))?
         > 0;
 
     if exists {
@@ -2155,27 +2218,70 @@ pub fn save_contact_with_identity_pubkey(
                      identity_pubkey = COALESCE(?2, identity_pubkey),
                      trust = ?3,
                      last_seen = ?4
-                 WHERE dest_hash = ?5 AND identity_id = ?6",
+                WHERE dest_hash = ?5 AND identity_id = ?6",
                 params![dn, identity_pubkey, trust, now, dest_hash, identity_id],
             )
-            .ok();
+            .map_err(|error| format!("update contact: {error}"))?;
         } else {
             conn.execute(
                 "UPDATE contacts
                  SET identity_pubkey = COALESCE(?1, identity_pubkey),
                      trust = ?2,
                      last_seen = ?3
-                 WHERE dest_hash = ?4 AND identity_id = ?5",
+                WHERE dest_hash = ?4 AND identity_id = ?5",
                 params![identity_pubkey, trust, now, dest_hash, identity_id],
             )
-            .ok();
+            .map_err(|error| format!("update contact: {error}"))?;
         }
     } else {
         let dn = display_name.unwrap_or("");
         conn.execute(
             "INSERT INTO contacts (dest_hash, identity_id, display_name, identity_pubkey, first_seen, last_seen, trust, notes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, '')",
             params![dest_hash, identity_id, dn, identity_pubkey, now, now, trust],
-        ).ok();
+        ).map_err(|error| format!("insert contact: {error}"))?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod checked_contact_persistence_tests {
+    use super::*;
+    use r2d2_sqlite::SqliteConnectionManager;
+
+    #[test]
+    fn checked_contact_persistence_reports_failure_and_round_trips_success() {
+        let manager = SqliteConnectionManager::memory();
+        let pool = r2d2::Pool::builder().max_size(1).build(manager).unwrap();
+        assert!(
+            try_save_contact_with_identity_pubkey(
+                &pool,
+                "11111111111111111111111111111111",
+                Some("Sepolia service"),
+                Some(&"22".repeat(64)),
+                "trusted",
+                "33333333333333333333333333333333",
+            )
+            .is_err()
+        );
+
+        init_schema(&pool).unwrap();
+        try_save_contact_with_identity_pubkey(
+            &pool,
+            "11111111111111111111111111111111",
+            Some("Sepolia service"),
+            Some(&"22".repeat(64)),
+            "trusted",
+            "33333333333333333333333333333333",
+        )
+        .unwrap();
+        let stored = get_contact(
+            &pool,
+            "11111111111111111111111111111111",
+            "33333333333333333333333333333333",
+        )
+        .unwrap();
+        assert_eq!(stored["display_name"], "Sepolia service");
+        assert_eq!(stored["identity_pubkey"], "22".repeat(64));
     }
 }
 
@@ -2601,6 +2707,54 @@ pub fn message_exists_for_identity(pool: &DbPool, msg_id: &str, identity_id: &st
         > 0
 }
 
+/// Mark an already-persisted inbound LXMF message as application traffic.
+///
+/// The runtime calls this only after its installed application observer has
+/// authenticated and accepted the exact attachment. The original message and
+/// attachment remain durable; presentation queries omit the claimed row.
+pub fn claim_inbound_application_message(
+    pool: &DbPool,
+    msg_id: &str,
+    identity_id: &str,
+    application_id: &str,
+) -> bool {
+    if application_id.is_empty()
+        || application_id.len() > 64
+        || !application_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+    {
+        return false;
+    }
+    let conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(_) => return false,
+    };
+    conn.execute(
+        "INSERT OR IGNORE INTO application_message_claims (
+            message_id, identity_id, application_id, claimed_at
+         )
+         SELECT id, identity_id, ?3, ?4
+         FROM messages
+         WHERE id = ?1 AND identity_id = ?2 AND direction = 'inbound'",
+        params![msg_id, identity_id, application_id, now_ts()],
+    )
+    .map(|changed| {
+        changed > 0
+            || conn
+                .query_row(
+                    "SELECT COUNT(*) FROM application_message_claims
+                     WHERE message_id = ?1 AND identity_id = ?2
+                       AND application_id = ?3",
+                    params![msg_id, identity_id, application_id],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0)
+                > 0
+    })
+    .unwrap_or(false)
+}
+
 // Mirrors the `messages` table insert/update columns. Keeping the call explicit
 // makes schema writes easy to trace at each persistence site.
 #[allow(clippy::too_many_arguments)]
@@ -2871,12 +3025,27 @@ pub fn get_conversation(
     let mut stmt = match conn.prepare(
         "SELECT * FROM (
             SELECT * FROM (
-                SELECT *, rowid AS _rw FROM messages WHERE source = ?1 AND identity_id = ?2
+                SELECT *, rowid AS _rw FROM messages
+                 WHERE source = ?1 AND identity_id = ?2
+                   AND NOT EXISTS (
+                       SELECT 1 FROM application_message_claims c
+                       WHERE c.message_id = messages.id
+                         AND c.identity_id = messages.identity_id
+                   )
                 UNION ALL
-                SELECT *, rowid AS _rw FROM messages WHERE destination = ?1 AND identity_id = ?2 AND source != ?1
+                SELECT *, rowid AS _rw FROM messages
+                 WHERE destination = ?1 AND identity_id = ?2 AND source != ?1
+                   AND NOT EXISTS (
+                       SELECT 1 FROM application_message_claims c
+                       WHERE c.message_id = messages.id
+                         AND c.identity_id = messages.identity_id
+                   )
             ) ORDER BY timestamp DESC, _rw DESC LIMIT ?3
-        ) ORDER BY timestamp ASC, _rw ASC"
-    ) { Ok(s) => s, Err(_) => return vec![] };
+        ) ORDER BY timestamp ASC, _rw ASC",
+    ) {
+        Ok(s) => s,
+        Err(_) => return vec![],
+    };
 
     let rows: Vec<serde_json::Value> = stmt
         .query_map(params![dest_hash, identity_id, limit], row_to_message)
@@ -2928,9 +3097,21 @@ pub fn next_conversation_observed_timestamp(
     let latest: Option<f64> = conn
         .query_row(
             "SELECT MAX(timestamp) FROM (
-                SELECT timestamp FROM messages WHERE source = ?1 AND identity_id = ?2
+                SELECT timestamp FROM messages
+                 WHERE source = ?1 AND identity_id = ?2
+                   AND NOT EXISTS (
+                       SELECT 1 FROM application_message_claims c
+                       WHERE c.message_id = messages.id
+                         AND c.identity_id = messages.identity_id
+                   )
                 UNION ALL
-                SELECT timestamp FROM messages WHERE destination = ?1 AND identity_id = ?2 AND source != ?1
+                SELECT timestamp FROM messages
+                 WHERE destination = ?1 AND identity_id = ?2 AND source != ?1
+                   AND NOT EXISTS (
+                       SELECT 1 FROM application_message_claims c
+                       WHERE c.message_id = messages.id
+                         AND c.identity_id = messages.identity_id
+                   )
             )",
             params![dest_hash, identity_id],
             |row| row.get::<_, Option<f64>>(0),
@@ -2963,12 +3144,20 @@ pub fn search_messages(
     // Phrase-search escape; tolerates user-typed FTS5 specials.
     let safe_query = format!("\"{}\"", query.replace('"', "\"\""));
 
-    let result = conn.prepare(
-        "SELECT m.* FROM messages m JOIN messages_fts f ON m.rowid = f.rowid WHERE messages_fts MATCH ?1 AND f.identity_id = ?2 ORDER BY m.timestamp DESC LIMIT ?3"
-    ).and_then(|mut stmt| {
-        stmt.query_map(params![safe_query, identity_id, limit], row_to_message)
-            .map(|rows| rows.filter_map(|r| r.ok()).collect::<Vec<_>>())
-    });
+    let result = conn
+        .prepare(
+            "SELECT m.* FROM messages m JOIN messages_fts f ON m.rowid = f.rowid
+         WHERE messages_fts MATCH ?1 AND f.identity_id = ?2
+           AND NOT EXISTS (
+               SELECT 1 FROM application_message_claims c
+               WHERE c.message_id = m.id AND c.identity_id = m.identity_id
+           )
+         ORDER BY m.timestamp DESC LIMIT ?3",
+        )
+        .and_then(|mut stmt| {
+            stmt.query_map(params![safe_query, identity_id, limit], row_to_message)
+                .map(|rows| rows.filter_map(|r| r.ok()).collect::<Vec<_>>())
+        });
 
     match result {
         Ok(rows) => rows,
@@ -2976,11 +3165,20 @@ pub fn search_messages(
             // LIKE fallback on FTS errors.
             let pattern = format!("%{query}%");
             conn.prepare(
-                "SELECT * FROM messages WHERE content LIKE ?1 AND identity_id = ?2 ORDER BY timestamp DESC LIMIT ?3"
-            ).and_then(|mut stmt| {
+                "SELECT * FROM messages
+                 WHERE content LIKE ?1 AND identity_id = ?2
+                   AND NOT EXISTS (
+                       SELECT 1 FROM application_message_claims c
+                       WHERE c.message_id = messages.id
+                         AND c.identity_id = messages.identity_id
+                   )
+                 ORDER BY timestamp DESC LIMIT ?3",
+            )
+            .and_then(|mut stmt| {
                 stmt.query_map(params![pattern, identity_id, limit], row_to_message)
                     .map(|rows| rows.filter_map(|r| r.ok()).collect())
-            }).unwrap_or_default()
+            })
+            .unwrap_or_default()
         }
     }
 }
@@ -3005,8 +3203,18 @@ pub fn get_all_unread_counts(
         Err(_) => return Default::default(),
     };
     let mut stmt = match conn.prepare(
-        "SELECT source, COUNT(*) as cnt FROM messages WHERE direction = 'inbound' AND state != 'read' AND identity_id = ?1 GROUP BY source"
-    ) { Ok(s) => s, Err(_) => return Default::default() };
+        "SELECT source, COUNT(*) as cnt FROM messages
+         WHERE direction = 'inbound' AND state != 'read' AND identity_id = ?1
+           AND NOT EXISTS (
+               SELECT 1 FROM application_message_claims c
+               WHERE c.message_id = messages.id
+                 AND c.identity_id = messages.identity_id
+           )
+         GROUP BY source",
+    ) {
+        Ok(s) => s,
+        Err(_) => return Default::default(),
+    };
 
     stmt.query_map(params![identity_id], |row| {
         Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
@@ -3034,6 +3242,11 @@ pub fn get_unread_breakdown(
             SELECT source, COUNT(*) AS unread
             FROM messages
             WHERE direction = 'inbound' AND state != 'read' AND identity_id = ?1
+              AND NOT EXISTS (
+                  SELECT 1 FROM application_message_claims c
+                  WHERE c.message_id = messages.id
+                    AND c.identity_id = messages.identity_id
+              )
             GROUP BY source
         ) cnt
         JOIN (
@@ -3043,6 +3256,11 @@ pub fn get_unread_breakdown(
                    ROW_NUMBER() OVER (PARTITION BY source ORDER BY timestamp DESC) AS rn
             FROM messages
             WHERE direction = 'inbound' AND state != 'read' AND identity_id = ?1
+              AND NOT EXISTS (
+                  SELECT 1 FROM application_message_claims c
+                  WHERE c.message_id = messages.id
+                    AND c.identity_id = messages.identity_id
+              )
         ) latest ON latest.source = cnt.source AND latest.rn = 1
         LEFT JOIN contacts c ON c.dest_hash = cnt.source AND c.identity_id = ?1
         ORDER BY latest.ts DESC
@@ -3075,11 +3293,21 @@ pub fn get_all_unread_counts_conn(
     identity_id: &str,
 ) -> std::collections::HashMap<String, i64> {
     let mut stmt = match conn.prepare(
-        "SELECT source, COUNT(*) as cnt FROM messages WHERE direction = 'inbound' AND state != 'read' AND identity_id = ?1 GROUP BY source"
+        "SELECT source, COUNT(*) as cnt FROM messages
+         WHERE direction = 'inbound' AND state != 'read' AND identity_id = ?1
+           AND NOT EXISTS (
+               SELECT 1 FROM application_message_claims c
+               WHERE c.message_id = messages.id
+                 AND c.identity_id = messages.identity_id
+           )
+         GROUP BY source",
     ) {
         Ok(s) => s,
         Err(_) => {
-            tracing::warn!(reason = "prepare_failed", "get_all_unread_counts_conn: prepare failed");
+            tracing::warn!(
+                reason = "prepare_failed",
+                "get_all_unread_counts_conn: prepare failed"
+            );
             return Default::default();
         }
     };
@@ -10656,6 +10884,60 @@ mod unread_breakdown_tests {
     }
 
     #[test]
+    fn claimed_application_message_remains_durable_but_is_not_human_chat() {
+        let pool = test_pool();
+        save_message(
+            &pool,
+            "protocol-frame",
+            "service",
+            "me",
+            "machine protocol payload",
+            "",
+            100.0,
+            "received",
+            "inbound",
+            "me",
+            "frame.bin",
+            "stored-frame.bin",
+            "",
+            "",
+            "",
+            "",
+            None,
+        );
+
+        assert!(claim_inbound_application_message(
+            &pool,
+            "protocol-frame",
+            "me",
+            "test.protocol"
+        ));
+        assert_eq!(
+            pool.get()
+                .unwrap()
+                .query_row("SELECT COUNT(*) FROM messages", [], |row| row
+                    .get::<_, i64>(0))
+                .unwrap(),
+            1,
+            "claiming must not delete the signed LXMF record"
+        );
+        assert!(get_conversation(&pool, "service", "me", 10).is_empty());
+        assert!(search_messages(&pool, "machine", "me", 10).is_empty());
+        assert!(get_all_unread_counts(&pool, "me").is_empty());
+        assert!(
+            (next_conversation_observed_timestamp(&pool, "service", "me", 99.0) - 99.0).abs()
+                < f64::EPSILON
+        );
+
+        assert!(!claim_inbound_application_message(
+            &pool,
+            "protocol-frame",
+            "me",
+            "bad protocol id!"
+        ));
+    }
+
+    #[test]
     fn observed_conversation_timestamp_keeps_newer_observation() {
         let pool = test_pool();
         save_message(
@@ -10713,6 +10995,7 @@ mod migration_tests {
             "identities",
             "contacts",
             "messages",
+            "application_message_claims",
             "connection_history",
             "messages_fts",
             "channel_hubs",
@@ -10872,7 +11155,7 @@ mod migration_tests {
     }
 
     #[test]
-    fn migration_43_adds_nullable_audio_mode_and_empty_storage_reference() {
+    fn migration_audio_columns_survive_newer_schema() {
         let pool = empty_pool();
         init_schema(&pool).unwrap();
         {
@@ -10886,7 +11169,7 @@ mod migration_tests {
         }
 
         init_schema(&pool).unwrap();
-        assert_eq!(read_schema_version(&pool), 43);
+        assert_eq!(read_schema_version(&pool), SCHEMA_VERSION);
         let conn = pool.get().unwrap();
         let columns = get_column_names(&conn, "messages").unwrap();
         assert_eq!(
@@ -10917,6 +11200,24 @@ mod migration_tests {
             )
             .unwrap();
         assert_eq!(defaults, (None, String::new()));
+    }
+
+    #[test]
+    fn migration_44_adds_application_message_claims() {
+        let pool = empty_pool();
+        init_schema(&pool).unwrap();
+        {
+            let conn = pool.get().unwrap();
+            conn.execute_batch(
+                "DROP TABLE application_message_claims;
+                 UPDATE schema_version SET version = 43;",
+            )
+            .unwrap();
+        }
+
+        init_schema(&pool).unwrap();
+        assert_eq!(read_schema_version(&pool), SCHEMA_VERSION);
+        assert!(table_exists(&pool.get().unwrap(), "application_message_claims").unwrap());
     }
 
     /// T1-8: blackhole requests queued for an identity do not survive its

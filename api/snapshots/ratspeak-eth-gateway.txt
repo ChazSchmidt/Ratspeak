@@ -1,0 +1,480 @@
+pub mod ratspeak_eth_gateway
+pub enum ratspeak_eth_gateway::BeaconClientError
+pub ratspeak_eth_gateway::BeaconClientError::AcquisitionLimit
+pub ratspeak_eth_gateway::BeaconClientError::CheckpointEpochMismatch
+pub ratspeak_eth_gateway::BeaconClientError::ClockPolicy
+pub ratspeak_eth_gateway::BeaconClientError::Conflict
+pub ratspeak_eth_gateway::BeaconClientError::ExecutionMismatch
+pub ratspeak_eth_gateway::BeaconClientError::InsecureEndpoint
+pub ratspeak_eth_gateway::BeaconClientError::InvalidConfiguration
+pub ratspeak_eth_gateway::BeaconClientError::InvalidResponse
+pub ratspeak_eth_gateway::BeaconClientError::Rollback
+pub ratspeak_eth_gateway::BeaconClientError::SizeLimit
+pub ratspeak_eth_gateway::BeaconClientError::Transient
+pub ratspeak_eth_gateway::BeaconClientError::VerificationFailed
+pub enum ratspeak_eth_gateway::DurableGatewayOutcome
+pub ratspeak_eth_gateway::DurableGatewayOutcome::BulkApproved(ratspeak_eth_gateway::GatewayStoredResult)
+pub ratspeak_eth_gateway::DurableGatewayOutcome::Duplicate(ratspeak_eth_gateway::GatewayJobState)
+pub ratspeak_eth_gateway::DurableGatewayOutcome::IgnoredUnauthenticated
+pub ratspeak_eth_gateway::DurableGatewayOutcome::Queued(ratspeak_eth_gateway::GatewayJob)
+pub enum ratspeak_eth_gateway::GatewayAdmissionError
+pub ratspeak_eth_gateway::GatewayAdmissionError::InvalidState
+pub ratspeak_eth_gateway::GatewayAdmissionError::Message(ratspeak_eth_gateway::GatewayMessageError)
+pub ratspeak_eth_gateway::GatewayAdmissionError::ReplayConflict
+pub ratspeak_eth_gateway::GatewayAdmissionError::Storage
+pub enum ratspeak_eth_gateway::GatewayBuildError
+pub ratspeak_eth_gateway::GatewayBuildError::EmptyPayload
+pub ratspeak_eth_gateway::GatewayBuildError::LengthOverflow
+pub ratspeak_eth_gateway::GatewayBuildError::LocalVerificationFailed
+pub ratspeak_eth_gateway::GatewayBuildError::SizeLimit
+pub ratspeak_eth_gateway::GatewayBuildError::TooManyItems
+pub ratspeak_eth_gateway::GatewayBuildError::UnsupportedNetwork
+pub enum ratspeak_eth_gateway::GatewayBundleKind
+pub ratspeak_eth_gateway::GatewayBundleKind::AccountProof
+pub ratspeak_eth_gateway::GatewayBundleKind::AccountStateEvidence
+pub ratspeak_eth_gateway::GatewayBundleKind::ConsensusBootstrap
+pub ratspeak_eth_gateway::GatewayBundleKind::ExecutionHeader
+pub ratspeak_eth_gateway::GatewayBundleKind::FinalizedReceiptEvidence
+pub ratspeak_eth_gateway::GatewayBundleKind::TxReceiptProof
+pub enum ratspeak_eth_gateway::GatewayExecutionError
+pub ratspeak_eth_gateway::GatewayExecutionError::Admission(ratspeak_eth_gateway::GatewayAdmissionError)
+pub ratspeak_eth_gateway::GatewayExecutionError::InvalidPolicy
+pub ratspeak_eth_gateway::GatewayExecutionError::RetainedMessage(ratspeak_eth_gateway::GatewayMessageError)
+pub enum ratspeak_eth_gateway::GatewayExecutionOutcome
+pub ratspeak_eth_gateway::GatewayExecutionOutcome::Completed(ratspeak_eth_gateway::GatewayStoredResult)
+pub ratspeak_eth_gateway::GatewayExecutionOutcome::Deferred
+pub ratspeak_eth_gateway::GatewayExecutionOutcome::Idle
+pub enum ratspeak_eth_gateway::GatewayJobKind
+pub ratspeak_eth_gateway::GatewayJobKind::Evidence
+pub ratspeak_eth_gateway::GatewayJobKind::SignedRelay
+pub enum ratspeak_eth_gateway::GatewayJobState
+pub ratspeak_eth_gateway::GatewayJobState::Completed
+pub ratspeak_eth_gateway::GatewayJobState::Expired
+pub ratspeak_eth_gateway::GatewayJobState::Leased
+pub ratspeak_eth_gateway::GatewayJobState::Pending
+pub enum ratspeak_eth_gateway::GatewayLxmfFrameKind
+pub ratspeak_eth_gateway::GatewayLxmfFrameKind::EvidenceManifest
+pub ratspeak_eth_gateway::GatewayLxmfFrameKind::EvidenceResponse
+pub ratspeak_eth_gateway::GatewayLxmfFrameKind::RelayObservation
+pub enum ratspeak_eth_gateway::GatewayLxmfServiceError
+pub ratspeak_eth_gateway::GatewayLxmfServiceError::Admission(ratspeak_eth_gateway::GatewayAdmissionError)
+pub ratspeak_eth_gateway::GatewayLxmfServiceError::Execution(ratspeak_eth_gateway::GatewayExecutionError)
+pub ratspeak_eth_gateway::GatewayLxmfServiceError::InvalidAttachment
+pub ratspeak_eth_gateway::GatewayLxmfServiceError::InvalidConfiguration
+pub ratspeak_eth_gateway::GatewayLxmfServiceError::InvalidMessageBinding
+pub ratspeak_eth_gateway::GatewayLxmfServiceError::RequesterNotConfigured
+pub ratspeak_eth_gateway::GatewayLxmfServiceError::SignatureNotValidated
+pub ratspeak_eth_gateway::GatewayLxmfServiceError::WrongDestination
+pub enum ratspeak_eth_gateway::GatewayLxmfServiceOutcome
+pub ratspeak_eth_gateway::GatewayLxmfServiceOutcome::AcceptedNoOutput
+pub ratspeak_eth_gateway::GatewayLxmfServiceOutcome::Deferred
+pub ratspeak_eth_gateway::GatewayLxmfServiceOutcome::Outbound(alloc::vec::Vec<ratspeak_eth_gateway::GatewayLxmfOutboundIntent>)
+pub enum ratspeak_eth_gateway::GatewayMessageError
+pub ratspeak_eth_gateway::GatewayMessageError::BudgetExceeded
+pub ratspeak_eth_gateway::GatewayMessageError::BulkApprovalRequired
+pub ratspeak_eth_gateway::GatewayMessageError::EvidenceMismatch
+pub ratspeak_eth_gateway::GatewayMessageError::Expired
+pub ratspeak_eth_gateway::GatewayMessageError::InvalidMessage
+pub ratspeak_eth_gateway::GatewayMessageError::InvalidSignedRelay
+pub ratspeak_eth_gateway::GatewayMessageError::RateLimited
+pub ratspeak_eth_gateway::GatewayMessageError::UnsupportedKind
+pub enum ratspeak_eth_gateway::GatewayMessageOutcome
+pub ratspeak_eth_gateway::GatewayMessageOutcome::BulkApproval(ratspeak_eth_gateway::AcceptedBulkApproval)
+pub ratspeak_eth_gateway::GatewayMessageOutcome::EvidenceRequest(ratspeak_eth_gateway::AcceptedEvidenceRequest)
+pub ratspeak_eth_gateway::GatewayMessageOutcome::IgnoredUnauthenticated
+pub ratspeak_eth_gateway::GatewayMessageOutcome::SignedRelay(ratspeak_eth_gateway::AcceptedSignedRelay)
+pub enum ratspeak_eth_gateway::GatewayProviderFailure
+pub ratspeak_eth_gateway::GatewayProviderFailure::Permanent
+pub ratspeak_eth_gateway::GatewayProviderFailure::Transient
+pub enum ratspeak_eth_gateway::GatewayResultKind
+pub ratspeak_eth_gateway::GatewayResultKind::Evidence
+pub ratspeak_eth_gateway::GatewayResultKind::PermanentFailure
+pub ratspeak_eth_gateway::GatewayResultKind::RelayAccepted
+pub ratspeak_eth_gateway::GatewayResultKind::RelayRejected
+pub enum ratspeak_eth_gateway::HttpEndpointPolicy
+pub ratspeak_eth_gateway::HttpEndpointPolicy::AllowLoopbackHttpForDevelopment
+pub ratspeak_eth_gateway::HttpEndpointPolicy::HttpsOnly
+pub enum ratspeak_eth_gateway::HttpTransportFailure
+pub ratspeak_eth_gateway::HttpTransportFailure::Oversized
+pub ratspeak_eth_gateway::HttpTransportFailure::Permanent
+pub ratspeak_eth_gateway::HttpTransportFailure::Transient
+pub enum ratspeak_eth_gateway::LiveProviderError
+pub ratspeak_eth_gateway::LiveProviderError::Configuration
+pub enum ratspeak_eth_gateway::MessagingEvidenceKind
+pub ratspeak_eth_gateway::MessagingEvidenceKind::AccountProof
+pub ratspeak_eth_gateway::MessagingEvidenceKind::AccountStatePackage
+pub ratspeak_eth_gateway::MessagingEvidenceKind::Consensus
+pub ratspeak_eth_gateway::MessagingEvidenceKind::ExecutionHeader
+pub ratspeak_eth_gateway::MessagingEvidenceKind::FinalizedReceiptPackage
+pub ratspeak_eth_gateway::MessagingEvidenceKind::ReceiptProof
+pub enum ratspeak_eth_gateway::ProviderConfigurationError
+pub ratspeak_eth_gateway::ProviderConfigurationError::ClientCreation
+pub ratspeak_eth_gateway::ProviderConfigurationError::InsecureEndpoint
+pub ratspeak_eth_gateway::ProviderConfigurationError::InvalidAuthorization
+pub ratspeak_eth_gateway::ProviderConfigurationError::InvalidEndpoint
+pub ratspeak_eth_gateway::ProviderConfigurationError::InvalidPolicy
+pub enum ratspeak_eth_gateway::RelayObservation
+pub ratspeak_eth_gateway::RelayObservation::GatewayAccepted
+pub ratspeak_eth_gateway::RelayObservation::RpcAccepted
+pub ratspeak_eth_gateway::RelayObservation::RpcRejected
+pub enum ratspeak_eth_gateway::RelayProviderStatus
+pub ratspeak_eth_gateway::RelayProviderStatus::Accepted
+pub ratspeak_eth_gateway::RelayProviderStatus::Rejected
+pub struct ratspeak_eth_gateway::AcceptedBulkApproval
+impl ratspeak_eth_gateway::AcceptedBulkApproval
+pub fn ratspeak_eth_gateway::AcceptedBulkApproval::checkpoint_context(&self) -> core::option::Option<ratspeak_eth_gateway::EvidenceCheckpointContext>
+pub fn ratspeak_eth_gateway::AcceptedBulkApproval::digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::AcceptedBulkApproval::encoded_size(&self) -> u32
+pub fn ratspeak_eth_gateway::AcceptedBulkApproval::evidence_kind(&self) -> ratspeak_eth_gateway::MessagingEvidenceKind
+pub fn ratspeak_eth_gateway::AcceptedBulkApproval::expires_at_unix(&self) -> u64
+pub fn ratspeak_eth_gateway::AcceptedBulkApproval::request_id(&self) -> [u8; 16]
+impl core::fmt::Debug for ratspeak_eth_gateway::AcceptedBulkApproval
+pub fn ratspeak_eth_gateway::AcceptedBulkApproval::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::AcceptedEvidenceRequest
+impl ratspeak_eth_gateway::AcceptedEvidenceRequest
+pub fn ratspeak_eth_gateway::AcceptedEvidenceRequest::bulk_approved(&self) -> bool
+pub fn ratspeak_eth_gateway::AcceptedEvidenceRequest::checkpoint_context(&self) -> core::option::Option<ratspeak_eth_gateway::EvidenceCheckpointContext>
+pub fn ratspeak_eth_gateway::AcceptedEvidenceRequest::evidence_kind(&self) -> ratspeak_eth_gateway::MessagingEvidenceKind
+pub fn ratspeak_eth_gateway::AcceptedEvidenceRequest::expires_at_unix(&self) -> u64
+pub fn ratspeak_eth_gateway::AcceptedEvidenceRequest::maximum_response_bytes(&self) -> u32
+pub fn ratspeak_eth_gateway::AcceptedEvidenceRequest::request_id(&self) -> [u8; 16]
+pub fn ratspeak_eth_gateway::AcceptedEvidenceRequest::subject(&self) -> [u8; 32]
+impl core::fmt::Debug for ratspeak_eth_gateway::AcceptedEvidenceRequest
+pub fn ratspeak_eth_gateway::AcceptedEvidenceRequest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::AcceptedSignedRelay
+impl ratspeak_eth_gateway::AcceptedSignedRelay
+pub fn ratspeak_eth_gateway::AcceptedSignedRelay::raw_transaction(&self) -> &[u8]
+pub fn ratspeak_eth_gateway::AcceptedSignedRelay::request_id(&self) -> [u8; 16]
+pub fn ratspeak_eth_gateway::AcceptedSignedRelay::sender(&self) -> [u8; 20]
+pub fn ratspeak_eth_gateway::AcceptedSignedRelay::tx_hash(&self) -> [u8; 32]
+impl core::fmt::Debug for ratspeak_eth_gateway::AcceptedSignedRelay
+pub fn ratspeak_eth_gateway::AcceptedSignedRelay::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::AuthenticatedGatewayEnvelope<'a>
+impl core::fmt::Debug for ratspeak_eth_gateway::AuthenticatedGatewayEnvelope<'_>
+pub fn ratspeak_eth_gateway::AuthenticatedGatewayEnvelope<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::BeaconCheckpointCard
+impl ratspeak_eth_gateway::BeaconCheckpointCard
+pub fn ratspeak_eth_gateway::BeaconCheckpointCard::bytes(&self) -> &[u8]
+pub fn ratspeak_eth_gateway::BeaconCheckpointCard::checkpoint_epoch(&self) -> u64
+pub fn ratspeak_eth_gateway::BeaconCheckpointCard::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::BeaconCheckpointCard::fingerprint(&self) -> [u8; 32]
+impl core::fmt::Debug for ratspeak_eth_gateway::BeaconCheckpointCard
+pub fn ratspeak_eth_gateway::BeaconCheckpointCard::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::BeaconConsensusClient<T, C>
+impl<T, C> ratspeak_eth_gateway::BeaconConsensusClient<T, C> where T: ratspeak_eth_gateway::BeaconHttpTransport, C: ratspeak_eth_gateway::UnixClock
+pub fn ratspeak_eth_gateway::BeaconConsensusClient<T, C>::acquire_builder(&mut self, &ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput) -> core::result::Result<ratspeak_eth_gateway::SepoliaGatewayBuilder, ratspeak_eth_gateway::BeaconClientError>
+pub fn ratspeak_eth_gateway::BeaconConsensusClient<T, C>::acquire_checkpoint_card(&mut self, u64) -> core::result::Result<ratspeak_eth_gateway::BeaconCheckpointCard, ratspeak_eth_gateway::BeaconClientError>
+pub fn ratspeak_eth_gateway::BeaconConsensusClient<T, C>::acquire_consensus(&mut self) -> core::result::Result<ratspeak_eth_gateway::beacon::VerifiedBeaconConsensus, ratspeak_eth_gateway::BeaconClientError>
+pub fn ratspeak_eth_gateway::BeaconConsensusClient<T, C>::into_transport(self) -> T
+pub fn ratspeak_eth_gateway::BeaconConsensusClient<T, C>::new(ratspeak_eth_verifier::consensus::BeaconCheckpointRoot, T, C, ratspeak_eth_gateway::BeaconHttpPolicy) -> core::result::Result<Self, ratspeak_eth_gateway::BeaconClientError>
+impl<T, C> core::fmt::Debug for ratspeak_eth_gateway::BeaconConsensusClient<T, C>
+pub fn ratspeak_eth_gateway::BeaconConsensusClient<T, C>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::BeaconHttpPolicy
+pub ratspeak_eth_gateway::BeaconHttpPolicy::connect_timeout: core::time::Duration
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_acquisition_duration: core::time::Duration
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_bootstrap_bytes: usize
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_finality_update_bytes: usize
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_finalized_age: core::time::Duration
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_requests: usize
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_total_bytes: usize
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_update_response_bytes: usize
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_updates: usize
+pub ratspeak_eth_gateway::BeaconHttpPolicy::maximum_updates_per_request: usize
+pub ratspeak_eth_gateway::BeaconHttpPolicy::request_timeout: core::time::Duration
+impl ratspeak_eth_gateway::BeaconHttpPolicy
+pub fn ratspeak_eth_gateway::BeaconHttpPolicy::conservative() -> Self
+pub struct ratspeak_eth_gateway::BeaconHttpResponse
+impl ratspeak_eth_gateway::BeaconHttpResponse
+pub fn ratspeak_eth_gateway::BeaconHttpResponse::new(u16, core::option::Option<&str>, core::option::Option<&str>, core::option::Option<&str>, alloc::vec::Vec<u8>) -> Self
+impl core::fmt::Debug for ratspeak_eth_gateway::BeaconHttpResponse
+pub fn ratspeak_eth_gateway::BeaconHttpResponse::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>
+impl<T> ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>
+pub fn ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>::into_transport(self) -> T
+pub fn ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>::new(T, ratspeak_eth_gateway::ProviderHttpPolicy) -> core::result::Result<Self, ratspeak_eth_gateway::ProviderConfigurationError>
+impl<T: ratspeak_eth_gateway::GatewayHttpTransport> ratspeak_eth_gateway::ExactReceiptProofBackend for ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>
+pub fn ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>::fetch_exact_receipt_proof(&mut self, [u8; 32], u64, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>::fetch_receipt_location(&mut self, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedReceiptLocation, ratspeak_eth_gateway::GatewayProviderFailure>
+impl<T> core::fmt::Debug for ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>
+pub fn ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::DurableGatewayAdmission
+impl ratspeak_eth_gateway::DurableGatewayAdmission
+pub fn ratspeak_eth_gateway::DurableGatewayAdmission::admit_persisted_attachment(&mut self, ratspeak_eth_gateway::AuthenticatedGatewayEnvelope<'_>, u64) -> core::result::Result<ratspeak_eth_gateway::DurableGatewayOutcome, ratspeak_eth_gateway::GatewayAdmissionError>
+pub fn ratspeak_eth_gateway::DurableGatewayAdmission::complete(&mut self, &ratspeak_eth_gateway::GatewayLease) -> core::result::Result<(), ratspeak_eth_gateway::GatewayAdmissionError>
+pub fn ratspeak_eth_gateway::DurableGatewayAdmission::completed_result(&self, [u8; 16], [u8; 16]) -> core::result::Result<core::option::Option<ratspeak_eth_gateway::GatewayStoredResult>, ratspeak_eth_gateway::GatewayAdmissionError>
+pub fn ratspeak_eth_gateway::DurableGatewayAdmission::lease_next(&mut self, [u8; 16], u64, u64) -> core::result::Result<core::option::Option<ratspeak_eth_gateway::GatewayLease>, ratspeak_eth_gateway::GatewayAdmissionError>
+pub fn ratspeak_eth_gateway::DurableGatewayAdmission::open(&std::path::Path, impl core::iter::traits::collect::IntoIterator<Item = [u8; 16]>, ratspeak_eth_gateway::GatewayRateLimit) -> core::result::Result<Self, ratspeak_eth_gateway::GatewayAdmissionError>
+pub fn ratspeak_eth_gateway::DurableGatewayAdmission::prune_expired(&mut self, u64, u64) -> core::result::Result<(), ratspeak_eth_gateway::GatewayAdmissionError>
+pub fn ratspeak_eth_gateway::DurableGatewayAdmission::release(&mut self, &ratspeak_eth_gateway::GatewayLease) -> core::result::Result<(), ratspeak_eth_gateway::GatewayAdmissionError>
+pub struct ratspeak_eth_gateway::EvidenceCheckpointContext
+impl ratspeak_eth_gateway::EvidenceCheckpointContext
+pub fn ratspeak_eth_gateway::EvidenceCheckpointContext::epoch(self) -> u64
+pub fn ratspeak_eth_gateway::EvidenceCheckpointContext::new(u64, [u8; 32]) -> core::result::Result<Self, ratspeak_eth_gateway::GatewayMessageError>
+pub fn ratspeak_eth_gateway::EvidenceCheckpointContext::root(self) -> [u8; 32]
+pub struct ratspeak_eth_gateway::GatewayBundle
+impl ratspeak_eth_gateway::GatewayBundle
+pub fn ratspeak_eth_gateway::GatewayBundle::bytes(&self) -> &[u8]
+pub fn ratspeak_eth_gateway::GatewayBundle::into_bytes(self) -> alloc::vec::Vec<u8>
+pub fn ratspeak_eth_gateway::GatewayBundle::kind(&self) -> ratspeak_eth_gateway::GatewayBundleKind
+pub struct ratspeak_eth_gateway::GatewayExecutionPolicy
+pub ratspeak_eth_gateway::GatewayExecutionPolicy::lease_seconds: u64
+pub ratspeak_eth_gateway::GatewayExecutionPolicy::retry_seconds: u64
+impl ratspeak_eth_gateway::GatewayExecutionPolicy
+pub fn ratspeak_eth_gateway::GatewayExecutionPolicy::conservative() -> Self
+pub struct ratspeak_eth_gateway::GatewayExecutor
+impl ratspeak_eth_gateway::GatewayExecutor
+pub fn ratspeak_eth_gateway::GatewayExecutor::execute_next(&self, &mut ratspeak_eth_gateway::DurableGatewayAdmission, &mut impl ratspeak_eth_gateway::GatewayExecutionProvider, u64) -> core::result::Result<ratspeak_eth_gateway::GatewayExecutionOutcome, ratspeak_eth_gateway::GatewayExecutionError>
+pub fn ratspeak_eth_gateway::GatewayExecutor::new([u8; 16], ratspeak_eth_gateway::GatewayExecutionPolicy) -> core::result::Result<Self, ratspeak_eth_gateway::GatewayExecutionError>
+pub struct ratspeak_eth_gateway::GatewayHttpResponse
+impl ratspeak_eth_gateway::GatewayHttpResponse
+pub fn ratspeak_eth_gateway::GatewayHttpResponse::body(&self) -> &[u8]
+pub fn ratspeak_eth_gateway::GatewayHttpResponse::new(u16, alloc::vec::Vec<u8>) -> Self
+pub fn ratspeak_eth_gateway::GatewayHttpResponse::status(&self) -> u16
+impl core::fmt::Debug for ratspeak_eth_gateway::GatewayHttpResponse
+pub fn ratspeak_eth_gateway::GatewayHttpResponse::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::GatewayJob
+impl ratspeak_eth_gateway::GatewayJob
+pub fn ratspeak_eth_gateway::GatewayJob::attachment_digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::GatewayJob::attachment_len(&self) -> usize
+pub fn ratspeak_eth_gateway::GatewayJob::expires_at_unix(&self) -> u64
+pub fn ratspeak_eth_gateway::GatewayJob::kind(&self) -> ratspeak_eth_gateway::GatewayJobKind
+pub fn ratspeak_eth_gateway::GatewayJob::request_id(&self) -> [u8; 16]
+pub fn ratspeak_eth_gateway::GatewayJob::requester_source_hash(&self) -> [u8; 16]
+pub fn ratspeak_eth_gateway::GatewayJob::state(&self) -> ratspeak_eth_gateway::GatewayJobState
+impl core::fmt::Debug for ratspeak_eth_gateway::GatewayJob
+pub fn ratspeak_eth_gateway::GatewayJob::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::GatewayLease
+impl ratspeak_eth_gateway::GatewayLease
+pub fn ratspeak_eth_gateway::GatewayLease::job(&self) -> &ratspeak_eth_gateway::GatewayJob
+pub fn ratspeak_eth_gateway::GatewayLease::validated_message(&self) -> core::result::Result<ratspeak_eth_gateway::GatewayMessageOutcome, ratspeak_eth_gateway::GatewayMessageError>
+impl core::fmt::Debug for ratspeak_eth_gateway::GatewayLease
+pub fn ratspeak_eth_gateway::GatewayLease::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::GatewayLxmfOutboundIntent
+impl ratspeak_eth_gateway::GatewayLxmfOutboundIntent
+pub fn ratspeak_eth_gateway::GatewayLxmfOutboundIntent::attachment(&self) -> &[u8]
+pub fn ratspeak_eth_gateway::GatewayLxmfOutboundIntent::attachment_name(&self) -> &'static str
+pub fn ratspeak_eth_gateway::GatewayLxmfOutboundIntent::destination_hash(&self) -> [u8; 16]
+pub fn ratspeak_eth_gateway::GatewayLxmfOutboundIntent::frame_kind(&self) -> ratspeak_eth_gateway::GatewayLxmfFrameKind
+pub fn ratspeak_eth_gateway::GatewayLxmfOutboundIntent::release_token(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::GatewayLxmfOutboundIntent::source_hash(&self) -> [u8; 16]
+impl core::cmp::Eq for ratspeak_eth_gateway::GatewayLxmfOutboundIntent
+impl core::cmp::PartialEq for ratspeak_eth_gateway::GatewayLxmfOutboundIntent
+pub fn ratspeak_eth_gateway::GatewayLxmfOutboundIntent::eq(&self, &Self) -> bool
+impl core::fmt::Debug for ratspeak_eth_gateway::GatewayLxmfOutboundIntent
+pub fn ratspeak_eth_gateway::GatewayLxmfOutboundIntent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::GatewayLxmfService
+impl ratspeak_eth_gateway::GatewayLxmfService
+pub fn ratspeak_eth_gateway::GatewayLxmfService::acknowledge_outbound_release(&mut self, [u8; 32]) -> core::result::Result<(), ratspeak_eth_gateway::GatewayLxmfServiceError>
+pub fn ratspeak_eth_gateway::GatewayLxmfService::handle_inbound(&mut self, &lxmf_core::message::LxMessage, &mut impl ratspeak_eth_gateway::GatewayExecutionProvider, u64) -> core::result::Result<ratspeak_eth_gateway::GatewayLxmfServiceOutcome, ratspeak_eth_gateway::GatewayLxmfServiceError>
+pub fn ratspeak_eth_gateway::GatewayLxmfService::open(&std::path::Path, [u8; 16], impl core::iter::traits::collect::IntoIterator<Item = ([u8; 16], [u8; 32])>, ratspeak_eth_gateway::GatewayRateLimit, ratspeak_eth_gateway::GatewayExecutionPolicy) -> core::result::Result<Self, ratspeak_eth_gateway::GatewayLxmfServiceError>
+pub fn ratspeak_eth_gateway::GatewayLxmfService::resume_next(&mut self, &mut impl ratspeak_eth_gateway::GatewayExecutionProvider, u64) -> core::result::Result<ratspeak_eth_gateway::GatewayLxmfServiceOutcome, ratspeak_eth_gateway::GatewayLxmfServiceError>
+impl core::fmt::Debug for ratspeak_eth_gateway::GatewayLxmfService
+pub fn ratspeak_eth_gateway::GatewayLxmfService::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::GatewayRateLimit
+pub ratspeak_eth_gateway::GatewayRateLimit::maximum_requested_bytes: u64
+pub ratspeak_eth_gateway::GatewayRateLimit::maximum_requests: u32
+pub ratspeak_eth_gateway::GatewayRateLimit::window_seconds: u64
+impl ratspeak_eth_gateway::GatewayRateLimit
+pub fn ratspeak_eth_gateway::GatewayRateLimit::conservative() -> Self
+pub struct ratspeak_eth_gateway::GatewayRelayGuard
+impl ratspeak_eth_gateway::GatewayRelayGuard
+pub fn ratspeak_eth_gateway::GatewayRelayGuard::evidence_manifest(&self, &ratspeak_eth_gateway::AcceptedEvidenceRequest, &ratspeak_eth_gateway::GatewayBundle) -> core::result::Result<alloc::vec::Vec<u8>, ratspeak_eth_gateway::GatewayMessageError>
+pub fn ratspeak_eth_gateway::GatewayRelayGuard::evidence_response(&self, &ratspeak_eth_gateway::AcceptedEvidenceRequest, &ratspeak_eth_gateway::GatewayBundle) -> core::result::Result<alloc::vec::Vec<u8>, ratspeak_eth_gateway::GatewayMessageError>
+pub fn ratspeak_eth_gateway::GatewayRelayGuard::handle_persisted_attachment(&mut self, ratspeak_eth_gateway::AuthenticatedGatewayEnvelope<'_>, u64) -> core::result::Result<ratspeak_eth_gateway::GatewayMessageOutcome, ratspeak_eth_gateway::GatewayMessageError>
+pub fn ratspeak_eth_gateway::GatewayRelayGuard::new([u8; 16], ratspeak_eth_gateway::GatewayRateLimit) -> core::result::Result<Self, ratspeak_eth_gateway::GatewayMessageError>
+pub fn ratspeak_eth_gateway::GatewayRelayGuard::relay_observation(&self, &ratspeak_eth_gateway::AcceptedSignedRelay, ratspeak_eth_gateway::RelayObservation) -> alloc::vec::Vec<u8>
+pub struct ratspeak_eth_gateway::GatewayStoredResult
+impl ratspeak_eth_gateway::GatewayStoredResult
+pub fn ratspeak_eth_gateway::GatewayStoredResult::attachment_digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::GatewayStoredResult::completed_at_unix(&self) -> u64
+pub fn ratspeak_eth_gateway::GatewayStoredResult::kind(&self) -> ratspeak_eth_gateway::GatewayResultKind
+pub fn ratspeak_eth_gateway::GatewayStoredResult::lease_generation(&self) -> u64
+pub fn ratspeak_eth_gateway::GatewayStoredResult::manifest(&self) -> &[u8]
+pub fn ratspeak_eth_gateway::GatewayStoredResult::manifest_digest(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::GatewayStoredResult::request_id(&self) -> [u8; 16]
+pub fn ratspeak_eth_gateway::GatewayStoredResult::requester_source_hash(&self) -> [u8; 16]
+pub fn ratspeak_eth_gateway::GatewayStoredResult::response(&self) -> &[u8]
+pub fn ratspeak_eth_gateway::GatewayStoredResult::response_digest(&self) -> [u8; 32]
+impl core::fmt::Debug for ratspeak_eth_gateway::GatewayStoredResult
+pub fn ratspeak_eth_gateway::GatewayStoredResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>
+impl<B, E, C, R> ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R> where B: ratspeak_eth_gateway::BeaconHttpTransport, C: ratspeak_eth_gateway::UnixClock + core::clone::Clone
+pub fn ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>::into_parts(self) -> (B, E, R)
+pub fn ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>::new(ratspeak_eth_verifier::consensus::BeaconCheckpointRoot, u64, B, E, C, R, ratspeak_eth_gateway::BeaconHttpPolicy, ratspeak_eth_gateway::ProviderHttpPolicy) -> core::result::Result<Self, ratspeak_eth_gateway::LiveProviderError>
+pub fn ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>::with_durable_consensus_floor(self, core::option::Option<ratspeak_eth_gateway::VerifiedConsensusFloor>, alloc::boxed::Box<dyn ratspeak_eth_gateway::VerifiedConsensusFloorSink>) -> core::result::Result<Self, ratspeak_eth_gateway::LiveProviderError>
+impl<B, E, C, R> core::fmt::Debug for ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>
+pub fn ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<B, E, C, R> ratspeak_eth_gateway::GatewayExecutionProvider for ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R> where B: ratspeak_eth_gateway::BeaconHttpTransport, E: ratspeak_eth_gateway::GatewayHttpTransport, C: ratspeak_eth_gateway::UnixClock + core::clone::Clone, R: ratspeak_eth_gateway::ExactReceiptProofBackend
+pub fn ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>::fetch_verified_evidence(&mut self, &ratspeak_eth_gateway::AcceptedEvidenceRequest) -> core::result::Result<ratspeak_eth_gateway::GatewayBundle, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>::submit_signed_relay(&mut self, &ratspeak_eth_gateway::AcceptedSignedRelay) -> core::result::Result<ratspeak_eth_gateway::RelayProviderObservation, ratspeak_eth_gateway::GatewayProviderFailure>
+pub struct ratspeak_eth_gateway::OperatorAuthorization(_)
+impl ratspeak_eth_gateway::OperatorAuthorization
+pub fn ratspeak_eth_gateway::OperatorAuthorization::parse(&str) -> core::result::Result<Self, ratspeak_eth_gateway::ProviderConfigurationError>
+impl core::fmt::Debug for ratspeak_eth_gateway::OperatorAuthorization
+pub fn ratspeak_eth_gateway::OperatorAuthorization::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::ProviderHttpPolicy
+pub ratspeak_eth_gateway::ProviderHttpPolicy::connect_timeout: core::time::Duration
+pub ratspeak_eth_gateway::ProviderHttpPolicy::maximum_json_response_bytes: usize
+pub ratspeak_eth_gateway::ProviderHttpPolicy::request_timeout: core::time::Duration
+impl ratspeak_eth_gateway::ProviderHttpPolicy
+pub fn ratspeak_eth_gateway::ProviderHttpPolicy::conservative() -> Self
+pub struct ratspeak_eth_gateway::RelayProviderObservation
+impl ratspeak_eth_gateway::RelayProviderObservation
+pub fn ratspeak_eth_gateway::RelayProviderObservation::new([u8; 32], ratspeak_eth_gateway::RelayProviderStatus) -> Self
+pub fn ratspeak_eth_gateway::RelayProviderObservation::status(&self) -> ratspeak_eth_gateway::RelayProviderStatus
+pub fn ratspeak_eth_gateway::RelayProviderObservation::tx_hash(&self) -> [u8; 32]
+impl core::fmt::Debug for ratspeak_eth_gateway::RelayProviderObservation
+pub fn ratspeak_eth_gateway::RelayProviderObservation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::ReqwestBeaconHttpTransport
+impl ratspeak_eth_gateway::ReqwestBeaconHttpTransport
+pub fn ratspeak_eth_gateway::ReqwestBeaconHttpTransport::new(&str, core::option::Option<ratspeak_eth_gateway::BeaconOperatorAuthorization>, ratspeak_eth_gateway::HttpEndpointPolicy, ratspeak_eth_gateway::BeaconHttpPolicy) -> core::result::Result<Self, ratspeak_eth_gateway::BeaconClientError>
+impl core::fmt::Debug for ratspeak_eth_gateway::ReqwestBeaconHttpTransport
+pub fn ratspeak_eth_gateway::ReqwestBeaconHttpTransport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl ratspeak_eth_gateway::BeaconHttpTransport for ratspeak_eth_gateway::ReqwestBeaconHttpTransport
+pub fn ratspeak_eth_gateway::ReqwestBeaconHttpTransport::get_ssz(&mut self, &str, usize, core::time::Duration) -> core::result::Result<ratspeak_eth_gateway::BeaconHttpResponse, ratspeak_eth_gateway::HttpTransportFailure>
+pub struct ratspeak_eth_gateway::ReqwestGatewayHttpTransport
+impl ratspeak_eth_gateway::ReqwestGatewayHttpTransport
+pub fn ratspeak_eth_gateway::ReqwestGatewayHttpTransport::new(&str, core::option::Option<ratspeak_eth_gateway::OperatorAuthorization>, ratspeak_eth_gateway::HttpEndpointPolicy, ratspeak_eth_gateway::ProviderHttpPolicy) -> core::result::Result<Self, ratspeak_eth_gateway::ProviderConfigurationError>
+impl core::fmt::Debug for ratspeak_eth_gateway::ReqwestGatewayHttpTransport
+pub fn ratspeak_eth_gateway::ReqwestGatewayHttpTransport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl ratspeak_eth_gateway::GatewayHttpTransport for ratspeak_eth_gateway::ReqwestGatewayHttpTransport
+pub fn ratspeak_eth_gateway::ReqwestGatewayHttpTransport::post_json(&mut self, &[u8], usize, core::time::Duration) -> core::result::Result<ratspeak_eth_gateway::GatewayHttpResponse, ratspeak_eth_gateway::HttpTransportFailure>
+pub struct ratspeak_eth_gateway::SepoliaGatewayBuilder
+impl ratspeak_eth_gateway::SepoliaGatewayBuilder
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::build_account_proof(&self, &ratspeak_eth_gateway::UntrustedAccountProofRpcInput) -> ratspeak_eth_gateway::Result<ratspeak_eth_gateway::GatewayBundle>
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::build_account_state_evidence(&self, &ratspeak_eth_gateway::UntrustedAccountProofRpcInput) -> ratspeak_eth_gateway::Result<ratspeak_eth_gateway::GatewayBundle>
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::build_finalized_receipt_evidence(&self, &ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput, &ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput) -> ratspeak_eth_gateway::Result<ratspeak_eth_gateway::GatewayBundle>
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::build_finalized_tx_receipt_proof(&self, &ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput, &ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput) -> ratspeak_eth_gateway::Result<ratspeak_eth_gateway::GatewayBundle>
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::build_tx_receipt_proof(&self, &ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput) -> ratspeak_eth_gateway::Result<ratspeak_eth_gateway::GatewayBundle>
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::consensus_bundle(&self) -> &ratspeak_eth_gateway::GatewayBundle
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::execution_block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::execution_block_number(&self) -> u64
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::execution_bundle(&self) -> &ratspeak_eth_gateway::GatewayBundle
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::execution_parent_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::execution_receipts_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::execution_state_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::execution_transactions_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::finalized_slot(&self) -> u64
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::from_untrusted_rpc(&ratspeak_eth_verifier::consensus::BeaconCheckpointRoot, &ratspeak_eth_gateway::UntrustedConsensusRpcInput, &ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput) -> ratspeak_eth_gateway::Result<Self>
+pub fn ratspeak_eth_gateway::SepoliaGatewayBuilder::from_untrusted_rpc_at_unix(&ratspeak_eth_verifier::consensus::BeaconCheckpointRoot, &ratspeak_eth_gateway::UntrustedConsensusRpcInput, &ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput, u64) -> ratspeak_eth_gateway::Result<Self>
+pub struct ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>
+impl<T, C, R> ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>
+pub fn ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>::into_transport(self) -> T
+pub fn ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>::with_receipt_backend<R2>(self, R2) -> ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R2>
+impl<T, C> ratspeak_eth_gateway::SepoliaRpcProvider<T, C, ratspeak_eth_gateway::UnsupportedReceiptProofBackend>
+pub fn ratspeak_eth_gateway::SepoliaRpcProvider<T, C, ratspeak_eth_gateway::UnsupportedReceiptProofBackend>::new(ratspeak_eth_gateway::SepoliaGatewayBuilder, T, C, ratspeak_eth_gateway::ProviderHttpPolicy) -> core::result::Result<Self, ratspeak_eth_gateway::ProviderConfigurationError>
+impl<T, C, R> core::fmt::Debug for ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>
+pub fn ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T, C, R> ratspeak_eth_gateway::GatewayExecutionProvider for ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R> where T: ratspeak_eth_gateway::GatewayHttpTransport, C: ratspeak_eth_gateway::UnixClock, R: ratspeak_eth_gateway::ExactReceiptProofBackend
+pub fn ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>::fetch_verified_evidence(&mut self, &ratspeak_eth_gateway::AcceptedEvidenceRequest) -> core::result::Result<ratspeak_eth_gateway::GatewayBundle, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>::submit_signed_relay(&mut self, &ratspeak_eth_gateway::AcceptedSignedRelay) -> core::result::Result<ratspeak_eth_gateway::RelayProviderObservation, ratspeak_eth_gateway::GatewayProviderFailure>
+pub struct ratspeak_eth_gateway::SystemUnixClock
+impl ratspeak_eth_gateway::UnixClock for ratspeak_eth_gateway::SystemUnixClock
+pub fn ratspeak_eth_gateway::SystemUnixClock::now_unix(&self) -> core::result::Result<u64, ratspeak_eth_gateway::GatewayProviderFailure>
+pub struct ratspeak_eth_gateway::UnsupportedReceiptProofBackend
+impl ratspeak_eth_gateway::ExactReceiptProofBackend for ratspeak_eth_gateway::UnsupportedReceiptProofBackend
+pub fn ratspeak_eth_gateway::UnsupportedReceiptProofBackend::fetch_exact_receipt_proof(&mut self, [u8; 32], u64, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::UnsupportedReceiptProofBackend::fetch_receipt_location(&mut self, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedReceiptLocation, ratspeak_eth_gateway::GatewayProviderFailure>
+pub struct ratspeak_eth_gateway::UntrustedAccountProofRpcInput
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::account_proof: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::address: [u8; 20]
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::balance: alloy_primitives::aliases::U256
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::block_hash: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::block_number: u64
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::captured_at_unix: u64
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::chain_id: u64
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::code_hash: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::network: alloc::string::String
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::nonce: u64
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::state_root: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedAccountProofRpcInput::storage_root: [u8; 32]
+impl core::fmt::Debug for ratspeak_eth_gateway::UntrustedAccountProofRpcInput
+pub fn ratspeak_eth_gateway::UntrustedAccountProofRpcInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::UntrustedConsensusRpcInput
+pub ratspeak_eth_gateway::UntrustedConsensusRpcInput::bootstrap_ssz: alloc::vec::Vec<u8>
+pub ratspeak_eth_gateway::UntrustedConsensusRpcInput::captured_at_unix: u64
+pub ratspeak_eth_gateway::UntrustedConsensusRpcInput::chain_id: u64
+pub ratspeak_eth_gateway::UntrustedConsensusRpcInput::finality_update_ssz: core::option::Option<alloc::vec::Vec<u8>>
+pub ratspeak_eth_gateway::UntrustedConsensusRpcInput::network: alloc::string::String
+pub ratspeak_eth_gateway::UntrustedConsensusRpcInput::updates_ssz: alloc::vec::Vec<alloc::vec::Vec<u8>>
+impl core::fmt::Debug for ratspeak_eth_gateway::UntrustedConsensusRpcInput
+pub fn ratspeak_eth_gateway::UntrustedConsensusRpcInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput
+pub ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::anchor_block_hash: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::anchor_block_number: u64
+pub ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::captured_at_unix: u64
+pub ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::chain_id: u64
+pub ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::network: alloc::string::String
+pub ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::rlp_headers: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::target_block_hash: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::target_block_number: u64
+impl core::fmt::Debug for ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput
+pub fn ratspeak_eth_gateway::UntrustedExecutionAncestryRpcInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput
+pub ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput::captured_at_unix: u64
+pub ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput::chain_id: u64
+pub ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput::network: alloc::string::String
+pub ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput::rlp_header: alloc::vec::Vec<u8>
+impl core::fmt::Debug for ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput
+pub fn ratspeak_eth_gateway::UntrustedExecutionHeaderRpcInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::UntrustedReceiptLocation
+pub ratspeak_eth_gateway::UntrustedReceiptLocation::block_hash: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedReceiptLocation::block_number: u64
+pub struct ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::block_hash: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::block_number: u64
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::captured_at_unix: u64
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::chain_id: u64
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::network: alloc::string::String
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::raw_tx: alloc::vec::Vec<u8>
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::receipt: alloc::vec::Vec<u8>
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::receipt_proof: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::receipts_root: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::transactions_root: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::tx_hash: [u8; 32]
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::tx_index: u64
+pub ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::tx_proof: alloc::vec::Vec<alloc::vec::Vec<u8>>
+impl core::fmt::Debug for ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput
+pub fn ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_gateway::VerifiedConsensusFloor
+impl ratspeak_eth_gateway::VerifiedConsensusFloor
+pub fn ratspeak_eth_gateway::VerifiedConsensusFloor::checkpoint_root(self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::VerifiedConsensusFloor::execution_block_hash(self) -> [u8; 32]
+pub fn ratspeak_eth_gateway::VerifiedConsensusFloor::finalized_slot(self) -> u64
+pub fn ratspeak_eth_gateway::VerifiedConsensusFloor::new([u8; 32], u64, [u8; 32]) -> core::result::Result<Self, ratspeak_eth_gateway::LiveProviderError>
+pub const ratspeak_eth_gateway::GATEWAY_LXMF_ATTACHMENT_NAME: &str
+pub trait ratspeak_eth_gateway::BeaconHttpTransport
+pub fn ratspeak_eth_gateway::BeaconHttpTransport::get_ssz(&mut self, &str, usize, core::time::Duration) -> core::result::Result<ratspeak_eth_gateway::BeaconHttpResponse, ratspeak_eth_gateway::HttpTransportFailure>
+impl ratspeak_eth_gateway::BeaconHttpTransport for ratspeak_eth_gateway::ReqwestBeaconHttpTransport
+pub fn ratspeak_eth_gateway::ReqwestBeaconHttpTransport::get_ssz(&mut self, &str, usize, core::time::Duration) -> core::result::Result<ratspeak_eth_gateway::BeaconHttpResponse, ratspeak_eth_gateway::HttpTransportFailure>
+pub trait ratspeak_eth_gateway::ExactReceiptProofBackend
+pub fn ratspeak_eth_gateway::ExactReceiptProofBackend::fetch_exact_receipt_proof(&mut self, [u8; 32], u64, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::ExactReceiptProofBackend::fetch_receipt_location(&mut self, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedReceiptLocation, ratspeak_eth_gateway::GatewayProviderFailure>
+impl ratspeak_eth_gateway::ExactReceiptProofBackend for ratspeak_eth_gateway::UnsupportedReceiptProofBackend
+pub fn ratspeak_eth_gateway::UnsupportedReceiptProofBackend::fetch_exact_receipt_proof(&mut self, [u8; 32], u64, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::UnsupportedReceiptProofBackend::fetch_receipt_location(&mut self, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedReceiptLocation, ratspeak_eth_gateway::GatewayProviderFailure>
+impl<T: ratspeak_eth_gateway::GatewayHttpTransport> ratspeak_eth_gateway::ExactReceiptProofBackend for ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>
+pub fn ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>::fetch_exact_receipt_proof(&mut self, [u8; 32], u64, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedTxReceiptProofRpcInput, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::CompleteBlockReceiptProofBackend<T>::fetch_receipt_location(&mut self, [u8; 32], u64) -> core::result::Result<ratspeak_eth_gateway::UntrustedReceiptLocation, ratspeak_eth_gateway::GatewayProviderFailure>
+pub trait ratspeak_eth_gateway::GatewayExecutionProvider
+pub fn ratspeak_eth_gateway::GatewayExecutionProvider::fetch_verified_evidence(&mut self, &ratspeak_eth_gateway::AcceptedEvidenceRequest) -> core::result::Result<ratspeak_eth_gateway::GatewayBundle, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::GatewayExecutionProvider::submit_signed_relay(&mut self, &ratspeak_eth_gateway::AcceptedSignedRelay) -> core::result::Result<ratspeak_eth_gateway::RelayProviderObservation, ratspeak_eth_gateway::GatewayProviderFailure>
+impl<B, E, C, R> ratspeak_eth_gateway::GatewayExecutionProvider for ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R> where B: ratspeak_eth_gateway::BeaconHttpTransport, E: ratspeak_eth_gateway::GatewayHttpTransport, C: ratspeak_eth_gateway::UnixClock + core::clone::Clone, R: ratspeak_eth_gateway::ExactReceiptProofBackend
+pub fn ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>::fetch_verified_evidence(&mut self, &ratspeak_eth_gateway::AcceptedEvidenceRequest) -> core::result::Result<ratspeak_eth_gateway::GatewayBundle, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::LiveSepoliaGatewayProvider<B, E, C, R>::submit_signed_relay(&mut self, &ratspeak_eth_gateway::AcceptedSignedRelay) -> core::result::Result<ratspeak_eth_gateway::RelayProviderObservation, ratspeak_eth_gateway::GatewayProviderFailure>
+impl<T, C, R> ratspeak_eth_gateway::GatewayExecutionProvider for ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R> where T: ratspeak_eth_gateway::GatewayHttpTransport, C: ratspeak_eth_gateway::UnixClock, R: ratspeak_eth_gateway::ExactReceiptProofBackend
+pub fn ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>::fetch_verified_evidence(&mut self, &ratspeak_eth_gateway::AcceptedEvidenceRequest) -> core::result::Result<ratspeak_eth_gateway::GatewayBundle, ratspeak_eth_gateway::GatewayProviderFailure>
+pub fn ratspeak_eth_gateway::SepoliaRpcProvider<T, C, R>::submit_signed_relay(&mut self, &ratspeak_eth_gateway::AcceptedSignedRelay) -> core::result::Result<ratspeak_eth_gateway::RelayProviderObservation, ratspeak_eth_gateway::GatewayProviderFailure>
+pub trait ratspeak_eth_gateway::GatewayHttpTransport
+pub fn ratspeak_eth_gateway::GatewayHttpTransport::post_json(&mut self, &[u8], usize, core::time::Duration) -> core::result::Result<ratspeak_eth_gateway::GatewayHttpResponse, ratspeak_eth_gateway::HttpTransportFailure>
+impl ratspeak_eth_gateway::GatewayHttpTransport for ratspeak_eth_gateway::ReqwestGatewayHttpTransport
+pub fn ratspeak_eth_gateway::ReqwestGatewayHttpTransport::post_json(&mut self, &[u8], usize, core::time::Duration) -> core::result::Result<ratspeak_eth_gateway::GatewayHttpResponse, ratspeak_eth_gateway::HttpTransportFailure>
+pub trait ratspeak_eth_gateway::UnixClock
+pub fn ratspeak_eth_gateway::UnixClock::now_unix(&self) -> core::result::Result<u64, ratspeak_eth_gateway::GatewayProviderFailure>
+impl ratspeak_eth_gateway::UnixClock for ratspeak_eth_gateway::SystemUnixClock
+pub fn ratspeak_eth_gateway::SystemUnixClock::now_unix(&self) -> core::result::Result<u64, ratspeak_eth_gateway::GatewayProviderFailure>
+pub trait ratspeak_eth_gateway::VerifiedConsensusFloorSink
+pub fn ratspeak_eth_gateway::VerifiedConsensusFloorSink::commit(&mut self, ratspeak_eth_gateway::VerifiedConsensusFloor) -> core::result::Result<(), ratspeak_eth_gateway::GatewayProviderFailure>
+pub type ratspeak_eth_gateway::BeaconOperatorAuthorization = ratspeak_eth_gateway::OperatorAuthorization
+pub type ratspeak_eth_gateway::Result<T> = core::result::Result<T, ratspeak_eth_gateway::GatewayBuildError>

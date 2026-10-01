@@ -31,6 +31,12 @@ src-tauri/target/
 .ratspeak/
 *.db
 *.key
+*.rseth
+*.sqlite
+wallet.vault
+.env
+.env.*
+!.env.example
 
 # Signing material
 *.p12

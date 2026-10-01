@@ -41,12 +41,12 @@ function setMessageUnreadSource(source, count) {
     }
 }
 window.setMessageUnreadSource = setMessageUnreadSource;
-var VIEWS = ['dashboard', 'message', 'channels', 'contacts', 'identity', 'peers', 'network', 'games', 'settings'];
+var VIEWS = ['dashboard', 'message', 'channels', 'contacts', 'identity', 'ethereum', 'peers', 'network', 'games', 'settings'];
 
 // Tab-bar destinations use replaceState; MORE_VIEWS live under the hamburger.
-var TAB_VIEWS = ['peers', 'message', 'channels', 'contacts', 'identity', 'network', 'games', 'settings'];
+var TAB_VIEWS = ['peers', 'message', 'channels', 'contacts', 'identity', 'ethereum', 'network', 'games', 'settings'];
 var PRIMARY_TAB_VIEWS = ['peers', 'message', 'channels'];
-var MORE_VIEWS = ['contacts', 'identity', 'network', 'games', 'settings'];
+var MORE_VIEWS = ['contacts', 'identity', 'ethereum', 'network', 'games', 'settings'];
 var MOBILE_TAB_SLOTS = ['peers', 'message', 'channels', 'more'];
 var DEFAULT_MORE_VIEW = 'identity';
 var _lastMoreView = DEFAULT_MORE_VIEW;
@@ -500,6 +500,10 @@ var VIEW_LIFECYCLE = {
 
     identity: function() {
         if (typeof loadIdentities === 'function') loadIdentities();
+    },
+
+    ethereum: function() {
+        if (typeof loadEthereumWalletView === 'function') loadEthereumWalletView();
     },
 
     games: function() {
@@ -1153,7 +1157,62 @@ function initSheetSwipeDismiss(sheetId, overlayId, closeFn) {
 
 var _waitingForKeyboard = false;
 var _keyboardStableTimer = null;
+var _focusedFieldRevealFrame = null;
 var _maxViewportHeight = 0;
+
+function _visualViewportGeometry(visualHeight, offsetTop, pageTop, bodyTop, scrollTop) {
+    var normalizedScroll = Math.max(0, Number(scrollTop) || 0);
+    var reportedOffset = Math.max(0, Number(offsetTop) || 0);
+    var pageOffset = Math.max(0, (Number(pageTop) || 0) - normalizedScroll);
+    var renderedBodyOffset = Math.max(0, -(Number(bodyTop) || 0) - normalizedScroll);
+    return {
+        height: Math.max(0, Number(visualHeight) || 0),
+        offset: Math.max(reportedOffset, pageOffset, renderedBodyOffset)
+    };
+}
+
+function _keyboardViewportMetrics(innerHeight, visualHeight, offsetTop, maxViewportHeight) {
+    var keyboardHeight = innerHeight - visualHeight;
+    var heightDrop = maxViewportHeight > 0 ? maxViewportHeight - visualHeight : 0;
+    var open = keyboardHeight > 150 || heightDrop > 150;
+    return {
+        open: open,
+        inset: open ? Math.max(0, innerHeight - visualHeight - (offsetTop || 0)) : 0
+    };
+}
+
+function _revealFocusedSheetField(el) {
+    if (!el || document.activeElement !== el) return;
+    var sheet = el.closest && el.closest('.bottom-sheet.open');
+    if (!sheet) {
+        el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+        return;
+    }
+
+    var scrollOwner = el.closest('.bottom-sheet-body') || sheet;
+    var ownerRect = scrollOwner.getBoundingClientRect();
+    var fieldRect = el.getBoundingClientRect();
+    var visibleBottom = window.visualViewport
+        ? window.visualViewport.offsetTop + window.visualViewport.height
+        : window.innerHeight;
+    var ownerBottom = Math.min(ownerRect.bottom, visibleBottom);
+    var edge = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--space-6')
+    ) || 0;
+    if (fieldRect.bottom > ownerBottom - edge) {
+        scrollOwner.scrollTop += fieldRect.bottom - ownerBottom + edge;
+    } else if (fieldRect.top < ownerRect.top + edge) {
+        scrollOwner.scrollTop -= ownerRect.top + edge - fieldRect.top;
+    }
+}
+
+function _scheduleFocusedFieldReveal(el) {
+    if (_focusedFieldRevealFrame) cancelAnimationFrame(_focusedFieldRevealFrame);
+    _focusedFieldRevealFrame = requestAnimationFrame(function() {
+        _focusedFieldRevealFrame = null;
+        _revealFocusedSheetField(el);
+    });
+}
 
 function _chatMessagesNearBottomForKeyboard() {
     var msgContainer = document.body.classList.contains('view-channel-detail')
@@ -1176,6 +1235,10 @@ function _pinChatMessagesToBottomForKeyboard() {
 
 function initKeyboardDetection() {
     var bar = document.getElementById('bottom-bar');
+    document.documentElement.setAttribute(
+        'data-keyboard-platform',
+        isIOS() ? 'ios' : (isAndroid() ? 'android' : 'other')
+    );
     if (!window.visualViewport) return;
 
     var _prevKeyboardOpen = false;
@@ -1183,40 +1246,96 @@ function initKeyboardDetection() {
 
     function onResize() {
         var vv = window.visualViewport;
-        var kbHeight = window.innerHeight - vv.height;
         var currentHeight = vv.height;
 
         if (currentHeight > _maxViewportHeight) {
             _maxViewportHeight = currentHeight;
         }
 
-        // Samsung One UI resizes both viewports together (kbHeight stays ~0);
-        // fall back to comparing against the tallest viewport we've seen.
-        var heightDrop = _maxViewportHeight > 0 ? (_maxViewportHeight - currentHeight) : 0;
-        var keyboardOpen = kbHeight > 150 || heightDrop > 150;
         var inConversationDetail =
             document.body.classList.contains('view-chat-detail') ||
             document.body.classList.contains('view-channel-detail');
+        var keyboardOpen = false;
 
-        if (isMobile()) {
+        if (isIOS()) {
+            var documentScroll = Math.max(
+                Number(window.scrollY) || 0,
+                Number(document.documentElement.scrollTop) || 0
+            );
+            if (inConversationDetail && documentScroll > 0) {
+                window.scrollTo(0, 0);
+                documentScroll = Math.max(
+                    Number(window.scrollY) || 0,
+                    Number(document.documentElement.scrollTop) || 0
+                );
+            }
+            var bodyRect = document.body.getBoundingClientRect();
+            var visualGeometry = _visualViewportGeometry(
+                currentHeight,
+                vv.offsetTop,
+                vv.pageTop,
+                bodyRect.top,
+                documentScroll
+            );
+
+            // WKWebView can report offsetTop late, so use the effective
+            // rendered offset when anchoring fixed sheets and conversations.
+            var keyboardMetrics = _keyboardViewportMetrics(
+                window.innerHeight,
+                currentHeight,
+                visualGeometry.offset,
+                _maxViewportHeight
+            );
+            keyboardOpen = keyboardMetrics.open;
+
+            // Fixed sheets are laid out against WKWebView's layout viewport,
+            // while the keyboard reduces the visual viewport. Publish both
+            // measurements so every canonical form sheet can stay above the
+            // IME instead of relying on device-specific offsets.
+            document.documentElement.style.setProperty('--visual-viewport-height', currentHeight + 'px');
+            document.documentElement.style.setProperty('--visual-viewport-top', visualGeometry.offset + 'px');
+            document.documentElement.style.setProperty('--keyboard-inset', keyboardMetrics.inset + 'px');
             if (keyboardOpen && inConversationDetail) {
-                // WKWebView pushes content behind the notch on focus; clamp
-                // --app-height and pin scrollTop to keep the conversation
-                // header and composer inside the visual viewport.
+                // Size and anchor the whole conversation to the visual
+                // viewport. On iOS 26 WKWebView can pan the rendered body while
+                // scrollTop remains zero; height alone leaves the composer
+                // behind the keyboard, so the effective top offset is required.
                 document.documentElement.style.setProperty('--app-height', currentHeight + 'px');
-                if (window.scrollY > 0 || document.documentElement.scrollTop > 0) {
-                    window.scrollTo(0, 0);
-                }
             } else if (!keyboardOpen) {
                 _fullAppHeight = currentHeight;
                 document.documentElement.style.setProperty('--app-height', currentHeight + 'px');
             }
             // Outside chat: leave --app-height alone so other inputs don't reflow.
+        } else {
+            // Preserve the Android pipeline used through v1.0.29: native IME
+            // padding moves WebView immediately, and visualViewport supplies
+            // the matching CSS height for conversation layout and dismissal.
+            var keyboardHeight = window.innerHeight - currentHeight;
+            var heightDrop = _maxViewportHeight > 0 ? _maxViewportHeight - currentHeight : 0;
+            keyboardOpen = keyboardHeight > 150 || heightDrop > 150;
+            if (isMobile()) {
+                if (keyboardOpen && inConversationDetail) {
+                    document.documentElement.style.setProperty('--app-height', currentHeight + 'px');
+                    if (window.scrollY > 0 || document.documentElement.scrollTop > 0) {
+                        window.scrollTo(0, 0);
+                    }
+                } else if (!keyboardOpen) {
+                    _fullAppHeight = currentHeight;
+                    document.documentElement.style.setProperty('--app-height', currentHeight + 'px');
+                }
+            }
         }
 
         if (keyboardOpen) {
             if (bar) bar.classList.add('keyboard-open');
             document.documentElement.classList.add('keyboard-open');
+
+            if (isIOS()) {
+                var active = document.activeElement;
+                if (active && active.closest && active.closest('.bottom-sheet.open')) {
+                    _scheduleFocusedFieldReveal(active);
+                }
+            }
 
             if (_waitingForKeyboard) {
                 clearTimeout(_keyboardStableTimer);
@@ -1236,6 +1355,7 @@ function initKeyboardDetection() {
     }
 
     window.visualViewport.addEventListener('resize', onResize);
+    if (isIOS()) window.addEventListener('resize', onResize);
     window.visualViewport.addEventListener('scroll', function() {
         // Pin scroll while chat keyboard is open; WKWebView otherwise scrolls
         // the header behind the notch as the viewport pans.
@@ -1282,19 +1402,30 @@ function initKeyboardDetection() {
 
         if (el.id === 'lxmf-input' || el.id === 'channel-message-input') {
             _waitingForKeyboard = _chatMessagesNearBottomForKeyboard();
+            if (isIOS()) onResize();
             return;
         }
 
         if (el.closest('.modal, .bottom-sheet')) {
-            setTimeout(function() {
-                el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-            }, 150);
+            if (isIOS()) {
+                _scheduleFocusedFieldReveal(el);
+            } else {
+                setTimeout(function() {
+                    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }, 150);
+            }
             return;
         }
 
-        setTimeout(function() {
-            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }, 300);
+        if (isIOS()) {
+            requestAnimationFrame(function() {
+                el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+            });
+        } else {
+            setTimeout(function() {
+                el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }, 300);
+        }
     });
 
     document.addEventListener('focusout', function(e) {

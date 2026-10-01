@@ -59,15 +59,27 @@ def main() -> None:
     floor_snapshots = {
         package["name"]: package["snapshot"] for package in floor_ledger["packages"]
     }
+    current_names = {package["name"] for package in ledger["packages"]}
+    removed_packages = sorted(set(floor_snapshots) - current_names)
+    if removed_packages:
+        fail(f"packages removed from the compatibility floor: {removed_packages}")
     total_added = 0
     total_removed = 0
     packages_with_removals: list[dict[str, object]] = []
     for package in ledger["packages"]:
         path = package["snapshot"]
         floor_path = floor_snapshots.get(package["name"])
-        if not isinstance(floor_path, str):
+        if isinstance(floor_path, str):
+            before = set(git_show(floor, floor_path).splitlines())
+        elif package.get("tier") == "application-internal" and package.get(
+            "compatibility"
+        ) == "reviewed-snapshot":
+            # A newly reviewed application-internal crate has no earlier API
+            # to preserve. Count every current item as additive while keeping
+            # removals of previously recorded packages fail-closed above.
+            before = set()
+        else:
             fail(f"{package['name']} is absent from the compatibility floor")
-        before = set(git_show(floor, floor_path).splitlines())
         after = set((ROOT / path).read_text(encoding="utf-8").splitlines())
         added = sorted(after - before)
         removed = sorted(before - after)

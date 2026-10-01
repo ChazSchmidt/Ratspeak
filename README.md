@@ -7,6 +7,8 @@
 Ratspeak is a native desktop and mobile client for E2EE conversations over
 Reticulum, a new type of mesh networking. Ratspeak gives you messaging, file/image sharing, voice calls and voice messages (experimental), Channels, LoRa capability, WiFi, BLE, TCP, offline messaging, turn-based games, and more.
 
+[Click here for iOS TestFlight Public Beta!](https://testflight.apple.com/join/AzzW4Jg6)
+
 [Docs](https://docs.ratspeak.org/) |
 [Build from source](https://docs.ratspeak.org/docs/reference/building-from-source) |
 [rsReticulum](https://github.com/ratspeak/rsReticulum) |
@@ -132,6 +134,64 @@ links — no servers, no relays. The stack is new and intentionally narrow:
 
 Voice is experimental — expect rough edges. Codec quality, call setup,
 ringtones, and platform audio routing are all subject to change.
+
+## Ethereum (experimental, source builds only)
+
+Ratspeak includes a default-off, unaudited Sepolia proof of concept behind the
+`experimental-ethereum` Cargo feature. It is limited to native-ETH EIP-1559
+transfers with fixed 21,000 gas, empty calldata, and the standard
+`m/44'/60'/0'/0/0` account. Mainnet, contracts, arbitrary signing, private-key
+import/export, and WebView access to recovery material are disabled.
+
+The field client accepts Ethereum evidence only when the LXMF signature matches
+its configured Ethereum service Contact, but transport delivery, service
+replies, and RPC responses are not treated as Ethereum state. The current field path
+can cross-check the same finalized Sepolia epoch and root through the fixed
+ethPandaOps and ChainSafe checkpoint services, verifies each service and the
+separate bootstrap service against Sepolia's genesis identity, and verifies
+the downloaded light-client bootstrap locally before installing the anchor.
+Manual checkpoint files remain an offline fallback and require explicit native
+approval. Evidence is verified forward from the installed checkpoint, and
+transaction success or failure is reported only after the exact finalized
+receipt verifies locally. An unknown or stale balance is shown as `...`; `0`
+is displayed only for a current verified zero-balance proof.
+
+Linux selects an Ethereum service from profile-scoped, public-key-validated
+Ratspeak Contacts. A source build or operator may configure one public test
+service Contact for one-click onboarding; the user must still select and
+review it. The current gateway daemon also requires the operator to provision
+each allowed requester's public Contact card; open public enrollment is not yet
+implemented. The Android preview still uses a native service-card file picker
+instead of the Linux Contacts chooser. Linux and Android use native
+wallet-custody and review surfaces; iOS custody is currently unavailable. The
+repository contains the standalone
+`ratspeak-eth-gatewayd` implementation for RPC access, proof construction, and
+relay scheduling. One user-authorized, low-value Linux Sepolia lifecycle has
+completed through the standalone daemon and a local shared Reticulum instance,
+including exact finalized-receipt verification on the field device. Production
+Rathole/systemd hosting and route-specific deployment validation are still
+pending. No transport role grants
+the gateway checkpoint or Ethereum authority, and automatic unknown-peer
+discovery is not used.
+
+This experimental branch currently depends on the companion
+[`ethereum-propagation-api`](https://github.com/ChazSchmidt/rsLXMF/tree/ethereum-propagation-api)
+rsLXMF branch at commit `9e3f55cebd3f8b491aaab73b69d2a2afef17bad1`.
+Place that checkout at `../rsLXMF` before building; fork CI resolves the same
+exact commit from the repository owner's rsLXMF fork.
+
+Build the field application explicitly with:
+
+```bash
+cd src-tauri
+cargo tauri dev --features experimental-ethereum
+```
+
+The integration has deterministic and adversarial test coverage, but the
+wallet has not been audited. The demonstrated lifecycle is one Linux smoke
+test, not a reliability or compatibility claim. Android native ceremonies,
+live restart recovery, and physical Reticulum/LoRa paths still require real
+system validation before production use.
 
 ## Platform Notes
 

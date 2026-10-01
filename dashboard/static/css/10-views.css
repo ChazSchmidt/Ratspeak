@@ -5110,3 +5110,477 @@ body.setup-active .main-content {
     align-self: stretch; /* in the centered reveal card, match the grid/button width */
 }
 .recovery-warn strong { color: var(--status-error-fg); }
+
+/* Experimental Sepolia wallet: public state and intent stay in the WebView;
+   secret custody and exact authorization are native-only. */
+.ethereum-page {
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--space-8);
+}
+.ethereum-page-header {
+    max-width: 1040px;
+    margin: 0 auto var(--space-6);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-6);
+}
+.ethereum-page-header h2 {
+    margin: 0;
+    font-size: var(--text-3xl);
+}
+.ethereum-page-header p,
+.ethereum-form-intro,
+.ethereum-assurance-note,
+.ethereum-native-status {
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+.ethereum-page-header p { margin: var(--space-2) 0 0; }
+.ethereum-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+.ethereum-network-badge {
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid rgba(var(--status-warning-rgb), 0.38);
+    border-radius: var(--radius-full);
+    background: rgba(var(--status-warning-rgb), 0.12);
+    color: var(--status-warning-fg);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.ethereum-notice {
+    max-width: 1040px;
+    margin: 0 auto var(--space-6);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--border-control);
+    border-left: 3px solid var(--status-warning);
+    border-radius: var(--radius-lg);
+    background: var(--surface-elevation-1);
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.ethereum-setup {
+    max-width: 1040px;
+    margin: 0 auto var(--space-6);
+    overflow: hidden;
+}
+.ethereum-setup-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    cursor: pointer;
+    list-style: none;
+}
+.ethereum-setup-header::-webkit-details-marker { display: none; }
+.ethereum-setup-header > div:first-child { flex: 1 1 auto; }
+.ethereum-setup-header h3 { margin: 0; }
+.ethereum-setup-header p {
+    margin: var(--space-2) 0 0;
+    color: var(--text-muted);
+    font-weight: 400;
+    line-height: 1.45;
+}
+.ethereum-setup-summary,
+.ethereum-step-state {
+    flex: 0 0 auto;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    background: var(--surface-control);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 600;
+}
+.ethereum-setup-disclosure {
+    position: relative;
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-control);
+    border-radius: 50%;
+    color: var(--text-secondary);
+}
+.ethereum-setup-disclosure::before,
+.ethereum-setup-disclosure::after {
+    content: '';
+    position: absolute;
+    top: 13px;
+    width: 7px;
+    height: 2px;
+    border-radius: var(--radius-full);
+    background: currentColor;
+    transition: transform var(--transition-fast);
+}
+.ethereum-setup-disclosure::before {
+    left: 7px;
+    transform: rotate(45deg);
+}
+.ethereum-setup-disclosure::after {
+    right: 7px;
+    transform: rotate(-45deg);
+}
+.ethereum-setup[open] .ethereum-setup-disclosure::before { transform: rotate(-45deg); }
+.ethereum-setup[open] .ethereum-setup-disclosure::after { transform: rotate(45deg); }
+.ethereum-setup:not([open]) .ethereum-setup-header p { display: none; }
+.ethereum-setup-header:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+}
+.ethereum-setup-steps {
+    display: grid;
+    gap: 0;
+}
+.ethereum-setup-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-3) 0 var(--space-6);
+}
+.ethereum-setup-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 43px;
+    bottom: 0;
+    left: 16px;
+    width: 2px;
+    background: var(--border-subtle);
+}
+.ethereum-step-number {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 2px solid var(--border-control);
+    border-radius: 50%;
+    background: var(--surface-elevation-1);
+    color: var(--text-muted);
+    font-weight: 700;
+}
+.ethereum-setup-step[data-state="current"] .ethereum-step-number {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.ethereum-setup-step[data-state="complete"] .ethereum-step-number {
+    border-color: var(--status-online);
+    background: rgba(var(--status-online-rgb), 0.12);
+    color: var(--status-online-fg);
+}
+.ethereum-setup-step[data-state="complete"] .ethereum-step-state {
+    background: rgba(var(--status-online-rgb), 0.12);
+    color: var(--status-online-fg);
+}
+.ethereum-setup-step[data-state="error"] .ethereum-step-state {
+    background: rgba(var(--status-error-rgb), 0.12);
+    color: var(--status-error-fg);
+}
+.ethereum-step-content { min-width: 0; }
+.ethereum-step-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+.ethereum-step-heading h4 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--text-base);
+}
+.ethereum-step-content > p,
+.ethereum-advanced p {
+    margin: var(--space-2) 0 var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+.ethereum-inline-status {
+    margin: var(--space-3) 0;
+    padding: var(--space-3);
+    border-left: 3px solid var(--border-control);
+    border-radius: var(--radius-sm);
+    background: var(--surface-elevation-0);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+}
+.ethereum-step-content > .nr-btn + .nr-btn {
+    margin-left: var(--space-2);
+}
+.ethereum-setup-step[data-state="current"] .ethereum-inline-status {
+    border-left-color: var(--accent);
+}
+.ethereum-setup-step[data-state="complete"] .ethereum-inline-status {
+    border-left-color: var(--status-online);
+}
+.ethereum-advanced { margin-top: var(--space-4); }
+.ethereum-advanced summary {
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: 600;
+}
+.ethereum-advanced[open] {
+    padding: var(--space-3);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-elevation-0);
+}
+.ethereum-grid {
+    max-width: 1040px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(260px, 0.85fr) minmax(360px, 1.4fr);
+    gap: var(--space-6);
+    padding-bottom: var(--space-8);
+}
+.ethereum-assurance-card { grid-column: 1 / -1; }
+.ethereum-balance-label {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+.ethereum-balance {
+    margin: var(--space-2) 0 var(--space-3);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+.ethereum-address {
+    width: 100%;
+    padding: var(--space-3);
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-md);
+    background: var(--surface-control);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    cursor: pointer;
+}
+.ethereum-address:disabled { cursor: default; opacity: var(--state-inactive-opacity); }
+.ethereum-facts {
+    margin: var(--space-5) 0;
+    display: grid;
+    gap: var(--space-3);
+}
+.ethereum-facts > div,
+.ethereum-cost-summary {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.7fr) minmax(0, 1.3fr);
+    gap: var(--space-4);
+    align-items: baseline;
+}
+.ethereum-facts dt,
+.ethereum-cost-summary span {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+.ethereum-facts dd,
+.ethereum-cost-summary strong {
+    margin: 0;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+    text-align: right;
+}
+.ethereum-native-status,
+.ethereum-assurance-note,
+.ethereum-form-intro {
+    margin: var(--space-3) 0 0;
+    font-size: var(--text-sm);
+}
+.ethereum-service-contact {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: 30rem;
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--border-row);
+    border-radius: var(--radius-md);
+    background: var(--surface-row);
+}
+.ethereum-service-contact-role {
+    color: var(--text-muted);
+    font-size: var(--type-row-meta-size);
+}
+.ethereum-transaction-timeline {
+    display: grid;
+    gap: 0;
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    list-style: none;
+}
+.ethereum-transaction-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+}
+.ethereum-transaction-actions p {
+    min-width: 0;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+}
+.ethereum-transaction-stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: 0 0 var(--space-4);
+}
+.ethereum-transaction-stage:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 16px;
+    bottom: 0;
+    left: 7px;
+    width: 1px;
+    background: var(--border-subtle);
+}
+.ethereum-transaction-stage-marker {
+    position: relative;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    border: 2px solid var(--border-control);
+    border-radius: 50%;
+    background: var(--surface-panel);
+}
+.ethereum-transaction-stage[data-state="complete"] .ethereum-transaction-stage-marker,
+.ethereum-transaction-stage[data-state="verified"] .ethereum-transaction-stage-marker {
+    border-color: var(--status-online);
+    background: var(--status-online);
+    box-shadow: inset 0 0 0 3px var(--surface-panel);
+}
+.ethereum-transaction-stage[data-state="current"] .ethereum-transaction-stage-marker {
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: inset 0 0 0 3px var(--surface-panel);
+}
+.ethereum-transaction-stage[data-state="reported"] .ethereum-transaction-stage-marker {
+    border-color: var(--status-info-fg);
+    background: var(--status-info-fg);
+    box-shadow: inset 0 0 0 3px var(--surface-panel);
+}
+.ethereum-transaction-stage[data-state="warning"] .ethereum-transaction-stage-marker {
+    border-color: var(--status-warning-fg);
+    background: var(--status-warning-fg);
+    box-shadow: inset 0 0 0 3px var(--surface-panel);
+}
+.ethereum-transaction-stage[data-state="error"] .ethereum-transaction-stage-marker {
+    border-color: var(--status-error-fg);
+    background: var(--status-error-fg);
+    box-shadow: inset 0 0 0 3px var(--surface-panel);
+}
+.ethereum-transaction-stage-content { min-width: 0; }
+.ethereum-transaction-stage-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+.ethereum-transaction-stage-heading strong {
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+}
+.ethereum-transaction-authority {
+    flex: 0 1 auto;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-align: right;
+}
+.ethereum-transaction-source-contact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    min-width: 0;
+}
+.ethereum-transaction-source-avatar {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    overflow: hidden;
+    border-radius: var(--radius-full);
+}
+.ethereum-transaction-source-avatar svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.ethereum-transaction-source-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ethereum-transaction-stage-content p {
+    max-width: 72ch;
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+}
+.ethereum-transaction-technical {
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-subtle);
+}
+.ethereum-transaction-technical summary {
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: 600;
+}
+.ethereum-transaction-technical .ethereum-facts { margin-bottom: 0; }
+.ethereum-transfer-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.ethereum-transfer-form > label,
+.ethereum-fee-grid label {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: 600;
+}
+.ethereum-fee-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+.ethereum-fee-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.ethereum-cost-summary {
+    margin-top: var(--space-3);
+    padding: var(--space-4);
+    row-gap: var(--space-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-elevation-0);
+}
+.ethereum-form-error {
+    min-height: 1.4em;
+    margin: 0;
+    color: var(--status-error-fg);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+}

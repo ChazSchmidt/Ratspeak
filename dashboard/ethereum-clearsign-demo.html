@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RatSpeak clear-sign prototype</title>
+<style>
+body{margin:0;background:#101214;color:#f1f3f5;font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
+main{width:min(560px,calc(100% - 32px));display:grid;gap:16px}
+.card{background:#191c20;border:1px solid #30353b;border-radius:16px;padding:20px}
+h1,h2,p{margin:0 0 12px}.muted{color:#aeb6bf}.defs{display:grid;gap:8px}.def{display:flex;justify-content:space-between;padding:10px 12px;background:#111418;border-radius:10px}
+.confirm strong{font-size:28px;display:block;margin-bottom:16px}.facts{display:grid;grid-template-columns:auto 1fr;gap:8px 16px}.facts span:nth-child(odd){color:#aeb6bf}.reject{border-color:#684343}.reject strong{display:block;margin-bottom:8px}
+small{color:#8d98a4}
+</style>
+</head>
+<body>
+<main>
+<section class="card">
+<h1>Installed Ethereum definitions</h1>
+<p class="muted">Definitions are independent of the RatSpeak APK. Removing one makes its operation unsignable.</p>
+<div class="defs">
+<div class="def"><span>Base native ETH</span><small>native</small></div>
+<div class="def"><span>Base USDC</span><small>ERC-7730 subset</small></div>
+<div class="def"><span>Base alUSDb</span><small>ERC-7730 subset</small></div>
+<div class="def"><span>Base RATSPEAK</span><small>ERC-7730 subset</small></div>
+</div>
+</section>
+<section class="card confirm">
+<small>Clear-sign confirmation</small>
+<strong>Send 10 USDC</strong>
+<div class="facts">
+<span>To</span><span>0x2222…2222</span>
+<span>Network</span><span>Base</span>
+<span>Maximum fee</span><span>0.000065 ETH</span>
+<span>Definition</span><span>erc7730-8453-8335…2913-a9059cbb</span>
+</div>
+</section>
+<section class="card reject">
+<strong>Cannot sign this operation</strong>
+<p>No installed trusted definition matches the contract, chain, and function selector. RatSpeak will not blind-sign it.</p>
+</section>
+</main>
+</body>
+</html>

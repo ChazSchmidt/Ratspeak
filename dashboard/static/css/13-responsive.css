@@ -1383,6 +1383,19 @@
         height: var(--app-height, 100dvh);
         padding-bottom: 0;
     }
+
+    /* iOS shrinks and may independently pan the visual viewport for its
+       keyboard. Keep both conversation implementations anchored to that
+       viewport instead of assuming its top remains at layout coordinate 0. */
+    html[data-keyboard-platform="ios"] body.view-chat-detail .app-layout,
+    html[data-keyboard-platform="ios"] body.view-channel-detail .app-layout {
+        position: relative;
+        top: var(--visual-viewport-top, 0px);
+    }
+    html[data-keyboard-platform="ios"].keyboard-open body.view-chat-detail .app-layout,
+    html[data-keyboard-platform="ios"].keyboard-open body.view-channel-detail .app-layout {
+        height: var(--visual-viewport-height, var(--app-height, 100dvh));
+    }
 }
 
 @media (max-width: 480px) {
@@ -1452,6 +1465,15 @@
         transform: translateY(0);
         visibility: visible;
         pointer-events: auto;
+    }
+
+    /* WKWebView keeps fixed sheets in the layout viewport while the software
+       keyboard shrinks and may pan the visual viewport. Lift only the sheet
+       that owns keyboard focus, and bound it to the actually visible height.
+       This shared rule covers Add Contact and every canonical input sheet. */
+    html[data-keyboard-platform="ios"].keyboard-open .bottom-sheet.open:focus-within {
+        bottom: var(--keyboard-inset, 0px);
+        max-height: min(70vh, calc(var(--visual-viewport-height, 100dvh) - var(--space-8)));
     }
     .bottom-sheet-handle {
         width: 36px;
@@ -1934,6 +1956,38 @@
     .propagation-section-title { font-size: var(--text-sm); }
 
     .health-card-label { font-size: var(--text-2xs); }
+}
+
+@media (max-width: 768px) {
+    .ethereum-page {
+        padding: var(--space-5);
+        padding-bottom: calc(62px + var(--sab) + var(--space-5));
+    }
+    .ethereum-page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-4);
+    }
+    .ethereum-setup-header { flex-wrap: wrap; gap: var(--space-3); }
+    .ethereum-setup-header > div:first-child { flex-basis: 100%; }
+    .ethereum-setup-summary { margin-left: auto; }
+    .ethereum-grid { grid-template-columns: minmax(0, 1fr); }
+    .ethereum-assurance-card { grid-column: auto; }
+    .ethereum-transaction-actions { align-items: stretch; flex-direction: column; }
+    .ethereum-transaction-stage-heading { align-items: flex-start; flex-direction: column; gap: var(--space-1); }
+    .ethereum-transaction-authority { text-align: left; }
+    .ethereum-transaction-source-contact { justify-content: flex-start; max-width: 100%; }
+    .ethereum-fee-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 380px) {
+    .ethereum-facts > div,
+    .ethereum-cost-summary {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-1);
+    }
+    .ethereum-facts dd,
+    .ethereum-cost-summary strong { text-align: left; }
 }
 
 @media (max-width: 768px) {

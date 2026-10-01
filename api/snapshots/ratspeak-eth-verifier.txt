@@ -1,0 +1,283 @@
+pub mod ratspeak_eth_verifier
+pub use ratspeak_eth_verifier::U256
+pub enum ratspeak_eth_verifier::ExecutionHeaderProvenance
+pub ratspeak_eth_verifier::ExecutionHeaderProvenance::CheckpointAnchor
+pub ratspeak_eth_verifier::ExecutionHeaderProvenance::HeliosFinalityUpdate
+pub enum ratspeak_eth_verifier::VerifyError
+pub ratspeak_eth_verifier::VerifyError::AccountStore(alloc::string::String)
+pub ratspeak_eth_verifier::VerifyError::CheckpointMismatch
+pub ratspeak_eth_verifier::VerifyError::CompressedBundleHashMismatch
+pub ratspeak_eth_verifier::VerifyError::ConsensusDecode(alloc::string::String)
+pub ratspeak_eth_verifier::VerifyError::ConsensusJsonDuplicateKey
+pub ratspeak_eth_verifier::VerifyError::ConsensusJsonLimit
+pub ratspeak_eth_verifier::VerifyError::ConsensusJsonSchema
+pub ratspeak_eth_verifier::VerifyError::ConsensusVerification(alloc::string::String)
+pub ratspeak_eth_verifier::VerifyError::Decompression(std::io::error::Error)
+pub ratspeak_eth_verifier::VerifyError::EmptyConsensusPayload
+pub ratspeak_eth_verifier::VerifyError::ExecutionHeaderMismatch
+pub ratspeak_eth_verifier::VerifyError::ExecutionTimestampMismatch
+pub ratspeak_eth_verifier::VerifyError::FutureCheckpoint
+pub ratspeak_eth_verifier::VerifyError::InvalidAccountProof(alloc::string::String)
+pub ratspeak_eth_verifier::VerifyError::InvalidExecutionAncestry
+pub ratspeak_eth_verifier::VerifyError::InvalidExecutionHeader(alloc::string::String)
+pub ratspeak_eth_verifier::VerifyError::InvalidLocalClock
+pub ratspeak_eth_verifier::VerifyError::InvalidReceiptProof(alloc::string::String)
+pub ratspeak_eth_verifier::VerifyError::InvalidTransaction(alloc::string::String)
+pub ratspeak_eth_verifier::VerifyError::InvalidUncompressedLength
+pub ratspeak_eth_verifier::VerifyError::Malformed(&'static str)
+pub ratspeak_eth_verifier::VerifyError::MissingExecutionHeader
+pub ratspeak_eth_verifier::VerifyError::NestedCompression
+pub ratspeak_eth_verifier::VerifyError::OversizedAncestryHeader
+pub ratspeak_eth_verifier::VerifyError::OversizedBundle
+pub ratspeak_eth_verifier::VerifyError::OversizedCompositeEvidence
+pub ratspeak_eth_verifier::VerifyError::OversizedConsensusPayload
+pub ratspeak_eth_verifier::VerifyError::OversizedDecompressedBundle
+pub ratspeak_eth_verifier::VerifyError::OversizedProofNode
+pub ratspeak_eth_verifier::VerifyError::ReceiptHeaderMismatch
+pub ratspeak_eth_verifier::VerifyError::Replay
+pub ratspeak_eth_verifier::VerifyError::StaleCheckpoint
+pub ratspeak_eth_verifier::VerifyError::TooManyAncestryHeaders
+pub ratspeak_eth_verifier::VerifyError::TooManyConsensusUpdates
+pub ratspeak_eth_verifier::VerifyError::TooManyProofNodes
+pub ratspeak_eth_verifier::VerifyError::TrailingCompressedData
+pub ratspeak_eth_verifier::VerifyError::UnexpectedAccount
+pub ratspeak_eth_verifier::VerifyError::UnexpectedTransaction
+pub ratspeak_eth_verifier::VerifyError::UnsupportedCompressionAlgorithm(u8)
+pub ratspeak_eth_verifier::VerifyError::UnsupportedKind(u8)
+pub ratspeak_eth_verifier::VerifyError::UnsupportedNetwork
+pub ratspeak_eth_verifier::VerifyError::UnsupportedNetwork::chain_id: u64
+pub ratspeak_eth_verifier::VerifyError::UnsupportedNetwork::network: alloc::string::String
+pub ratspeak_eth_verifier::VerifyError::UnsupportedVersion(u8)
+pub ratspeak_eth_verifier::VerifyError::UntrustedHeader
+pub ratspeak_eth_verifier::VerifyError::WrongMagic
+pub struct ratspeak_eth_verifier::AccountProofBundle
+pub ratspeak_eth_verifier::AccountProofBundle::account_proof: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub ratspeak_eth_verifier::AccountProofBundle::address: [u8; 20]
+pub ratspeak_eth_verifier::AccountProofBundle::balance: alloy_primitives::aliases::U256
+pub ratspeak_eth_verifier::AccountProofBundle::block_hash: [u8; 32]
+pub ratspeak_eth_verifier::AccountProofBundle::block_number: u64
+pub ratspeak_eth_verifier::AccountProofBundle::chain_id: u64
+pub ratspeak_eth_verifier::AccountProofBundle::code_hash: [u8; 32]
+pub ratspeak_eth_verifier::AccountProofBundle::created_at_unix: u64
+pub ratspeak_eth_verifier::AccountProofBundle::network: alloc::string::String
+pub ratspeak_eth_verifier::AccountProofBundle::nonce: u64
+pub ratspeak_eth_verifier::AccountProofBundle::state_root: [u8; 32]
+pub ratspeak_eth_verifier::AccountProofBundle::storage_root: [u8; 32]
+pub struct ratspeak_eth_verifier::AccountStateEvidencePackage
+impl ratspeak_eth_verifier::AccountStateEvidencePackage
+pub fn ratspeak_eth_verifier::AccountStateEvidencePackage::account_proof(&self) -> &ratspeak_eth_verifier::AccountProofBundle
+pub fn ratspeak_eth_verifier::AccountStateEvidencePackage::account_proof_bytes(&self) -> &[u8]
+pub fn ratspeak_eth_verifier::AccountStateEvidencePackage::consensus(&self) -> &ratspeak_eth_verifier::ConsensusBootstrapBundle
+pub fn ratspeak_eth_verifier::AccountStateEvidencePackage::consensus_bundle_bytes(&self) -> &[u8]
+pub fn ratspeak_eth_verifier::AccountStateEvidencePackage::created_at_unix(&self) -> u64
+pub fn ratspeak_eth_verifier::AccountStateEvidencePackage::execution_header(&self) -> &ratspeak_eth_verifier::ExecutionHeaderProofBundle
+pub fn ratspeak_eth_verifier::AccountStateEvidencePackage::execution_header_bytes(&self) -> &[u8]
+pub struct ratspeak_eth_verifier::AccountStoreError(_)
+impl ratspeak_eth_verifier::AccountStoreError
+pub fn ratspeak_eth_verifier::AccountStoreError::new(impl core::convert::Into<alloc::string::String>) -> Self
+pub struct ratspeak_eth_verifier::BeaconCheckpointRoot
+impl ratspeak_eth_verifier::BeaconCheckpointRoot
+pub fn ratspeak_eth_verifier::BeaconCheckpointRoot::beacon_block_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::BeaconCheckpointRoot::sepolia([u8; 32]) -> Self
+pub struct ratspeak_eth_verifier::ConsensusBootstrapBundle
+pub ratspeak_eth_verifier::ConsensusBootstrapBundle::bootstrap_ssz: alloc::vec::Vec<u8>
+pub ratspeak_eth_verifier::ConsensusBootstrapBundle::chain_id: u64
+pub ratspeak_eth_verifier::ConsensusBootstrapBundle::created_at_unix: u64
+pub ratspeak_eth_verifier::ConsensusBootstrapBundle::finality_update_ssz: core::option::Option<alloc::vec::Vec<u8>>
+pub ratspeak_eth_verifier::ConsensusBootstrapBundle::network: alloc::string::String
+pub ratspeak_eth_verifier::ConsensusBootstrapBundle::updates_ssz: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub struct ratspeak_eth_verifier::ExecutionHeaderProofBundle
+pub ratspeak_eth_verifier::ExecutionHeaderProofBundle::chain_id: u64
+pub ratspeak_eth_verifier::ExecutionHeaderProofBundle::created_at_unix: u64
+pub ratspeak_eth_verifier::ExecutionHeaderProofBundle::network: alloc::string::String
+pub ratspeak_eth_verifier::ExecutionHeaderProofBundle::rlp_header: alloc::vec::Vec<u8>
+pub struct ratspeak_eth_verifier::FinalizedReceiptEvidencePackage
+impl ratspeak_eth_verifier::FinalizedReceiptEvidencePackage
+pub fn ratspeak_eth_verifier::FinalizedReceiptEvidencePackage::consensus(&self) -> &ratspeak_eth_verifier::ConsensusBootstrapBundle
+pub fn ratspeak_eth_verifier::FinalizedReceiptEvidencePackage::consensus_bundle_bytes(&self) -> &[u8]
+pub fn ratspeak_eth_verifier::FinalizedReceiptEvidencePackage::created_at_unix(&self) -> u64
+pub fn ratspeak_eth_verifier::FinalizedReceiptEvidencePackage::execution_header(&self) -> &ratspeak_eth_verifier::ExecutionHeaderProofBundle
+pub fn ratspeak_eth_verifier::FinalizedReceiptEvidencePackage::execution_header_bytes(&self) -> &[u8]
+pub fn ratspeak_eth_verifier::FinalizedReceiptEvidencePackage::finalized_receipt(&self) -> &ratspeak_eth_verifier::FinalizedTxReceiptProofBundle
+pub fn ratspeak_eth_verifier::FinalizedReceiptEvidencePackage::finalized_receipt_bytes(&self) -> &[u8]
+pub struct ratspeak_eth_verifier::FinalizedTxReceiptProofBundle
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::ancestry_headers: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::anchor_block_hash: [u8; 32]
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::anchor_block_number: u64
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::chain_id: u64
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::created_at_unix: u64
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::network: alloc::string::String
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::receipt_proof: ratspeak_eth_verifier::TxReceiptProofBundle
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::receipt_proof_bytes: alloc::vec::Vec<u8>
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::target_block_hash: [u8; 32]
+pub ratspeak_eth_verifier::FinalizedTxReceiptProofBundle::target_block_number: u64
+pub struct ratspeak_eth_verifier::ManualCheckpointFile
+impl ratspeak_eth_verifier::ManualCheckpointFile
+pub fn ratspeak_eth_verifier::ManualCheckpointFile::bootstrap_bundle(&self) -> &[u8]
+pub fn ratspeak_eth_verifier::ManualCheckpointFile::checkpoint_epoch(&self) -> u64
+pub fn ratspeak_eth_verifier::ManualCheckpointFile::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::ManualCheckpointFile::encode(&self) -> alloc::vec::Vec<u8>
+pub fn ratspeak_eth_verifier::ManualCheckpointFile::parse(&[u8]) -> ratspeak_eth_verifier::Result<Self>
+impl core::fmt::Debug for ratspeak_eth_verifier::ManualCheckpointFile
+pub fn ratspeak_eth_verifier::ManualCheckpointFile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct ratspeak_eth_verifier::MemoryAccountStore
+impl ratspeak_eth_verifier::MemoryAccountStore
+pub fn ratspeak_eth_verifier::MemoryAccountStore::account_at_checkpoint(&self, u64, [u8; 32], [u8; 20]) -> core::option::Option<&ratspeak_eth_verifier::VerifiedAccount>
+impl ratspeak_eth_verifier::VerifiedAccountStore for ratspeak_eth_verifier::MemoryAccountStore
+pub fn ratspeak_eth_verifier::MemoryAccountStore::record_if_new(&mut self, &ratspeak_eth_verifier::VerifiedAccount) -> core::result::Result<bool, ratspeak_eth_verifier::AccountStoreError>
+pub struct ratspeak_eth_verifier::PinnedCheckpoint
+impl ratspeak_eth_verifier::PinnedCheckpoint
+pub fn ratspeak_eth_verifier::PinnedCheckpoint::execution_block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::PinnedCheckpoint::execution_block_number(&self) -> u64
+pub fn ratspeak_eth_verifier::PinnedCheckpoint::sepolia(u64, [u8; 32], [u8; 32]) -> Self
+pub fn ratspeak_eth_verifier::PinnedCheckpoint::state_root(&self) -> [u8; 32]
+pub struct ratspeak_eth_verifier::TxReceiptProofBundle
+pub ratspeak_eth_verifier::TxReceiptProofBundle::block_hash: [u8; 32]
+pub ratspeak_eth_verifier::TxReceiptProofBundle::block_number: u64
+pub ratspeak_eth_verifier::TxReceiptProofBundle::chain_id: u64
+pub ratspeak_eth_verifier::TxReceiptProofBundle::created_at_unix: u64
+pub ratspeak_eth_verifier::TxReceiptProofBundle::network: alloc::string::String
+pub ratspeak_eth_verifier::TxReceiptProofBundle::raw_tx: alloc::vec::Vec<u8>
+pub ratspeak_eth_verifier::TxReceiptProofBundle::receipt: alloc::vec::Vec<u8>
+pub ratspeak_eth_verifier::TxReceiptProofBundle::receipt_proof: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub ratspeak_eth_verifier::TxReceiptProofBundle::receipts_root: [u8; 32]
+pub ratspeak_eth_verifier::TxReceiptProofBundle::transactions_root: [u8; 32]
+pub ratspeak_eth_verifier::TxReceiptProofBundle::tx_hash: [u8; 32]
+pub ratspeak_eth_verifier::TxReceiptProofBundle::tx_index: u64
+pub ratspeak_eth_verifier::TxReceiptProofBundle::tx_proof: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub struct ratspeak_eth_verifier::VerifiedAccount
+impl ratspeak_eth_verifier::VerifiedAccount
+pub fn ratspeak_eth_verifier::VerifiedAccount::address(&self) -> [u8; 20]
+pub fn ratspeak_eth_verifier::VerifiedAccount::balance(&self) -> alloy_primitives::aliases::U256
+pub fn ratspeak_eth_verifier::VerifiedAccount::block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedAccount::block_number(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedAccount::chain_id(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedAccount::code_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedAccount::network(&self) -> &str
+pub fn ratspeak_eth_verifier::VerifiedAccount::nonce(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedAccount::proof_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedAccount::semantic_import_key(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedAccount::state_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedAccount::storage_root(&self) -> [u8; 32]
+pub struct ratspeak_eth_verifier::VerifiedAccountStateEvidence
+impl ratspeak_eth_verifier::VerifiedAccountStateEvidence
+pub fn ratspeak_eth_verifier::VerifiedAccountStateEvidence::account(&self) -> &ratspeak_eth_verifier::VerifiedAccount
+pub fn ratspeak_eth_verifier::VerifiedAccountStateEvidence::consensus(&self) -> &ratspeak_eth_verifier::VerifiedExecutionHeader
+pub fn ratspeak_eth_verifier::VerifiedAccountStateEvidence::execution_block(&self) -> &ratspeak_eth_verifier::VerifiedExecutionBlock
+pub fn ratspeak_eth_verifier::VerifiedAccountStateEvidence::into_parts(self) -> (ratspeak_eth_verifier::VerifiedExecutionHeader, ratspeak_eth_verifier::VerifiedExecutionBlock, ratspeak_eth_verifier::VerifiedAccount)
+pub fn ratspeak_eth_verifier::VerifiedAccountStateEvidence::package_hash(&self) -> [u8; 32]
+pub struct ratspeak_eth_verifier::VerifiedExecutionBlock
+impl ratspeak_eth_verifier::VerifiedExecutionBlock
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::chain_id(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::consensus_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::execution_block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::execution_block_number(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::network(&self) -> &str
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::parent_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::proof_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::provenance(&self) -> ratspeak_eth_verifier::ExecutionHeaderProvenance
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::receipts_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::state_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionBlock::transactions_root(&self) -> [u8; 32]
+pub struct ratspeak_eth_verifier::VerifiedExecutionHeader
+impl ratspeak_eth_verifier::VerifiedExecutionHeader
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::beacon_transactions_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::chain_id(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::execution_block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::execution_block_number(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::finalized_at_unix(&self) -> ratspeak_eth_verifier::Result<u64>
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::finalized_slot(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::network(&self) -> &str
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::proof_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::provenance(&self) -> ratspeak_eth_verifier::ExecutionHeaderProvenance
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::receipts_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedExecutionHeader::state_root(&self) -> [u8; 32]
+pub struct ratspeak_eth_verifier::VerifiedFinalizedReceiptEvidence
+impl ratspeak_eth_verifier::VerifiedFinalizedReceiptEvidence
+pub fn ratspeak_eth_verifier::VerifiedFinalizedReceiptEvidence::anchor(&self) -> &ratspeak_eth_verifier::VerifiedExecutionBlock
+pub fn ratspeak_eth_verifier::VerifiedFinalizedReceiptEvidence::consensus(&self) -> &ratspeak_eth_verifier::VerifiedExecutionHeader
+pub fn ratspeak_eth_verifier::VerifiedFinalizedReceiptEvidence::finalized_receipt(&self) -> &ratspeak_eth_verifier::VerifiedFinalizedTxReceipt
+pub fn ratspeak_eth_verifier::VerifiedFinalizedReceiptEvidence::into_parts(self) -> (ratspeak_eth_verifier::VerifiedExecutionHeader, ratspeak_eth_verifier::VerifiedExecutionBlock, ratspeak_eth_verifier::VerifiedFinalizedTxReceipt)
+pub fn ratspeak_eth_verifier::VerifiedFinalizedReceiptEvidence::package_hash(&self) -> [u8; 32]
+pub struct ratspeak_eth_verifier::VerifiedFinalizedTxReceipt
+impl ratspeak_eth_verifier::VerifiedFinalizedTxReceipt
+pub fn ratspeak_eth_verifier::VerifiedFinalizedTxReceipt::into_parts(self) -> (ratspeak_eth_verifier::VerifiedExecutionBlock, ratspeak_eth_verifier::VerifiedTxReceipt)
+pub fn ratspeak_eth_verifier::VerifiedFinalizedTxReceipt::receipt(&self) -> &ratspeak_eth_verifier::VerifiedTxReceipt
+pub fn ratspeak_eth_verifier::VerifiedFinalizedTxReceipt::target_block(&self) -> &ratspeak_eth_verifier::VerifiedExecutionBlock
+pub struct ratspeak_eth_verifier::VerifiedTxReceipt
+impl ratspeak_eth_verifier::VerifiedTxReceipt
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::block_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::block_number(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::chain_id(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::checkpoint_root(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::consensus_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::cumulative_gas_used(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::execution_header_proof_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::logs_count(&self) -> u64
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::network(&self) -> &str
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::proof_bundle_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::provenance(&self) -> ratspeak_eth_verifier::ExecutionHeaderProvenance
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::succeeded(&self) -> bool
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::tx_hash(&self) -> [u8; 32]
+pub fn ratspeak_eth_verifier::VerifiedTxReceipt::tx_index(&self) -> u64
+pub struct ratspeak_eth_verifier::Verifier
+impl ratspeak_eth_verifier::Verifier
+pub fn ratspeak_eth_verifier::Verifier::build_account_state_evidence(&self, u64, &[u8], &[u8], &[u8]) -> ratspeak_eth_verifier::Result<alloc::vec::Vec<u8>>
+pub fn ratspeak_eth_verifier::Verifier::build_finalized_receipt_evidence(&self, u64, &[u8], &[u8], &[u8]) -> ratspeak_eth_verifier::Result<alloc::vec::Vec<u8>>
+pub fn ratspeak_eth_verifier::Verifier::parse_account_state_evidence(&self, &[u8]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::AccountStateEvidencePackage>
+pub fn ratspeak_eth_verifier::Verifier::parse_finalized_receipt_evidence(&self, &[u8]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::FinalizedReceiptEvidencePackage>
+pub fn ratspeak_eth_verifier::Verifier::verify_account_state_evidence(&self, &[u8], &ratspeak_eth_verifier::BeaconCheckpointRoot, [u8; 20]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedAccountStateEvidence>
+pub fn ratspeak_eth_verifier::Verifier::verify_finalized_receipt_evidence(&self, &[u8], &ratspeak_eth_verifier::BeaconCheckpointRoot, [u8; 32]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedFinalizedReceiptEvidence>
+impl ratspeak_eth_verifier::Verifier
+pub fn ratspeak_eth_verifier::Verifier::parse_account_proof(&self, &[u8]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::AccountProofBundle>
+pub fn ratspeak_eth_verifier::Verifier::sepolia() -> Self
+pub fn ratspeak_eth_verifier::Verifier::verify_account_from_consensus(&self, &[u8], &ratspeak_eth_verifier::VerifiedExecutionHeader, &mut impl ratspeak_eth_verifier::VerifiedAccountStore) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedAccount>
+pub fn ratspeak_eth_verifier::Verifier::verify_and_import(&self, &[u8], &ratspeak_eth_verifier::PinnedCheckpoint, &mut impl ratspeak_eth_verifier::VerifiedAccountStore) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedAccount>
+impl ratspeak_eth_verifier::Verifier
+pub fn ratspeak_eth_verifier::Verifier::parse_consensus_bootstrap(&self, &[u8]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::ConsensusBootstrapBundle>
+pub fn ratspeak_eth_verifier::Verifier::reverify_historical_consensus_bootstrap(&self, &[u8], &ratspeak_eth_verifier::BeaconCheckpointRoot) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedExecutionHeader>
+pub fn ratspeak_eth_verifier::Verifier::verify_consensus_bootstrap(&self, &[u8], &ratspeak_eth_verifier::BeaconCheckpointRoot) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedExecutionHeader>
+pub fn ratspeak_eth_verifier::Verifier::verify_consensus_bootstrap_at_unix(&self, &[u8], &ratspeak_eth_verifier::BeaconCheckpointRoot, u64) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedExecutionHeader>
+impl ratspeak_eth_verifier::Verifier
+pub fn ratspeak_eth_verifier::Verifier::parse_execution_header_proof(&self, &[u8]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::ExecutionHeaderProofBundle>
+pub fn ratspeak_eth_verifier::Verifier::verify_execution_header(&self, &[u8], &ratspeak_eth_verifier::VerifiedExecutionHeader) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedExecutionBlock>
+impl ratspeak_eth_verifier::Verifier
+pub fn ratspeak_eth_verifier::Verifier::parse_finalized_tx_receipt_proof(&self, &[u8]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::FinalizedTxReceiptProofBundle>
+pub fn ratspeak_eth_verifier::Verifier::verify_finalized_tx_receipt(&self, &[u8], &ratspeak_eth_verifier::VerifiedExecutionBlock) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedFinalizedTxReceipt>
+impl ratspeak_eth_verifier::Verifier
+pub fn ratspeak_eth_verifier::Verifier::parse_tx_receipt_proof(&self, &[u8]) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::TxReceiptProofBundle>
+pub fn ratspeak_eth_verifier::Verifier::verify_tx_receipt(&self, &[u8], &ratspeak_eth_verifier::VerifiedExecutionBlock) -> ratspeak_eth_verifier::Result<ratspeak_eth_verifier::VerifiedTxReceipt>
+impl core::default::Default for ratspeak_eth_verifier::Verifier
+pub fn ratspeak_eth_verifier::Verifier::default() -> Self
+pub const ratspeak_eth_verifier::KIND_EXECUTION_HEADER_PROOF: u8
+pub const ratspeak_eth_verifier::KIND_FINALIZED_TX_RECEIPT_PROOF: u8
+pub const ratspeak_eth_verifier::KIND_PINNED_CONSENSUS_BOOTSTRAP: u8
+pub const ratspeak_eth_verifier::KIND_TX_RECEIPT_PROOF: u8
+pub const ratspeak_eth_verifier::MAGIC: &[u8; 6]
+pub const ratspeak_eth_verifier::MAX_ANCESTRY_HEADERS: usize
+pub const ratspeak_eth_verifier::MAX_ANCESTRY_HEADER_BYTES: usize
+pub const ratspeak_eth_verifier::MAX_BUNDLE_BYTES: usize
+pub const ratspeak_eth_verifier::MAX_COMPOSITE_EVIDENCE_BYTES: usize
+pub const ratspeak_eth_verifier::MAX_MANUAL_CHECKPOINT_FILE_BYTES: usize
+pub const ratspeak_eth_verifier::MAX_PROOF_NODES: usize
+pub const ratspeak_eth_verifier::MAX_PROOF_NODE_BYTES: usize
+pub const ratspeak_eth_verifier::SEPOLIA_CHAIN_ID: u64
+pub const ratspeak_eth_verifier::SEPOLIA_GENESIS_TIME: u64
+pub const ratspeak_eth_verifier::SEPOLIA_NETWORK: &str
+pub const ratspeak_eth_verifier::SEPOLIA_SECONDS_PER_SLOT: u64
+pub const ratspeak_eth_verifier::SEPOLIA_SLOTS_PER_SYNC_COMMITTEE_PERIOD: u64
+pub const ratspeak_eth_verifier::VERSION: u8
+pub trait ratspeak_eth_verifier::VerifiedAccountStore
+pub fn ratspeak_eth_verifier::VerifiedAccountStore::record_if_new(&mut self, &ratspeak_eth_verifier::VerifiedAccount) -> core::result::Result<bool, ratspeak_eth_verifier::AccountStoreError>
+impl ratspeak_eth_verifier::VerifiedAccountStore for ratspeak_eth_verifier::MemoryAccountStore
+pub fn ratspeak_eth_verifier::MemoryAccountStore::record_if_new(&mut self, &ratspeak_eth_verifier::VerifiedAccount) -> core::result::Result<bool, ratspeak_eth_verifier::AccountStoreError>
+pub fn ratspeak_eth_verifier::encode_manual_checkpoint_file(u64, [u8; 32], &[u8]) -> ratspeak_eth_verifier::Result<alloc::vec::Vec<u8>>
+pub fn ratspeak_eth_verifier::manual_checkpoint_file_fingerprint(&[u8]) -> [u8; 32]
+pub fn ratspeak_eth_verifier::sepolia_consensus_update_slot(&[u8]) -> ratspeak_eth_verifier::Result<u64>
+pub fn ratspeak_eth_verifier::sepolia_slot_at_unix(u64) -> ratspeak_eth_verifier::Result<u64>
+pub fn ratspeak_eth_verifier::sepolia_slot_start_unix(u64) -> ratspeak_eth_verifier::Result<u64>
+pub fn ratspeak_eth_verifier::split_and_tag_beacon_json_updates(&[u8], usize) -> ratspeak_eth_verifier::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>>
+pub fn ratspeak_eth_verifier::tag_beacon_json_payload(&[u8]) -> ratspeak_eth_verifier::Result<alloc::vec::Vec<u8>>
+pub type ratspeak_eth_verifier::Result<T> = core::result::Result<T, ratspeak_eth_verifier::VerifyError>
