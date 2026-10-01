@@ -5864,6 +5864,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ratspeak-eth-clearsign"
+version = "1.0.31"
+dependencies = [
+ "alloy-primitives",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.19",
+]
+
+[[package]]
 name = "ratspeak-eth-wallet"
 version = "1.0.31"
 dependencies = [
@@ -5873,6 +5883,7 @@ dependencies = [
  "alloy-signer",
  "alloy-signer-local",
  "bip39",
+ "ratspeak-eth-clearsign",
  "thiserror 2.0.19",
  "zeroize",
 ]
