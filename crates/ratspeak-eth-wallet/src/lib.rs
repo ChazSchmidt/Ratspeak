@@ -1478,4 +1478,155 @@ mod tests {
             .unwrap();
         assert_eq!(restored_signed, original_signed);
     }
+
+    struct ClearAuthorizer {
+        review_digest: B256,
+        calls: usize,
+    }
+
+    impl ClearSignAuthorizer for ClearAuthorizer {
+        type Error = ();
+
+        fn authorize_clear_signed_operation(
+            &mut self,
+            review: &ClearSignedTransferReview,
+        ) -> std::result::Result<(), Self::Error> {
+            self.calls += 1;
+            if review.review_digest != self.review_digest {
+                return Err(());
+            }
+            Ok(())
+        }
+    }
+
+    fn usdc_registry() -> DefinitionRegistry {
+        let mut registry = DefinitionRegistry::new();
+        registry
+            .install_bytes(include_bytes!("../../ratspeak-eth-clearsign/definitions/base-usdc.json"))
+            .unwrap();
+        registry
+    }
+
+    fn erc20_transfer_calldata(recipient: Address, amount: U256) -> Bytes {
+        let mut calldata = Vec::with_capacity(68);
+        calldata.extend_from_slice(&[0xa9, 0x05, 0x9c, 0xbb]);
+        calldata.extend_from_slice(&[0u8; 12]);
+        calldata.extend_from_slice(recipient.as_slice());
+        calldata.extend_from_slice(&amount.to_be_bytes::<32>());
+        calldata.into()
+    }
+
+    fn base_usdc_intent(account: WalletAccount, recipient: Address, amount: U256) -> ClearSignedIntent {
+        ClearSignedIntent {
+            chain_id: 8453,
+            from: account.address(),
+            to: address("833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"),
+            value: U256::ZERO,
+            input: erc20_transfer_calldata(recipient, amount),
+            nonce: 12,
+            gas_limit: 65_000,
+            max_fee_per_gas: 1_000_000_000,
+            max_priority_fee_per_gas: 100_000_000,
+        }
+    }
+
+    #[test]
+    fn clear_signed_erc20_signs_exact_eip1559_bytes() {
+        let secret = secret();
+        let account = secret.account().unwrap();
+        let recipient = address("2222222222222222222222222222222222222222");
+        let prepared = account
+            .prepare_clear_signed_operation(
+                base_usdc_intent(account, recipient, U256::from(10_000_000u64)),
+                &usdc_registry(),
+                operation(8),
+                1_000,
+                1_100,
+            )
+            .unwrap();
+        assert_eq!(prepared.review().clear_sign.asset_symbol, "USDC");
+        assert_eq!(prepared.review().clear_sign.recipient, recipient);
+        assert_eq!(prepared.review().clear_sign.amount, U256::from(10_000_000u64));
+        assert_eq!(
+            keccak256(prepared.canonical_signing_bytes()),
+            prepared.review().signing_hash
+        );
+
+        let mut authorizer = ClearAuthorizer {
+            review_digest: prepared.review().review_digest,
+            calls: 0,
+        };
+        let signed = prepared
+            .authorize_and_sign(&secret, &mut authorizer, 1_001)
+            .unwrap();
+        assert_eq!(authorizer.calls, 1);
+        assert_eq!(signed.raw_transaction()[0], 0x02);
+        assert_eq!(signed.review().clear_sign.asset_symbol, "USDC");
+    }
+
+    #[test]
+    fn calldata_modified_after_review_is_rejected_before_authorization() {
+        let secret = secret();
+        let account = secret.account().unwrap();
+        let recipient = address("2222222222222222222222222222222222222222");
+        let mut prepared = account
+            .prepare_clear_signed_operation(
+                base_usdc_intent(account, recipient, U256::from(10_000_000u64)),
+                &usdc_registry(),
+                operation(9),
+                1_000,
+                1_100,
+            )
+            .unwrap();
+        let mut authorizer = ClearAuthorizer {
+            review_digest: prepared.review().review_digest,
+            calls: 0,
+        };
+
+        let mut changed = prepared.tx.input.to_vec();
+        *changed.last_mut().unwrap() ^= 1;
+        prepared.tx.input = changed.into();
+
+        assert_eq!(
+            prepared.authorize_and_sign(&secret, &mut authorizer, 1_001),
+            Err(WalletError::ClearSignedOperationChanged)
+        );
+        assert_eq!(authorizer.calls, 0);
+    }
+
+    #[test]
+    fn clear_signed_unknown_contract_and_approve_never_reach_authorizer() {
+        let account = account();
+        let recipient = address("2222222222222222222222222222222222222222");
+        let mut unknown = base_usdc_intent(account, recipient, U256::from(1));
+        unknown.to = address("3333333333333333333333333333333333333333");
+        assert!(matches!(
+            account.prepare_clear_signed_operation(
+                unknown,
+                &usdc_registry(),
+                operation(10),
+                1_000,
+                1_100,
+            ),
+            Err(WalletError::ClearSignRejected)
+        ));
+
+        let mut approve = base_usdc_intent(account, recipient, U256::from(1));
+        approve.input = {
+            let mut bytes = vec![0x09, 0x5e, 0xa7, 0xb3];
+            bytes.resize(68, 0);
+            bytes.into()
+        };
+        assert!(matches!(
+            account.prepare_clear_signed_operation(
+                approve,
+                &usdc_registry(),
+                operation(11),
+                1_000,
+                1_100,
+            ),
+            Err(WalletError::ClearSignRejected)
+        ));
+    }
+
 }
