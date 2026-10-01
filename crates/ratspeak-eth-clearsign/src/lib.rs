@@ -32,6 +32,8 @@ pub enum Error {
     UnsupportedFunction,
     #[error("native definition cannot authorize calldata")]
     NativeCalldata,
+    #[error("native transfer must use the 21,000 gas pure-value envelope")]
+    UnsafeNativeGasLimit,
     #[error("ERC-20 transfer must not carry native value")]
     UnexpectedNativeValue,
 }
@@ -262,6 +264,7 @@ impl InstalledDefinition {
             DefinitionKind::Native(d) => {
                 if op.chain_id != d.chain_id { return Ok(None); }
                 if !op.input.is_empty() { return Err(Error::NativeCalldata); }
+                if op.gas_limit != 21_000 { return Err(Error::UnsafeNativeGasLimit); }
                 if op.value == U256::ZERO { return Ok(None); }
                 Ok(Some(ClearSignReview {
                     definition_id: self.definition_id.clone(),
@@ -488,6 +491,21 @@ mod tests {
         assert_eq!(review.asset_symbol, "ETH");
         assert_eq!(review.recipient, op.to);
         assert_eq!(review.kind, ReviewKind::NativeTransfer);
+    }
+
+    #[test]
+    fn native_eth_rejects_contract_execution_sized_gas() {
+        let r = registry();
+        let operation = EvmOperation {
+            chain_id: BASE_CHAIN_ID,
+            to: address("1111111111111111111111111111111111111111"),
+            value: U256::from(1u64),
+            input: Bytes::new(),
+            gas_limit: 50_000,
+            max_fee_per_gas: 1_000_000_000,
+            max_priority_fee_per_gas: 100_000_000,
+        };
+        assert!(matches!(r.review(&operation), Err(Error::UnsafeNativeGasLimit)));
     }
 
     #[test]
