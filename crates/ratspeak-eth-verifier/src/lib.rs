@@ -21,6 +21,7 @@ mod execution;
 mod finalized_receipt;
 mod manual_checkpoint;
 mod receipt;
+mod storage;
 
 pub use composite::{
     AccountStateEvidencePackage, FinalizedReceiptEvidencePackage, VerifiedAccountStateEvidence,
@@ -43,6 +44,7 @@ pub use manual_checkpoint::{
     manual_checkpoint_file_fingerprint,
 };
 pub use receipt::{TxReceiptProofBundle, VerifiedTxReceipt};
+pub use storage::{StorageProofBundle, VerifiedStorageValue};
 
 pub const MAGIC: &[u8; 6] = b"RSETH1";
 pub const VERSION: u8 = 1;
@@ -65,6 +67,7 @@ const KIND_COMPACT_CONSENSUS_BOOTSTRAP: u8 = 7;
 const KIND_COMPRESSED_BUNDLE: u8 = 11;
 pub const KIND_PINNED_CONSENSUS_BOOTSTRAP: u8 = 12;
 pub const KIND_FINALIZED_TX_RECEIPT_PROOF: u8 = 13;
+pub const KIND_STORAGE_PROOF: u8 = 14;
 const COMPRESSION_ALGORITHM_GZIP: u8 = 1;
 const MAX_NETWORK_BYTES: usize = 32;
 
