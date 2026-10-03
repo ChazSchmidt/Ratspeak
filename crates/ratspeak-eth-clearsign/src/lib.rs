@@ -531,6 +531,8 @@ mod tests {
     const USDC: &[u8] = include_bytes!("../definitions/base-usdc.json");
     const ALUSDB: &[u8] = include_bytes!("../definitions/base-alusdb.json");
     const RATSPEAK: &[u8] = include_bytes!("../definitions/base-ratspeak.json");
+    const BASE_SEPOLIA_NATIVE: &[u8] = include_bytes!("../definitions/base-sepolia-native-eth.json");
+    const BASE_SEPOLIA_USDC: &[u8] = include_bytes!("../definitions/base-sepolia-usdc.json");
 
     fn address(s: &str) -> Address {
         s.parse().unwrap()
@@ -559,10 +561,50 @@ mod tests {
 
     fn registry() -> DefinitionRegistry {
         let mut r = DefinitionRegistry::new();
-        for d in [NATIVE, USDC, ALUSDB, RATSPEAK] {
+        for d in [NATIVE, USDC, ALUSDB, RATSPEAK, BASE_SEPOLIA_NATIVE, BASE_SEPOLIA_USDC] {
             r.install_bytes(d).unwrap();
         }
         r
+    }
+
+    #[test]
+    fn base_sepolia_native_eth_transfer_is_clear_signed() {
+        let r = registry();
+        let op = EvmOperation {
+            chain_id: BASE_SEPOLIA_CHAIN_ID,
+            to: address("1111111111111111111111111111111111111111"),
+            value: U256::from(10_000_000_000_000_000u64),
+            input: Bytes::new(),
+            gas_limit: 21_000,
+            max_fee_per_gas: 1_000_000_000,
+            max_priority_fee_per_gas: 100_000_000,
+        };
+        let review = r.review(&op).unwrap();
+        assert_eq!(review.asset_symbol, "ETH");
+        assert_eq!(review.network, "Base Sepolia");
+        assert_eq!(review.recipient, op.to);
+        assert_eq!(review.kind, ReviewKind::NativeTransfer);
+    }
+
+    #[test]
+    fn base_sepolia_usdc_uses_same_erc20_decoder() {
+        let recipient = address("2222222222222222222222222222222222222222");
+        let review = registry()
+            .review(&EvmOperation {
+                chain_id: BASE_SEPOLIA_CHAIN_ID,
+                to: address("036CbD53842c5426634e7929541eC2318f3dCF7e"),
+                value: U256::ZERO,
+                input: transfer_input(recipient, U256::from(10_000_000u64)),
+                gas_limit: 65_000,
+                max_fee_per_gas: 1_000_000_000,
+                max_priority_fee_per_gas: 100_000_000,
+            })
+            .unwrap();
+        assert_eq!(review.asset_symbol, "USDC");
+        assert_eq!(review.asset_decimals, 6);
+        assert_eq!(review.network, "Base Sepolia");
+        assert_eq!(review.recipient, recipient);
+        assert_eq!(review.amount, U256::from(10_000_000u64));
     }
 
     #[test]
