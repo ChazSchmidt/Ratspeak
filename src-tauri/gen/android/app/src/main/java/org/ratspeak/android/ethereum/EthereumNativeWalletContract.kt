@@ -228,6 +228,8 @@ internal class ExactSepoliaTransferReview private constructor(
         .toString()
 
     private var payload: ByteArray? = canonicalSigningPayload.copyOf()
+    val displayAmount: String = formatUnits(amount, assetDecimals)
+
     private var operation: ByteArray? = operationId.copyOf()
     private val boundDigest = computeDigest(operationId, canonicalSigningPayload)
 
@@ -323,6 +325,14 @@ internal class ExactSepoliaTransferReview private constructor(
                 operationId,
                 canonicalSigningPayload,
             )
+        }
+
+        private fun formatUnits(value: String, decimals: Int): String {
+            if (decimals == 0) return value
+            val padded = value.padStart(decimals + 1, '0')
+            val whole = padded.dropLast(decimals).trimStart('0').ifEmpty { "0" }
+            val fractional = padded.takeLast(decimals).trimEnd('0')
+            return if (fractional.isEmpty()) whole else "$whole.$fractional"
         }
 
         private fun parseCanonicalUnsigned(value: String, maximum: BigInteger): BigInteger? {
