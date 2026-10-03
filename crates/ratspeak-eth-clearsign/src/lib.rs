@@ -93,10 +93,6 @@ struct NativeDefinition {
     network: String,
     symbol: String,
     decimals: u8,
-    #[serde(default)]
-    contract: Option<String>,
-    #[serde(default)]
-    storage: Option<RawBalanceStorage>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -174,6 +170,10 @@ struct RawRatspeak {
     network: String,
     symbol: String,
     decimals: u8,
+    #[serde(default)]
+    contract: Option<String>,
+    #[serde(default)]
+    storage: Option<RawBalanceStorage>,
 }
 
 #[derive(Debug, Deserialize)]
