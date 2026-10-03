@@ -1,0 +1,15 @@
+{
+  "ratspeak": {
+    "definitionId": "base-sepolia-usdc-balance-v1",
+    "kind": "erc20Balance",
+    "chainId": 84532,
+    "network": "Base Sepolia",
+    "contract": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "symbol": "USDC",
+    "decimals": 6,
+    "storage": {
+      "mappingSlot": 9,
+      "valueMaskBits": 255
+    }
+  }
+}
