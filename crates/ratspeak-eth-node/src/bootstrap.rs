@@ -1724,6 +1724,22 @@ impl ApprovedCheckpointAnchor<'_> {
     }
 }
 
+pub(crate) fn active_checkpoint_available_at(
+    store: &EthereumNodeStore,
+    now_unix: u64,
+) -> Result<bool, CheckpointPolicyError> {
+    let Some(approval) = store.latest_checkpoint_approval()? else {
+        return Ok(false);
+    };
+    match validate_stored_approval(&store.connection, &approval, now_unix) {
+        Ok(()) => Ok(true),
+        Err(CheckpointPolicyError::StaleCheckpoint)
+        | Err(CheckpointPolicyError::RevokedCheckpoint)
+        | Err(CheckpointPolicyError::NoApprovedCheckpoint) => Ok(false),
+        Err(error) => Err(error),
+    }
+}
+
 pub(crate) fn ensure_active_checkpoint_at(
     store: &EthereumNodeStore,
     checkpoint_root: [u8; 32],
