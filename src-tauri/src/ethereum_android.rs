@@ -2760,6 +2760,45 @@ pub extern "system" fn Java_org_ratspeak_android_ethereum_RustEthereumNativeWall
 
 #[cfg(target_os = "android")]
 #[no_mangle]
+pub extern "system" fn Java_org_ratspeak_android_ethereum_RustEthereumNativeWalletEngine_nativeCancelClearSignedOperation(
+    env: jni::JNIEnv,
+    _class: jni::objects::JClass,
+    identity_hash: jni::sys::jbyteArray,
+    identity_session_generation: jni::sys::jlong,
+    operation_id: jni::sys::jbyteArray,
+) {
+    let identity = jni_bytes(&env, identity_hash);
+    let operation = jni_bytes(&env, operation_id);
+    let (Ok(identity), Ok(operation)) = (identity, operation) else {
+        return;
+    };
+    let (Ok(identity_hash), Ok(session_generation), Ok(operation)) = (
+        <[u8; 16]>::try_from(identity.as_slice()),
+        u64::try_from(identity_session_generation),
+        <[u8; 16]>::try_from(operation.as_slice()),
+    ) else {
+        return;
+    };
+    let identity = AndroidIdentityBinding {
+        hash: identity_hash,
+        session_generation,
+    };
+    let _ = with_installed_state(|installed, state| {
+        if active_identity_binding(&installed.runtime)? != identity {
+            return Err(EngineFailure::OperationFailed);
+        }
+        state
+            .cancel_native_clear_signed_operation(
+                identity.hash,
+                identity.session_generation,
+                operation,
+            )
+            .map_err(|_| EngineFailure::OperationFailed)
+    });
+}
+
+#[cfg(target_os = "android")]
+#[no_mangle]
 pub extern "system" fn Java_org_ratspeak_android_ethereum_RustEthereumNativeWalletEngine_nativeCancelExactTransfer(
     env: jni::JNIEnv,
     _class: jni::objects::JClass,
