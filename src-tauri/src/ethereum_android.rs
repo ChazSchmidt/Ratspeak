@@ -34,8 +34,8 @@ use ratspeak_eth_node::{
 #[cfg(target_os = "android")]
 use ratspeak_eth_wallet::MAX_PREPARED_LIFETIME_SECONDS;
 use ratspeak_eth_wallet::{
-    ClearSignAuthorizer, PreparedClearSignedOperation, PreparedTransfer, SignedTransfer,
-    TransferAuthorizer, WalletAccount, WalletError, WalletSecret,
+    ClearSignAuthorizer, OperationId, PreparedClearSignedOperation, PreparedTransfer,
+    SignedTransfer, TransferAuthorizer, WalletAccount, WalletError, WalletSecret,
 };
 #[cfg(target_os = "android")]
 use tauri::Manager;
@@ -47,10 +47,12 @@ use crate::ethereum::{
 };
 #[cfg(target_os = "android")]
 use crate::ethereum::{EthereumNativeTransportProfileBinding, EthereumProfileGeneration};
+#[cfg(any(target_os = "android", target_os = "linux", test))]
+use crate::ethereum::EthereumClearSignedOperationRequest;
 #[cfg(target_os = "android")]
 use crate::ethereum::{
-    EthereumClearSignedOperationRequest, EthereumNativeWalletLaunchRequest,
-    EthereumNativeWalletLaunchView, MAX_CURRENT_EVIDENCE_AGE_SECONDS,
+    EthereumNativeWalletLaunchRequest, EthereumNativeWalletLaunchView,
+    MAX_CURRENT_EVIDENCE_AGE_SECONDS,
 };
 
 const MAX_PENDING_WALLETS: usize = 4;
@@ -1087,7 +1089,7 @@ pub(crate) fn launch_native_clear_signed_operation(
     Ok(operation_id)
 }
 
-#[cfg(not(target_os = "android"))]
+#[cfg(any(target_os = "linux", test))]
 #[allow(dead_code)]
 pub(crate) fn launch_native_clear_signed_operation(
     _state: &EthereumApplicationState,
