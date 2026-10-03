@@ -22,7 +22,7 @@ use crate::{
     UntrustedTxReceiptProofRpcInput,
 };
 use ratspeak_eth_verifier::{
-    MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK,
+    MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, chain_definition,
 };
 
 const MAX_BLOCK_TRANSACTIONS: usize = 2_048;
@@ -37,6 +37,8 @@ const MAX_TOTAL_FETCH_TIME: Duration = Duration::from_secs(120);
 pub struct CompleteBlockReceiptProofBackend<T> {
     transport: T,
     policy: ProviderHttpPolicy,
+    chain_id: u64,
+    network: &'static str,
     next_rpc_id: u64,
 }
 
@@ -54,9 +56,30 @@ impl<T> CompleteBlockReceiptProofBackend<T> {
         transport: T,
         policy: ProviderHttpPolicy,
     ) -> Result<Self, crate::ProviderConfigurationError> {
+        Self::new_for_chain(
+            transport,
+            policy,
+            SEPOLIA_CHAIN_ID,
+            SEPOLIA_NETWORK,
+        )
+    }
+
+    pub fn new_for_chain(
+        transport: T,
+        policy: ProviderHttpPolicy,
+        chain_id: u64,
+        network: &str,
+    ) -> Result<Self, crate::ProviderConfigurationError> {
+        let definition = chain_definition(chain_id)
+            .ok_or(crate::ProviderConfigurationError::InvalidPolicy)?;
+        if definition.network != network {
+            return Err(crate::ProviderConfigurationError::InvalidPolicy);
+        }
         Ok(Self {
             transport,
             policy: policy.validate()?,
+            chain_id,
+            network: definition.network,
             next_rpc_id: 1,
         })
     }
@@ -216,8 +239,8 @@ impl<T: GatewayHttpTransport> ExactReceiptProofBackend for CompleteBlockReceiptP
         }
 
         Ok(UntrustedTxReceiptProofRpcInput {
-            chain_id: SEPOLIA_CHAIN_ID,
-            network: SEPOLIA_NETWORK.to_owned(),
+            chain_id: self.chain_id,
+            network: self.network.to_owned(),
             captured_at_unix,
             block_number: execution_block_number,
             block_hash: execution_block_hash,
