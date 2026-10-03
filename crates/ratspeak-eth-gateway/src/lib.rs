@@ -58,10 +58,11 @@ pub use messaging::{
 
 use ratspeak_eth_verifier::{
     BeaconCheckpointRoot, KIND_EXECUTION_HEADER_PROOF, KIND_FINALIZED_TX_RECEIPT_PROOF,
-    KIND_PINNED_CONSENSUS_BOOTSTRAP, KIND_TX_RECEIPT_PROOF, MAGIC, MAX_ANCESTRY_HEADER_BYTES,
-    MAX_ANCESTRY_HEADERS, MAX_BUNDLE_BYTES, MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES,
-    MemoryAccountStore, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, U256, VERSION, VerifiedExecutionBlock,
-    VerifiedExecutionHeader, Verifier,
+    KIND_PINNED_CONSENSUS_BOOTSTRAP, KIND_STORAGE_PROOF, KIND_TX_RECEIPT_PROOF, MAGIC,
+    MAX_ANCESTRY_HEADER_BYTES, MAX_ANCESTRY_HEADERS, MAX_BUNDLE_BYTES, MAX_PROOF_NODE_BYTES,
+    MAX_PROOF_NODES, MemoryAccountStore, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, U256, VERSION,
+    VerifiedAccount, VerifiedEvmAnchor, VerifiedExecutionBlock, VerifiedExecutionHeader, Verifier,
+    chain_definition,
 };
 
 const KIND_ACCOUNT_PROOF: u8 = 3;
@@ -81,7 +82,7 @@ pub type Result<T> = std::result::Result<T, GatewayBuildError>;
 /// this error before it crosses a process boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum GatewayBuildError {
-    #[error("gateway input is not Sepolia")]
+    #[error("gateway input uses an unsupported chain/network")]
     UnsupportedNetwork,
     #[error("gateway input contains an empty required payload")]
     EmptyPayload,
@@ -172,6 +173,36 @@ impl fmt::Debug for UntrustedAccountProofRpcInput {
             .field("block_number", &self.block_number)
             .field("account_proof_count", &self.account_proof.len())
             .field("account_proof_bytes", &total_bytes(&self.account_proof))
+            .finish()
+    }
+}
+
+/// Decoded EIP-1186 storage evidence for one slot under an already verified
+/// contract account.
+#[derive(Clone, PartialEq, Eq)]
+pub struct UntrustedStorageProofRpcInput {
+    pub chain_id: u64,
+    pub network: String,
+    pub captured_at_unix: u64,
+    pub block_number: u64,
+    pub block_hash: [u8; 32],
+    pub account_address: [u8; 20],
+    pub storage_root: [u8; 32],
+    pub key: [u8; 32],
+    pub value: U256,
+    pub proof: Vec<Vec<u8>>,
+}
+
+impl fmt::Debug for UntrustedStorageProofRpcInput {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("UntrustedStorageProofRpcInput")
+            .field("chain_id", &self.chain_id)
+            .field("network_len", &self.network.len())
+            .field("captured_at_unix", &self.captured_at_unix)
+            .field("block_number", &self.block_number)
+            .field("proof_count", &self.proof.len())
+            .field("proof_bytes", &total_bytes(&self.proof))
             .finish()
     }
 }
@@ -275,6 +306,7 @@ pub enum GatewayBundleKind {
     ConsensusBootstrap,
     ExecutionHeader,
     AccountProof,
+    StorageProof,
     TxReceiptProof,
     AccountStateEvidence,
     FinalizedReceiptEvidence,
@@ -534,6 +566,82 @@ impl SepoliaGatewayBuilder {
     }
 }
 
+/// Stack-neutral proof packager for an execution block already authenticated by
+/// Ethereum, OP Stack, or Nitro verification.
+///
+/// RPC responses remain untrusted. Every emitted bundle is locally reverified
+/// against the supplied anchor before leaving this builder.
+pub struct EvmAnchorGatewayBuilder {
+    anchor: VerifiedEvmAnchor,
+}
+
+impl EvmAnchorGatewayBuilder {
+    pub fn new(anchor: VerifiedEvmAnchor) -> Self {
+        Self { anchor }
+    }
+
+    pub fn anchor(&self) -> &VerifiedEvmAnchor {
+        &self.anchor
+    }
+
+    pub fn verify_account(
+        &self,
+        input: &UntrustedAccountProofRpcInput,
+    ) -> Result<VerifiedAccount> {
+        let bytes = encode_account_proof(input)?;
+        Verifier::for_chain(self.anchor.chain_id())
+            .map_err(|_| GatewayBuildError::UnsupportedNetwork)?
+            .verify_account_from_anchor(
+                &bytes,
+                &self.anchor,
+                &mut MemoryAccountStore::default(),
+            )
+            .map_err(|_| GatewayBuildError::LocalVerificationFailed)
+    }
+
+    pub fn build_account_proof(
+        &self,
+        input: &UntrustedAccountProofRpcInput,
+    ) -> Result<GatewayBundle> {
+        self.verify_account(input)?;
+        Ok(GatewayBundle {
+            kind: GatewayBundleKind::AccountProof,
+            bytes: encode_account_proof(input)?,
+        })
+    }
+
+    pub fn build_storage_proof(
+        &self,
+        account: &VerifiedAccount,
+        input: &UntrustedStorageProofRpcInput,
+    ) -> Result<GatewayBundle> {
+        let bytes = encode_storage_proof(input)?;
+        Verifier::for_chain(self.anchor.chain_id())
+            .map_err(|_| GatewayBuildError::UnsupportedNetwork)?
+            .verify_storage_proof(&bytes, account)
+            .map_err(|_| GatewayBuildError::LocalVerificationFailed)?;
+        Ok(GatewayBundle {
+            kind: GatewayBundleKind::StorageProof,
+            bytes,
+        })
+    }
+
+    pub fn build_tx_receipt_proof(
+        &self,
+        input: &UntrustedTxReceiptProofRpcInput,
+    ) -> Result<GatewayBundle> {
+        let bytes = encode_tx_receipt_proof(input)?;
+        Verifier::for_chain(self.anchor.chain_id())
+            .map_err(|_| GatewayBuildError::UnsupportedNetwork)?
+            .verify_tx_receipt_from_anchor(&bytes, &self.anchor)
+            .map_err(|_| GatewayBuildError::LocalVerificationFailed)?;
+        Ok(GatewayBundle {
+            kind: GatewayBundleKind::TxReceiptProof,
+            bytes,
+        })
+    }
+}
+
 fn encode_consensus_bootstrap(input: &UntrustedConsensusRpcInput) -> Result<Vec<u8>> {
     validate_network(input.chain_id, &input.network)?;
     validate_payload(&input.bootstrap_ssz, MAX_BOOTSTRAP_BYTES)?;
@@ -567,7 +675,7 @@ fn encode_consensus_bootstrap(input: &UntrustedConsensusRpcInput) -> Result<Vec<
 fn encode_execution_header(input: &UntrustedExecutionHeaderRpcInput) -> Result<Vec<u8>> {
     validate_network(input.chain_id, &input.network)?;
     validate_payload(&input.rlp_header, MAX_EXECUTION_HEADER_BYTES)?;
-    let mut out = prelude(KIND_EXECUTION_HEADER_PROOF);
+    let mut out = prelude_for(input.chain_id, &input.network, KIND_EXECUTION_HEADER_PROOF)?;
     out.extend_from_slice(&input.captured_at_unix.to_le_bytes());
     write_bytes(&mut out, &input.rlp_header)?;
     finish(out)
@@ -576,7 +684,7 @@ fn encode_execution_header(input: &UntrustedExecutionHeaderRpcInput) -> Result<V
 fn encode_account_proof(input: &UntrustedAccountProofRpcInput) -> Result<Vec<u8>> {
     validate_network(input.chain_id, &input.network)?;
     validate_nodes(&input.account_proof)?;
-    let mut out = prelude(KIND_ACCOUNT_PROOF);
+    let mut out = prelude_for(input.chain_id, &input.network, KIND_ACCOUNT_PROOF)?;
     out.extend_from_slice(&input.captured_at_unix.to_le_bytes());
     out.extend_from_slice(&input.block_number.to_le_bytes());
     out.extend_from_slice(&input.block_hash);
@@ -590,13 +698,28 @@ fn encode_account_proof(input: &UntrustedAccountProofRpcInput) -> Result<Vec<u8>
     finish(out)
 }
 
+fn encode_storage_proof(input: &UntrustedStorageProofRpcInput) -> Result<Vec<u8>> {
+    validate_network(input.chain_id, &input.network)?;
+    validate_nodes(&input.proof)?;
+    let mut out = prelude_for(input.chain_id, &input.network, KIND_STORAGE_PROOF)?;
+    out.extend_from_slice(&input.captured_at_unix.to_le_bytes());
+    out.extend_from_slice(&input.block_number.to_le_bytes());
+    out.extend_from_slice(&input.block_hash);
+    out.extend_from_slice(&input.account_address);
+    out.extend_from_slice(&input.storage_root);
+    out.extend_from_slice(&input.key);
+    out.extend_from_slice(&input.value.to_be_bytes::<32>());
+    write_nodes(&mut out, &input.proof)?;
+    finish(out)
+}
+
 fn encode_tx_receipt_proof(input: &UntrustedTxReceiptProofRpcInput) -> Result<Vec<u8>> {
     validate_network(input.chain_id, &input.network)?;
     validate_payload(&input.raw_tx, MAX_TRANSACTION_BYTES)?;
     validate_payload(&input.receipt, MAX_RECEIPT_BYTES)?;
     validate_nodes(&input.tx_proof)?;
     validate_nodes(&input.receipt_proof)?;
-    let mut out = prelude(KIND_TX_RECEIPT_PROOF);
+    let mut out = prelude_for(input.chain_id, &input.network, KIND_TX_RECEIPT_PROOF)?;
     out.extend_from_slice(&input.captured_at_unix.to_le_bytes());
     out.extend_from_slice(&input.block_number.to_le_bytes());
     out.extend_from_slice(&input.block_hash);
@@ -612,7 +735,10 @@ fn encode_tx_receipt_proof(input: &UntrustedTxReceiptProofRpcInput) -> Result<Ve
 }
 
 fn validate_network(chain_id: u64, network: &str) -> Result<()> {
-    if chain_id != SEPOLIA_CHAIN_ID || network != SEPOLIA_NETWORK {
+    let Some(definition) = chain_definition(chain_id) else {
+        return Err(GatewayBuildError::UnsupportedNetwork);
+    };
+    if definition.network != network {
         return Err(GatewayBuildError::UnsupportedNetwork);
     }
     Ok(())
@@ -648,14 +774,21 @@ fn total_bytes(values: &[Vec<u8>]) -> usize {
 }
 
 fn prelude(kind: u8) -> Vec<u8> {
+    prelude_for(SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, kind)
+        .expect("Sepolia is a built-in network")
+}
+
+fn prelude_for(chain_id: u64, network: &str, kind: u8) -> Result<Vec<u8>> {
+    validate_network(chain_id, network)?;
+    let network_len = wire_u16(network.len())?;
     let mut out = Vec::with_capacity(64);
     out.extend_from_slice(MAGIC);
     out.push(VERSION);
-    out.extend_from_slice(&SEPOLIA_CHAIN_ID.to_le_bytes());
-    out.extend_from_slice(&(SEPOLIA_NETWORK.len() as u16).to_le_bytes());
-    out.extend_from_slice(SEPOLIA_NETWORK.as_bytes());
+    out.extend_from_slice(&chain_id.to_le_bytes());
+    out.extend_from_slice(&network_len.to_le_bytes());
+    out.extend_from_slice(network.as_bytes());
     out.push(kind);
-    out
+    Ok(out)
 }
 
 fn write_bytes(out: &mut Vec<u8>, value: &[u8]) -> Result<()> {
