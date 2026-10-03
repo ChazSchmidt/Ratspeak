@@ -47,12 +47,18 @@ internal class EthereumNativeWalletController(
         data class Authorizing(val purpose: Purpose) : State()
         data class Active(val address: String) : State()
         data class Reviewing(val review: ExactSepoliaTransferReview) : State()
+        data class ClearSigningReviewing(val review: ExactClearSignedReview) : State()
         data class Signed(val transactionHash: String) : State()
         data class RecoveryRequired(val expectedAddress: String, val reason: String) : State()
         data class Failed(val reason: String) : State()
     }
 
-    internal enum class Purpose { ACTIVATE_WALLET, REVEAL_BACKUP, SIGN_TRANSFER }
+    internal enum class Purpose {
+        ACTIVATE_WALLET,
+        REVEAL_BACKUP,
+        SIGN_TRANSFER,
+        SIGN_CLEAR_SIGNED,
+    }
 
     private var state: State
     private var operationGeneration = 0L
@@ -61,6 +67,7 @@ internal class EthereumNativeWalletController(
     private var activeAddress: String? = null
     private var recoveryExpectedAddress: String? = null
     private var review: ExactSepoliaTransferReview? = null
+    private var clearSignReview: ExactClearSignedReview? = null
     private var closed = false
 
     init {
@@ -311,6 +318,79 @@ internal class EthereumNativeWalletController(
         transition(State.Reviewing(candidate))
     }
 
+    fun beginClearSignedReview(candidate: ExactClearSignedReview) {
+        val active = state as? State.Active
+        if (active == null || closed || !candidate.isStillBound() ||
+            !ethereumAddressesEqual(active.address, candidate.sender) ||
+            candidate.expiresAtEpochMillis <= clockMillis()
+        ) {
+            candidate.close()
+            return
+        }
+        review?.close()
+        review = null
+        clearSignReview?.close()
+        clearSignReview = candidate
+        transition(State.ClearSigningReviewing(candidate))
+    }
+
+    fun approveClearSignedOperation() {
+        val reviewing = state as? State.ClearSigningReviewing ?: return
+        val lockedReview = clearSignReview ?: return
+        if (reviewing.review !== lockedReview || !lockedReview.isStillBound() ||
+            lockedReview.expiresAtEpochMillis <= clockMillis()
+        ) {
+            cancelToActive()
+            return
+        }
+        val generation = nextOperation()
+        transition(State.Authorizing(Purpose.SIGN_CLEAR_SIGNED))
+        try {
+            custody.authorizeAndLoad(activeAddress ?: "") { result ->
+                if (!owns(generation, Purpose.SIGN_CLEAR_SIGNED)) {
+                    closeCustodyResult(result)
+                    return@authorizeAndLoad
+                }
+                when (result) {
+                    is EthereumCustodyResult.Failure -> failCustody(result.reason)
+                    is EthereumCustodyResult.Success -> {
+                        if (!lockedReview.isStillBound() ||
+                            lockedReview.expiresAtEpochMillis <= clockMillis()
+                        ) {
+                            result.value.close()
+                            cancelToActive()
+                            return@authorizeAndLoad
+                        }
+                        val signed = try {
+                            engine.signClearSignedOperation(lockedReview, result.value)
+                        } catch (_: Throwable) {
+                            NativeWalletResult.Failure(NativeWalletFailure.OPERATION_FAILED)
+                        } finally {
+                            result.value.close()
+                        }
+                        when (signed) {
+                            is NativeWalletResult.Failure ->
+                                transition(State.Failed(signed.reason.name))
+                            is NativeWalletResult.Success -> {
+                                if (TRANSACTION_HASH.matches(signed.value)) {
+                                    transition(State.Signed(signed.value))
+                                } else {
+                                    transition(State.Failed("INVALID_TRANSACTION_HASH"))
+                                }
+                            }
+                        }
+                        lockedReview.close()
+                        clearSignReview = null
+                    }
+                }
+            }
+        } catch (_: Throwable) {
+            if (owns(generation, Purpose.SIGN_CLEAR_SIGNED)) {
+                failCustody(EthereumCustodyFailure.OPERATION_FAILED)
+            }
+        }
+    }
+
     fun approveTransfer() {
         val reviewing = state as? State.Reviewing ?: return
         val lockedReview = review ?: return
@@ -408,6 +488,8 @@ internal class EthereumNativeWalletController(
         nextOperation()
         review?.close()
         review = null
+        clearSignReview?.close()
+        clearSignReview = null
         transitionToRestingState()
     }
 
@@ -419,6 +501,8 @@ internal class EthereumNativeWalletController(
         revealedPhrase = null
         review?.close()
         review = null
+        clearSignReview?.close()
+        clearSignReview = null
     }
 
     private fun discardPendingWallet(wallet: PendingNativeWallet) {
