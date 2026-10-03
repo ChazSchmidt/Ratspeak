@@ -546,6 +546,70 @@ mod tests {
         (encode(&bundle), header)
     }
 
+    fn shared_anchor_fixture(chain_id: u64) -> (Vec<u8>, VerifiedEvmAnchor) {
+        let definition = crate::chain_definition(chain_id).unwrap();
+        let transactions = vec![transaction_bytes_for_chain(1, chain_id)];
+        let receipts = vec![receipt_bytes(true, 21_000)];
+        let (transactions_root, tx_proof) = trie_root_and_proof(&transactions, 0);
+        let (receipts_root, receipt_proof) = trie_root_and_proof(&receipts, 0);
+        let raw_tx = transactions[0].clone();
+        let transaction = decode_transaction(&raw_tx).unwrap();
+        let bundle = TxReceiptProofBundle {
+            chain_id,
+            network: definition.network.to_owned(),
+            created_at_unix: 123,
+            block_number: 456,
+            block_hash: [0x44; 32],
+            tx_hash: transaction.tx_hash().0,
+            tx_index: 0,
+            raw_tx,
+            receipt: receipts[0].clone(),
+            transactions_root,
+            receipts_root,
+            tx_proof,
+            receipt_proof,
+        };
+        let assurance = match definition.family {
+            crate::VerificationFamily::EthereumBeacon => crate::AnchorAssurance::EthereumFinalized,
+            crate::VerificationFamily::OpStack => crate::AnchorAssurance::SequencerAuthenticated,
+            crate::VerificationFamily::Nitro => crate::AnchorAssurance::RollupConfirmed,
+        };
+        let anchor = VerifiedEvmAnchor::new(
+            chain_id,
+            definition.network,
+            bundle.block_number,
+            bundle.block_hash,
+            [0x43; 32],
+            [0x33; 32],
+            transactions_root,
+            receipts_root,
+            1_800_000_000,
+            assurance,
+            [0x55; 32],
+        );
+        (encode(&bundle), anchor)
+    }
+
+    #[test]
+    fn shared_receipt_verifier_accepts_all_five_poc_networks() {
+        for chain_id in [
+            crate::ETHEREUM_SEPOLIA_CHAIN_ID,
+            crate::BASE_SEPOLIA_CHAIN_ID,
+            crate::OP_SEPOLIA_CHAIN_ID,
+            crate::ARBITRUM_SEPOLIA_CHAIN_ID,
+            crate::ROBINHOOD_TESTNET_CHAIN_ID,
+        ] {
+            let (bytes, anchor) = shared_anchor_fixture(chain_id);
+            let verified = Verifier::for_chain(chain_id)
+                .unwrap()
+                .verify_tx_receipt_from_anchor(&bytes, &anchor)
+                .unwrap();
+            assert_eq!(verified.chain_id(), chain_id);
+            assert!(verified.succeeded());
+            assert_eq!(verified.tx_index(), 0);
+        }
+    }
+
     #[test]
     fn verifies_exact_successful_receipt() {
         let (bytes, header) = fixture(0);
