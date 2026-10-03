@@ -49,8 +49,8 @@ use crate::ethereum::{
 use crate::ethereum::{EthereumNativeTransportProfileBinding, EthereumProfileGeneration};
 #[cfg(target_os = "android")]
 use crate::ethereum::{
-    EthereumNativeWalletLaunchRequest, EthereumNativeWalletLaunchView,
-    MAX_CURRENT_EVIDENCE_AGE_SECONDS,
+    EthereumClearSignedOperationRequest, EthereumNativeWalletLaunchRequest,
+    EthereumNativeWalletLaunchView, MAX_CURRENT_EVIDENCE_AGE_SECONDS,
 };
 
 const MAX_PENDING_WALLETS: usize = 4;
@@ -1023,6 +1023,77 @@ pub(crate) fn launch_native_wallet(
             ))
         }
     }
+}
+
+#[cfg(target_os = "android")]
+pub(crate) fn launch_native_clear_signed_operation(
+    state: &EthereumApplicationState,
+    request: EthereumClearSignedOperationRequest,
+) -> Result<OperationId, &'static str> {
+    let installed = INSTALLED_ENGINE
+        .get()
+        .ok_or("native_ethereum_wallet_unavailable")?;
+    let identity =
+        active_identity_binding(&installed.runtime).map_err(|_| "ethereum_identity_unavailable")?;
+    let store = EthereumNodeStore::open_in_profile(&installed.profile_dir)
+        .map_err(|_| "ethereum_state_unavailable")?;
+    let account = store
+        .wallet_account()
+        .map_err(|_| "ethereum_state_unavailable")?
+        .ok_or("ethereum_wallet_unavailable")?;
+    let generation = state.install_profile_binding_for_identity(
+        installed.profile_dir.clone(),
+        account,
+        identity.hash,
+        identity.session_generation,
+    )?;
+    let now_unix = trusted_android_now_unix()?;
+    let expires_at_unix = now_unix
+        .checked_add(MAX_PREPARED_LIFETIME_SECONDS)
+        .ok_or("clock_unavailable")?;
+    let candidate = state.prepare_clear_signed_operation_for_native(
+        generation,
+        identity.hash,
+        identity.session_generation,
+        &request,
+        now_unix,
+        expires_at_unix,
+    )?;
+    let operation_id = OperationId::new(candidate.operation_id)
+        .map_err(|_| "ethereum_operation_id_unavailable")?;
+    let launch = AndroidClearSignedLaunch::from_candidate(identity, &candidate)?;
+    if active_identity_binding(&installed.runtime).ok() != Some(identity)
+        || !android_launch_clear_signed_operation(&launch)
+    {
+        let _ = state.cancel_native_clear_signed_operation(
+            identity.hash,
+            identity.session_generation,
+            candidate.operation_id,
+        );
+        return Err("native_ethereum_wallet_unavailable");
+    }
+    if active_identity_binding(&installed.runtime).ok() != Some(identity)
+        || state
+            .ensure_native_identity(identity.hash, identity.session_generation)
+            .is_err()
+    {
+        let _ = state.cancel_native_clear_signed_operation(
+            identity.hash,
+            identity.session_generation,
+            candidate.operation_id,
+        );
+        return Err("ethereum_profile_changed");
+    }
+    Ok(operation_id)
+}
+
+#[cfg(not(target_os = "android"))]
+#[allow(dead_code)]
+pub(crate) fn launch_native_clear_signed_operation(
+    _state: &EthereumApplicationState,
+    _request: EthereumClearSignedOperationRequest,
+) -> Result<OperationId, &'static str> {
+    Err("native_ethereum_wallet_unavailable")
 }
 
 /// Begins the native Android review for the next exact durable bulk-evidence
@@ -2181,6 +2252,64 @@ impl AndroidTransferLaunch {
 }
 
 #[cfg(target_os = "android")]
+struct AndroidClearSignedLaunch {
+    identity: AndroidIdentityBinding,
+    operation_id: [u8; 16],
+    chain_id: i64,
+    sender: String,
+    network: String,
+    definition_hash: [u8; 32],
+    operation_hash: [u8; 32],
+    asset_symbol: String,
+    asset_decimals: i32,
+    recipient: String,
+    amount: String,
+    nonce: String,
+    gas_limit: i64,
+    max_fee_per_gas_wei: String,
+    max_priority_fee_per_gas_wei: String,
+    expires_at_epoch_millis: i64,
+    canonical_signing_payload: Vec<u8>,
+}
+
+#[cfg(target_os = "android")]
+impl AndroidClearSignedLaunch {
+    fn from_candidate(
+        identity: AndroidIdentityBinding,
+        candidate: &NativeClearSignedCandidate,
+    ) -> Result<Self, &'static str> {
+        let expires_at_epoch_millis = candidate
+            .expires_at_unix
+            .checked_mul(1_000)
+            .and_then(|value| i64::try_from(value).ok())
+            .ok_or("ethereum_transfer_expiry_invalid")?;
+        Ok(Self {
+            identity,
+            operation_id: candidate.operation_id,
+            chain_id: i64::try_from(candidate.chain_id)
+                .map_err(|_| "unsupported_ethereum_chain")?,
+            sender: candidate.sender.clone(),
+            network: candidate.network.clone(),
+            definition_hash: candidate.definition_hash,
+            operation_hash: candidate.operation_hash,
+            asset_symbol: candidate.asset_symbol.clone(),
+            asset_decimals: i32::from(candidate.asset_decimals),
+            recipient: candidate.recipient.clone(),
+            amount: candidate.amount.clone(),
+            nonce: candidate.nonce.to_string(),
+            gas_limit: i64::try_from(candidate.gas_limit)
+                .map_err(|_| "invalid_ethereum_gas_limit")?,
+            max_fee_per_gas_wei: candidate.max_fee_per_gas_wei.to_string(),
+            max_priority_fee_per_gas_wei: candidate
+                .max_priority_fee_per_gas_wei
+                .to_string(),
+            expires_at_epoch_millis,
+            canonical_signing_payload: candidate.canonical_signing_payload.clone(),
+        })
+    }
+}
+
+#[cfg(target_os = "android")]
 fn android_launch_wallet(identity: AndroidIdentityBinding, active_address: Option<&str>) -> bool {
     let Ok(session_generation) = i64::try_from(identity.session_generation) else {
         return false;
@@ -2244,6 +2373,56 @@ fn android_launch_exact_transfer(launch: &AndroidTransferLaunch) -> bool {
                 JValue::Object(JObject::from(recipient)),
                 JValue::Object(JObject::from(value)),
                 JValue::Object(JObject::from(nonce)),
+                JValue::Object(JObject::from(max_fee)),
+                JValue::Object(JObject::from(priority_fee)),
+                JValue::Long(launch.expires_at_epoch_millis),
+                JValue::Object(JObject::from(payload)),
+            ],
+        )?
+        .z()
+    })
+    .unwrap_or(false)
+}
+
+#[cfg(target_os = "android")]
+fn android_launch_clear_signed_operation(launch: &AndroidClearSignedLaunch) -> bool {
+    let Ok(session_generation) = i64::try_from(launch.identity.session_generation) else {
+        return false;
+    };
+    with_android_wallet_bridge(|env, class| {
+        use jni::objects::{JObject, JValue};
+        let identity = env.byte_array_from_slice(&launch.identity.hash)?;
+        let operation = env.byte_array_from_slice(&launch.operation_id)?;
+        let sender = env.new_string(&launch.sender)?;
+        let network = env.new_string(&launch.network)?;
+        let definition_hash = env.byte_array_from_slice(&launch.definition_hash)?;
+        let operation_hash = env.byte_array_from_slice(&launch.operation_hash)?;
+        let symbol = env.new_string(&launch.asset_symbol)?;
+        let recipient = env.new_string(&launch.recipient)?;
+        let amount = env.new_string(&launch.amount)?;
+        let nonce = env.new_string(&launch.nonce)?;
+        let max_fee = env.new_string(&launch.max_fee_per_gas_wei)?;
+        let priority_fee = env.new_string(&launch.max_priority_fee_per_gas_wei)?;
+        let payload = env.byte_array_from_slice(&launch.canonical_signing_payload)?;
+        env.call_static_method(
+            class,
+            "launchClearSignedOperation",
+            "([BJ[BJLjava/lang/String;Ljava/lang/String;[B[BLjava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;J[B)Z",
+            &[
+                JValue::Object(JObject::from(identity)),
+                JValue::Long(session_generation),
+                JValue::Object(JObject::from(operation)),
+                JValue::Long(launch.chain_id),
+                JValue::Object(JObject::from(sender)),
+                JValue::Object(JObject::from(network)),
+                JValue::Object(JObject::from(definition_hash)),
+                JValue::Object(JObject::from(operation_hash)),
+                JValue::Object(JObject::from(symbol)),
+                JValue::Int(launch.asset_decimals),
+                JValue::Object(JObject::from(recipient)),
+                JValue::Object(JObject::from(amount)),
+                JValue::Object(JObject::from(nonce)),
+                JValue::Long(launch.gas_limit),
                 JValue::Object(JObject::from(max_fee)),
                 JValue::Object(JObject::from(priority_fee)),
                 JValue::Long(launch.expires_at_epoch_millis),
