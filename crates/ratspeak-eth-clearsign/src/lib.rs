@@ -709,6 +709,105 @@ impl DefinitionRegistry {
         Ok(registry)
     }
 
+    /// Persists one user-facing ERC-20 asset as a validated pair of internal
+    /// definition files. Both definitions are parsed and cross-checked before
+    /// touching the store. Runtime failures roll back any first rename so the
+    /// profile never intentionally leaves a half-installed asset.
+    pub fn install_asset_bundle_files(
+        store: &Path,
+        clear_sign_bytes: &[u8],
+        balance_bytes: &[u8],
+    ) -> Result<InstalledAssetBundle> {
+        let mut registry = Self::new();
+        let installed = registry.install_asset_bundle(clear_sign_bytes, balance_bytes)?;
+
+        fs::create_dir_all(store)?;
+        let clear_path = store.join(format!("{}.json", installed.clear_sign_definition_id));
+        let balance_path = store.join(format!("{}.json", installed.balance_definition_id));
+        let clear_tmp = store.join(format!(
+            ".{}.{}.tmp",
+            installed.clear_sign_definition_id,
+            std::process::id()
+        ));
+        let balance_tmp = store.join(format!(
+            ".{}.{}.tmp",
+            installed.balance_definition_id,
+            std::process::id()
+        ));
+        let clear_backup = store.join(format!(
+            ".{}.{}.bak",
+            installed.clear_sign_definition_id,
+            std::process::id()
+        ));
+        let balance_backup = store.join(format!(
+            ".{}.{}.bak",
+            installed.balance_definition_id,
+            std::process::id()
+        ));
+
+        let _ = fs::remove_file(&clear_tmp);
+        let _ = fs::remove_file(&balance_tmp);
+        let _ = fs::remove_file(&clear_backup);
+        let _ = fs::remove_file(&balance_backup);
+
+        fs::write(&clear_tmp, clear_sign_bytes)?;
+        if let Err(error) = fs::write(&balance_tmp, balance_bytes) {
+            let _ = fs::remove_file(&clear_tmp);
+            return Err(error.into());
+        }
+
+        let had_clear = clear_path.exists();
+        let had_balance = balance_path.exists();
+        if had_clear {
+            fs::rename(&clear_path, &clear_backup)?;
+        }
+        if had_balance {
+            if let Err(error) = fs::rename(&balance_path, &balance_backup) {
+                if had_clear {
+                    let _ = fs::rename(&clear_backup, &clear_path);
+                }
+                let _ = fs::remove_file(&clear_tmp);
+                let _ = fs::remove_file(&balance_tmp);
+                return Err(error.into());
+            }
+        }
+
+        if let Err(error) = fs::rename(&clear_tmp, &clear_path) {
+            if had_clear {
+                let _ = fs::rename(&clear_backup, &clear_path);
+            }
+            if had_balance {
+                let _ = fs::rename(&balance_backup, &balance_path);
+            }
+            let _ = fs::remove_file(&balance_tmp);
+            return Err(error.into());
+        }
+        if let Err(error) = fs::rename(&balance_tmp, &balance_path) {
+            let _ = fs::remove_file(&clear_path);
+            if had_clear {
+                let _ = fs::rename(&clear_backup, &clear_path);
+            }
+            if had_balance {
+                let _ = fs::rename(&balance_backup, &balance_path);
+            }
+            return Err(error.into());
+        }
+
+        let _ = fs::remove_file(clear_backup);
+        let _ = fs::remove_file(balance_backup);
+
+        // Re-read through the normal loader before claiming installation.
+        let loaded = Self::load_dir(store)?;
+        if !loaded.contains(&installed.clear_sign_definition_id)
+            || !loaded.contains(&installed.balance_definition_id)
+        {
+            return Err(Error::UnsupportedDefinition(
+                "persisted asset definitions did not reload",
+            ));
+        }
+        Ok(installed)
+    }
+
     pub fn install_file(store: &Path, source: &Path) -> Result<B256> {
         let bytes = fs::read(source)?;
         let definition = InstalledDefinition::parse(&bytes)?;
@@ -814,6 +913,28 @@ mod tests {
             assert_eq!(review.asset_symbol, "ETH");
             assert_eq!(review.kind, ReviewKind::NativeTransfer);
         }
+    }
+
+    #[test]
+    fn asset_bundle_files_persist_and_reload_as_one_install() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let store = std::env::temp_dir().join(format!(
+            "ratspeak-asset-bundle-{}-{unique}",
+            std::process::id()
+        ));
+        let installed = DefinitionRegistry::install_asset_bundle_files(
+            &store,
+            BASE_SEPOLIA_USDC,
+            BASE_SEPOLIA_USDC_BALANCE,
+        )
+        .unwrap();
+        let loaded = DefinitionRegistry::load_dir(&store).unwrap();
+        assert!(loaded.contains(&installed.clear_sign_definition_id));
+        assert!(loaded.contains(&installed.balance_definition_id));
+        let _ = fs::remove_dir_all(store);
     }
 
     #[test]
