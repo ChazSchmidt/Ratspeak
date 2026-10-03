@@ -43,6 +43,7 @@ pub use provider::{
     HttpEndpointPolicy, HttpTransportFailure, OperatorAuthorization, ProviderConfigurationError,
     ProviderHttpPolicy, ReqwestGatewayHttpTransport, SepoliaRpcProvider, SystemUnixClock,
     UnixClock, UnsupportedReceiptProofBackend, UntrustedReceiptLocation,
+    VerifiedStorageEvidenceBundles,
 };
 pub use receipt_backend::CompleteBlockReceiptProofBackend;
 
