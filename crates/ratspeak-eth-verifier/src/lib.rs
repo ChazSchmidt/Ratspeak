@@ -15,7 +15,9 @@ use alloy_trie::{EMPTY_ROOT_HASH, KECCAK_EMPTY, Nibbles, TrieAccount};
 use flate2::bufread::GzDecoder;
 use sha2::{Digest, Sha256};
 
+mod anchor;
 mod base_sepolia;
+mod chains;
 mod composite;
 mod consensus;
 mod execution;
@@ -24,7 +26,14 @@ mod manual_checkpoint;
 mod receipt;
 mod storage;
 
+pub use anchor::{AnchorAssurance, VerifiedEvmAnchor};
 pub use base_sepolia::{BaseSepoliaSequencerAnchor, VerifiedBaseSepoliaHeader};
+pub use chains::{
+    ARBITRUM_SEPOLIA, ARBITRUM_SEPOLIA_CHAIN_ID, BASE_SEPOLIA, BASE_SEPOLIA_CHAIN_ID,
+    ChainDefinition, ETHEREUM_SEPOLIA, ETHEREUM_SEPOLIA_CHAIN_ID, NitroConfig, OP_SEPOLIA,
+    OP_SEPOLIA_CHAIN_ID, OpStackConfig, ROBINHOOD_TESTNET, ROBINHOOD_TESTNET_CHAIN_ID,
+    StackConfig, SUPPORTED_CHAINS, VerificationFamily, chain_definition,
+};
 pub use composite::{
     AccountStateEvidencePackage, FinalizedReceiptEvidencePackage, VerifiedAccountStateEvidence,
     VerifiedFinalizedReceiptEvidence,
@@ -50,10 +59,9 @@ pub use storage::{StorageProofBundle, VerifiedStorageValue};
 
 pub const MAGIC: &[u8; 6] = b"RSETH1";
 pub const VERSION: u8 = 1;
-pub const SEPOLIA_CHAIN_ID: u64 = 11_155_111;
-pub const SEPOLIA_NETWORK: &str = "sepolia";
-pub const BASE_SEPOLIA_CHAIN_ID: u64 = 84_532;
-pub const BASE_SEPOLIA_NETWORK: &str = "base-sepolia";
+pub const SEPOLIA_CHAIN_ID: u64 = ETHEREUM_SEPOLIA_CHAIN_ID;
+pub const SEPOLIA_NETWORK: &str = ETHEREUM_SEPOLIA.network;
+pub const BASE_SEPOLIA_NETWORK: &str = BASE_SEPOLIA.network;
 pub const MAX_BUNDLE_BYTES: usize = 2 * 1024 * 1024;
 /// Aggregate limit for a self-contained evidence package transported as a Resource.
 pub const MAX_COMPOSITE_EVIDENCE_BYTES: usize = MAX_BUNDLE_BYTES;
@@ -192,20 +200,48 @@ impl PinnedCheckpoint {
         }
     }
 
-    /// Constructs a Base Sepolia checkpoint obtained from an independently
-    /// verified OP-Stack execution anchor.
+    /// Constructs a checkpoint for any supported EVM network after its
+    /// stack-specific verifier has authenticated the execution block.
+    pub fn for_network(
+        chain_id: u64,
+        network: &str,
+        execution_block_number: u64,
+        execution_block_hash: [u8; 32],
+        state_root: [u8; 32],
+    ) -> Result<Self> {
+        let definition = chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
+            chain_id,
+            network: network.to_owned(),
+        })?;
+        if definition.network != network {
+            return Err(VerifyError::UnsupportedNetwork {
+                chain_id,
+                network: network.to_owned(),
+            });
+        }
+        Ok(Self {
+            chain_id,
+            network: definition.network,
+            execution_block_number,
+            execution_block_hash,
+            state_root,
+        })
+    }
+
+    /// Compatibility constructor for the original Base Sepolia experiment.
     pub fn base_sepolia(
         execution_block_number: u64,
         execution_block_hash: [u8; 32],
         state_root: [u8; 32],
     ) -> Self {
-        Self {
-            chain_id: BASE_SEPOLIA_CHAIN_ID,
-            network: BASE_SEPOLIA_NETWORK,
+        Self::for_network(
+            BASE_SEPOLIA_CHAIN_ID,
+            BASE_SEPOLIA_NETWORK,
             execution_block_number,
             execution_block_hash,
             state_root,
-        }
+        )
+        .expect("Base Sepolia is a built-in chain")
     }
 
     pub fn execution_block_number(&self) -> u64 {
@@ -369,20 +405,36 @@ impl Default for Verifier {
 }
 
 impl Verifier {
-    pub fn sepolia() -> Self {
-        Self {
-            chain_id: SEPOLIA_CHAIN_ID,
-            network: SEPOLIA_NETWORK,
-        }
+    pub fn for_chain(chain_id: u64) -> Result<Self> {
+        let definition = chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
+            chain_id,
+            network: "unknown".to_owned(),
+        })?;
+        Ok(Self {
+            chain_id,
+            network: definition.network,
+        })
     }
 
-    /// Verifies Base Sepolia execution-state proof bundles against a Base
-    /// Sepolia checkpoint supplied by an independent OP-Stack trust path.
+    pub fn sepolia() -> Self {
+        Self::for_chain(SEPOLIA_CHAIN_ID).expect("Sepolia is a built-in chain")
+    }
+
     pub fn base_sepolia() -> Self {
-        Self {
-            chain_id: BASE_SEPOLIA_CHAIN_ID,
-            network: BASE_SEPOLIA_NETWORK,
-        }
+        Self::for_chain(BASE_SEPOLIA_CHAIN_ID).expect("Base Sepolia is a built-in chain")
+    }
+
+    pub fn op_sepolia() -> Self {
+        Self::for_chain(OP_SEPOLIA_CHAIN_ID).expect("OP Sepolia is a built-in chain")
+    }
+
+    pub fn arbitrum_sepolia() -> Self {
+        Self::for_chain(ARBITRUM_SEPOLIA_CHAIN_ID).expect("Arbitrum Sepolia is a built-in chain")
+    }
+
+    pub fn robinhood_testnet() -> Self {
+        Self::for_chain(ROBINHOOD_TESTNET_CHAIN_ID)
+            .expect("Robinhood Chain Testnet is a built-in chain")
     }
 
     /// Parses an uncompressed account-proof bundle without establishing trust.
