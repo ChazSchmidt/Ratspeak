@@ -43,6 +43,12 @@ internal interface EthereumNativeWalletEngine {
         review: ExactSepoliaTransferReview,
         secret: SensitiveWalletBytes,
     ): NativeWalletResult<String>
+
+    /** Signs only one Rust-retained clear-signed EVM operation after native review. */
+    fun signClearSignedOperation(
+        review: ExactClearSignedReview,
+        secret: SensitiveWalletBytes,
+    ): NativeWalletResult<String>
 }
 
 internal sealed class NativeWalletResult<out T> {
@@ -334,6 +340,187 @@ internal class ExactSepoliaTransferReview private constructor(
             val whole = padded.dropLast(18).trimStart('0').ifEmpty { "0" }
             val fractional = padded.takeLast(18).trimEnd('0')
             return if (fractional.isEmpty()) whole else "$whole.$fractional"
+        }
+    }
+}
+
+/** Immutable multichain clear-sign review bound to one Rust-retained operation. */
+internal class ExactClearSignedReview private constructor(
+    val chainId: Long,
+    val sender: String,
+    val network: String,
+    val assetSymbol: String,
+    val assetDecimals: Int,
+    val recipient: String,
+    val amount: String,
+    val nonce: String,
+    val gasLimit: Long,
+    val maxFeePerGasWei: String,
+    val maxPriorityFeePerGasWei: String,
+    val expiresAtEpochMillis: Long,
+    operationId: ByteArray,
+    definitionHash: ByteArray,
+    operationHash: ByteArray,
+    canonicalSigningPayload: ByteArray,
+) : AutoCloseable {
+    private var operation: ByteArray? = operationId.copyOf()
+    private var definition: ByteArray? = definitionHash.copyOf()
+    private var operationDigest: ByteArray? = operationHash.copyOf()
+    private var payload: ByteArray? = canonicalSigningPayload.copyOf()
+    private val boundDigest = computeDigest(
+        operationId,
+        definitionHash,
+        operationHash,
+        canonicalSigningPayload,
+    )
+
+    fun copyOperationId(): ByteArray = operation?.copyOf()
+        ?: throw IllegalStateException("clear-sign review is closed")
+
+    fun copyDefinitionHash(): ByteArray = definition?.copyOf()
+        ?: throw IllegalStateException("clear-sign review is closed")
+
+    fun copyOperationHash(): ByteArray = operationDigest?.copyOf()
+        ?: throw IllegalStateException("clear-sign review is closed")
+
+    fun copySigningPayload(): ByteArray = payload?.copyOf()
+        ?: throw IllegalStateException("clear-sign review is closed")
+
+    fun isStillBound(): Boolean {
+        val op = operation ?: return false
+        val def = definition ?: return false
+        val opHash = operationDigest ?: return false
+        val signing = payload ?: return false
+        return MessageDigest.isEqual(
+            boundDigest,
+            computeDigest(op, def, opHash, signing),
+        )
+    }
+
+    override fun close() {
+        operation?.fill(0)
+        definition?.fill(0)
+        operationDigest?.fill(0)
+        payload?.fill(0)
+        operation = null
+        definition = null
+        operationDigest = null
+        payload = null
+        boundDigest.fill(0)
+    }
+
+    private fun computeDigest(
+        operationId: ByteArray,
+        definitionHash: ByteArray,
+        operationHash: ByteArray,
+        signingPayload: ByteArray,
+    ): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        listOf(
+            DOMAIN,
+            chainId.toString(),
+            sender,
+            network,
+            assetSymbol,
+            assetDecimals.toString(),
+            recipient,
+            amount,
+            nonce,
+            gasLimit.toString(),
+            maxFeePerGasWei,
+            maxPriorityFeePerGasWei,
+            expiresAtEpochMillis.toString(),
+        ).forEach { field ->
+            val bytes = field.toByteArray(StandardCharsets.US_ASCII)
+            digest.update(ByteBuffer.allocate(Int.SIZE_BYTES).putInt(bytes.size).array())
+            digest.update(bytes)
+        }
+        listOf(operationId, definitionHash, operationHash, signingPayload).forEach { bytes ->
+            digest.update(ByteBuffer.allocate(Int.SIZE_BYTES).putInt(bytes.size).array())
+            digest.update(bytes)
+        }
+        return digest.digest()
+    }
+
+    companion object {
+        private const val DOMAIN = "ratspeak.android.ethereum.clear-sign-review.v1"
+        const val MAX_SIGNING_PAYLOAD_BYTES = 4_096
+        private val ADDRESS = Regex("^0x[0-9a-fA-F]{40}$")
+        private val SYMBOL = Regex("^[A-Za-z0-9._-]{1,32}$")
+        private val NETWORKS = mapOf(
+            11_155_111L to "Ethereum Sepolia",
+            84_532L to "Base Sepolia",
+            11_155_420L to "OP Sepolia",
+            421_614L to "Arbitrum Sepolia",
+            46_630L to "Robinhood Chain Testnet",
+        )
+        private val MAX_U256 = BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE)
+        private val MAX_U64 = BigInteger.ONE.shiftLeft(64).subtract(BigInteger.ONE)
+
+        fun checked(
+            chainId: Long,
+            sender: String,
+            network: String,
+            definitionHash: ByteArray,
+            operationHash: ByteArray,
+            assetSymbol: String,
+            assetDecimals: Int,
+            recipient: String,
+            amount: String,
+            nonce: String,
+            gasLimit: Long,
+            maxFeePerGasWei: String,
+            maxPriorityFeePerGasWei: String,
+            expiresAtEpochMillis: Long,
+            operationId: ByteArray,
+            canonicalSigningPayload: ByteArray,
+        ): ExactClearSignedReview? {
+            if (NETWORKS[chainId] != network) return null
+            if (!ADDRESS.matches(sender) || !ADDRESS.matches(recipient)) return null
+            if (!SYMBOL.matches(assetSymbol) || assetDecimals !in 0..36) return null
+            if (operationId.size != 16 || operationId.all { it == 0.toByte() }) return null
+            if (definitionHash.size != 32 || definitionHash.all { it == 0.toByte() }) return null
+            if (operationHash.size != 32 || operationHash.all { it == 0.toByte() }) return null
+            if (canonicalSigningPayload.isEmpty() ||
+                canonicalSigningPayload.size > MAX_SIGNING_PAYLOAD_BYTES
+            ) return null
+            if (gasLimit <= 0 || expiresAtEpochMillis <= 0) return null
+            val parsedAmount = parseCanonicalUnsigned(amount, MAX_U256) ?: return null
+            val parsedNonce = parseCanonicalUnsigned(nonce, MAX_U64) ?: return null
+            val maxFee = parseCanonicalUnsigned(maxFeePerGasWei, MAX_U256) ?: return null
+            val priorityFee =
+                parseCanonicalUnsigned(maxPriorityFeePerGasWei, MAX_U256) ?: return null
+            if (priorityFee > maxFee || parsedAmount.signum() < 0 || parsedNonce.signum() < 0) {
+                return null
+            }
+            return ExactClearSignedReview(
+                chainId,
+                sender.lowercase(Locale.ROOT),
+                network,
+                assetSymbol,
+                assetDecimals,
+                recipient.lowercase(Locale.ROOT),
+                amount,
+                nonce,
+                gasLimit,
+                maxFeePerGasWei,
+                maxPriorityFeePerGasWei,
+                expiresAtEpochMillis,
+                operationId,
+                definitionHash,
+                operationHash,
+                canonicalSigningPayload,
+            )
+        }
+
+        private fun parseCanonicalUnsigned(value: String, maximum: BigInteger): BigInteger? {
+            if (!Regex("^(0|[1-9][0-9]*)$").matches(value)) return null
+            val number = try {
+                BigInteger(value)
+            } catch (_: NumberFormatException) {
+                return null
+            }
+            return number.takeIf { it <= maximum }
         }
     }
 }
