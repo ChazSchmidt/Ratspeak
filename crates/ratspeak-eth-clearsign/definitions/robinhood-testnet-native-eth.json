@@ -1,0 +1,10 @@
+{
+  "ratspeak": {
+    "definitionId": "robinhood-testnet-native-eth-v1",
+    "kind": "nativeTransfer",
+    "chainId": 46630,
+    "network": "Robinhood Chain Testnet",
+    "symbol": "ETH",
+    "decimals": 18
+  }
+}
