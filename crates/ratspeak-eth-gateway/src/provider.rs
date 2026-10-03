@@ -1387,10 +1387,9 @@ fn parse_account_and_storage_proof_result(
     if storage.keys().any(|key| !["key", "value", "proof"].contains(&key.as_str())) {
         return Err(GatewayProviderFailure::Permanent);
     }
-    let key = parse_quantity_u256(
+    let key = parse_storage_key(
         storage.get("key").ok_or(GatewayProviderFailure::Permanent)?,
-    )?
-    .to_be_bytes::<32>();
+    )?;
     if key != expected_key {
         return Err(GatewayProviderFailure::Permanent);
     }
@@ -1440,6 +1439,34 @@ fn parse_account_and_storage_proof_result(
         proof: storage_proof,
     };
     Ok((account, storage))
+}
+
+fn parse_storage_key(value: &Value) -> Result<[u8; 32], GatewayProviderFailure> {
+    let value = value.as_str().ok_or(GatewayProviderFailure::Permanent)?;
+    let digits = value
+        .strip_prefix("0x")
+        .ok_or(GatewayProviderFailure::Permanent)?;
+    if digits.is_empty()
+        || digits.len() > 64
+        || digits
+            .bytes()
+            .any(|byte| !byte.is_ascii_digit() && !(b'a'..=b'f').contains(&byte))
+    {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    let mut normalized = String::with_capacity(digits.len() + 1);
+    if digits.len() % 2 != 0 {
+        normalized.push('0');
+    }
+    normalized.push_str(digits);
+    let decoded =
+        alloy_primitives::hex::decode(normalized).map_err(|_| GatewayProviderFailure::Permanent)?;
+    if decoded.len() > 32 {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    let mut out = [0u8; 32];
+    out[32 - decoded.len()..].copy_from_slice(&decoded);
+    Ok(out)
 }
 
 fn parse_quantity_u256(value: &Value) -> Result<U256, GatewayProviderFailure> {
