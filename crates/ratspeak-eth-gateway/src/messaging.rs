@@ -468,7 +468,7 @@ pub enum GatewayMessageError {
     RateLimited,
     #[error("gateway evidence does not match the request")]
     EvidenceMismatch,
-    #[error("signed relay is not a plain Sepolia native transfer")]
+    #[error("signed relay is not a supported clear-signed EIP-1559 transaction")]
     InvalidSignedRelay,
 }
 
@@ -901,19 +901,20 @@ fn validate_signed_transaction(raw: &[u8]) -> Result<([u8; 32], [u8; 20]), Gatew
     let mut remaining = raw;
     let envelope = TxEnvelope::decode_2718(&mut remaining)
         .map_err(|_| GatewayMessageError::InvalidSignedRelay)?;
-    if !remaining.is_empty() || envelope.chain_id() != Some(SEPOLIA_CHAIN_ID) {
+    if !remaining.is_empty() {
+        return Err(GatewayMessageError::InvalidSignedRelay);
+    }
+    let chain_id = envelope
+        .chain_id()
+        .ok_or(GatewayMessageError::InvalidSignedRelay)?;
+    if chain_definition(chain_id).is_none() {
         return Err(GatewayMessageError::InvalidSignedRelay);
     }
     let TxEnvelope::Eip1559(signed) = &envelope else {
         return Err(GatewayMessageError::InvalidSignedRelay);
     };
     let tx = signed.tx();
-    if !matches!(tx.to, TxKind::Call(_))
-        || tx.gas_limit != NATIVE_TRANSFER_GAS_LIMIT
-        || tx.value == U256::ZERO
-        || !tx.input.is_empty()
-        || !tx.access_list.is_empty()
-    {
+    if !matches!(tx.to, TxKind::Call(_)) || !tx.access_list.is_empty() {
         return Err(GatewayMessageError::InvalidSignedRelay);
     }
     let sender = envelope
