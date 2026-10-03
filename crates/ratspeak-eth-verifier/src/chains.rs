@@ -119,7 +119,7 @@ pub const ROBINHOOD_TESTNET: ChainDefinition = ChainDefinition {
     sequencer_feed_hint: Some("wss://feed.testnet.chain.robinhood.com"),
 };
 
-pub const SUPPORTED_CHAINS: [ChainDefinition; 5] = [
+pub static SUPPORTED_CHAINS: [ChainDefinition; 5] = [
     ETHEREUM_SEPOLIA,
     BASE_SEPOLIA,
     OP_SEPOLIA,
