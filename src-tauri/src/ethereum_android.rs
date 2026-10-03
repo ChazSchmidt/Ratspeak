@@ -34,14 +34,17 @@ use ratspeak_eth_node::{
 #[cfg(target_os = "android")]
 use ratspeak_eth_wallet::MAX_PREPARED_LIFETIME_SECONDS;
 use ratspeak_eth_wallet::{
-    PreparedTransfer, SignedTransfer, TransferAuthorizer, WalletAccount, WalletError, WalletSecret,
+    ClearSignAuthorizer, PreparedClearSignedOperation, PreparedTransfer, SignedTransfer,
+    TransferAuthorizer, WalletAccount, WalletError, WalletSecret,
 };
 #[cfg(target_os = "android")]
 use tauri::Manager;
 
 #[cfg(target_os = "android")]
 use crate::ethereum::EthereumGatewayCard;
-use crate::ethereum::{EthereumApplicationState, NativeExactTransferCandidate};
+use crate::ethereum::{
+    EthereumApplicationState, NativeClearSignedCandidate, NativeExactTransferCandidate,
+};
 #[cfg(target_os = "android")]
 use crate::ethereum::{EthereumNativeTransportProfileBinding, EthereumProfileGeneration};
 #[cfg(target_os = "android")]
@@ -274,6 +277,33 @@ impl AndroidWalletEngineCore {
         Ok(stored)
     }
 
+    fn sign_clear_signed_operation(
+        &self,
+        state: &EthereumApplicationState,
+        identity: AndroidIdentityBinding,
+        candidate: NativeClearSignedCandidate,
+        custody_secret: &[u8],
+    ) -> Result<StoredSignedTransaction, EngineFailure> {
+        let secret = import_custody_secret(custody_secret)?;
+        let account = secret.account().map_err(map_wallet_material_error)?;
+        if candidate.sender != format!("{:#x}", account.address()) {
+            return Err(EngineFailure::InvalidWalletMaterial);
+        }
+        let stored = state
+            .with_native_clear_signed_operation(
+                identity.hash,
+                identity.session_generation,
+                account,
+                &candidate,
+                |profile_dir, pending| {
+                    authorize_clear_signed_and_persist(profile_dir, pending, secret)
+                },
+            )
+            .map_err(|_| EngineFailure::ReviewMismatch)??;
+        state.wake_outbound();
+        Ok(stored)
+    }
+
     fn random_pending_handle(
         &self,
         pending: &HashMap<u64, PendingWallet>,
@@ -342,6 +372,43 @@ impl TransferAuthorizer for NativeReviewAlreadyApproved {
         // prepared transfer matching every displayed field and signing byte.
         Ok(())
     }
+}
+
+struct NativeClearSignReviewAlreadyApproved;
+
+impl ClearSignAuthorizer for NativeClearSignReviewAlreadyApproved {
+    type Error = ();
+
+    fn authorize_clear_signed_operation(
+        &mut self,
+        _review: &ratspeak_eth_wallet::ClearSignedTransferReview,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+fn authorize_clear_signed_and_persist(
+    profile_dir: &Path,
+    pending: PreparedClearSignedOperation,
+    secret: WalletSecret,
+) -> Result<StoredSignedTransaction, EngineFailure> {
+    let expected_sender = pending.review().from.0;
+    let review_digest = pending.review().review_digest.0;
+    let mut authorizer = NativeClearSignReviewAlreadyApproved;
+    let signed = pending
+        .authorize_and_sign(&secret, &mut authorizer, wall_clock_now_unix())
+        .map_err(|_| EngineFailure::SigningFailed)?;
+    let mut store = EthereumNodeStore::open_in_profile(profile_dir)
+        .map_err(|_| EngineFailure::OperationFailed)?;
+    store
+        .record_clear_signed_transaction(
+            signed.raw_transaction(),
+            expected_sender,
+            review_digest,
+            wall_clock_now_unix(),
+        )
+        .map(|(_, stored)| stored)
+        .map_err(|_| EngineFailure::SigningFailed)
 }
 
 struct SystemClock;
@@ -439,6 +506,10 @@ impl<'a> NativeFrameReader<'a> {
         Ok(value)
     }
 
+    fn u8(&mut self) -> Result<u8, EngineFailure> {
+        Ok(self.take(1)?[0])
+    }
+
     fn u16(&mut self) -> Result<u16, EngineFailure> {
         Ok(u16::from_be_bytes(
             self.take(2)?
@@ -520,6 +591,83 @@ fn parse_review_frame(bytes: &[u8]) -> Result<NativeExactTransferCandidate, Engi
         sender,
         recipient,
         value_wei,
+        nonce,
+        gas_limit,
+        max_fee_per_gas_wei,
+        max_priority_fee_per_gas_wei,
+        expires_at_unix: expires_at_epoch_millis / 1_000,
+        canonical_signing_payload,
+    })
+}
+
+fn parse_clear_signed_review_frame(
+    bytes: &[u8],
+) -> Result<NativeClearSignedCandidate, EngineFailure> {
+    let mut reader = NativeFrameReader::new(bytes)?;
+    if reader.u8()? != 3 {
+        return Err(EngineFailure::ReviewMismatch);
+    }
+    let operation_id: [u8; 16] = reader
+        .take(16)?
+        .try_into()
+        .map_err(|_| EngineFailure::ReviewMismatch)?;
+    if operation_id == [0; 16] {
+        return Err(EngineFailure::ReviewMismatch);
+    }
+    let chain_id = reader.u64()?;
+    let sender = canonical_address(reader.ascii(ADDRESS_BYTES)?)?;
+    let network_len = usize::from(reader.u16()?);
+    let network = reader.ascii(network_len)?;
+    let definition_hash: [u8; 32] = reader
+        .take(32)?
+        .try_into()
+        .map_err(|_| EngineFailure::ReviewMismatch)?;
+    let operation_hash: [u8; 32] = reader
+        .take(32)?
+        .try_into()
+        .map_err(|_| EngineFailure::ReviewMismatch)?;
+    let symbol_len = usize::from(reader.u16()?);
+    let asset_symbol = reader.ascii(symbol_len)?;
+    let asset_decimals = reader.u8()?;
+    let recipient = canonical_address(reader.ascii(ADDRESS_BYTES)?)?;
+    let amount_len = usize::from(reader.u16()?);
+    let amount = canonical_decimal(reader.ascii(amount_len)?)?;
+    let nonce = reader.u64()?;
+    let gas_limit = reader.u64()?;
+    let max_fee_per_gas_wei = reader.u128()?;
+    let max_priority_fee_per_gas_wei = reader.u128()?;
+    let expires_at_epoch_millis = reader.u64()?;
+    if chain_id == 0
+        || network.is_empty()
+        || network.len() > 64
+        || definition_hash == [0; 32]
+        || operation_hash == [0; 32]
+        || asset_symbol.is_empty()
+        || asset_symbol.len() > 32
+        || asset_decimals > 36
+        || expires_at_epoch_millis == 0
+        || expires_at_epoch_millis % 1_000 != 0
+        || max_priority_fee_per_gas_wei > max_fee_per_gas_wei
+    {
+        return Err(EngineFailure::ReviewMismatch);
+    }
+    let payload_len = usize::from(reader.u16()?);
+    let canonical_signing_payload = reader.take(payload_len)?.to_vec();
+    reader.finish()?;
+    if canonical_signing_payload.is_empty() || canonical_signing_payload.len() > 4_096 {
+        return Err(EngineFailure::ReviewMismatch);
+    }
+    Ok(NativeClearSignedCandidate {
+        operation_id,
+        chain_id,
+        sender,
+        network,
+        definition_hash,
+        operation_hash,
+        asset_symbol,
+        asset_decimals,
+        recipient,
+        amount,
         nonce,
         gas_limit,
         max_fee_per_gas_wei,
@@ -2581,6 +2729,29 @@ pub extern "system" fn Java_org_ratspeak_android_ethereum_RustEthereumNativeWall
                 installed
                     .core
                     .sign_exact_transfer(state, identity, candidate, secret.as_slice())
+            })
+        })
+        .map(|stored| public_value_frame(&format!("0x{}", encode_hex(&stored.tx_hash()))));
+    jni_result(&env, result)
+}
+
+#[cfg(target_os = "android")]
+#[no_mangle]
+pub extern "system" fn Java_org_ratspeak_android_ethereum_RustEthereumNativeWalletEngine_nativeSignClearSignedOperation(
+    env: jni::JNIEnv,
+    _class: jni::objects::JClass,
+    review_frame: jni::sys::jbyteArray,
+    custody_secret: jni::sys::jbyteArray,
+) -> jni::sys::jbyteArray {
+    let result = jni_bytes(&env, review_frame)
+        .and_then(|frame| parse_clear_signed_review_frame(frame.as_slice()))
+        .and_then(|candidate| {
+            let secret = jni_bytes(&env, custody_secret)?;
+            with_installed_state(|installed, state| {
+                let identity = active_identity_binding(&installed.runtime)?;
+                installed
+                    .core
+                    .sign_clear_signed_operation(state, identity, candidate, secret.as_slice())
             })
         })
         .map(|stored| public_value_frame(&format!("0x{}", encode_hex(&stored.tx_hash()))));
