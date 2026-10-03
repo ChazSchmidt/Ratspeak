@@ -24,7 +24,7 @@ mod manual_checkpoint;
 mod receipt;
 mod storage;
 
-pub use base_sepolia::BaseSepoliaSequencerAnchor;
+pub use base_sepolia::{BaseSepoliaSequencerAnchor, VerifiedBaseSepoliaHeader};
 pub use composite::{
     AccountStateEvidencePackage, FinalizedReceiptEvidencePackage, VerifiedAccountStateEvidence,
     VerifiedFinalizedReceiptEvidence,
