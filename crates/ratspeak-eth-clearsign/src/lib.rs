@@ -84,6 +84,7 @@ pub struct InstalledDefinition {
 enum DefinitionKind {
     Native(NativeDefinition),
     Erc7730(Erc7730Definition),
+    Balance(BalanceDefinition),
 }
 
 #[derive(Clone, Debug)]
@@ -92,6 +93,18 @@ struct NativeDefinition {
     network: String,
     symbol: String,
     decimals: u8,
+    #[serde(default)]
+    contract: Option<String>,
+    #[serde(default)]
+    storage: Option<RawBalanceStorage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawBalanceStorage {
+    #[serde(rename = "mappingSlot")]
+    mapping_slot: u64,
+    #[serde(rename = "valueMaskBits")]
+    value_mask_bits: u16,
 }
 
 #[derive(Clone, Debug)]
@@ -102,6 +115,39 @@ struct Erc7730Definition {
     symbol: String,
     decimals: u8,
     selector: [u8; 4],
+}
+
+#[derive(Clone, Debug)]
+struct BalanceDefinition {
+    chain_id: u64,
+    contract: Address,
+    network: String,
+    symbol: String,
+    decimals: u8,
+    mapping_slot: U256,
+    value_mask_bits: u16,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BalanceProofQuery {
+    pub definition_id: String,
+    pub chain_id: u64,
+    pub contract: Address,
+    pub network: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub storage_key: B256,
+    pub value_mask_bits: u16,
+}
+
+impl BalanceProofQuery {
+    pub fn interpret_storage_value(&self, value: U256) -> U256 {
+        if self.value_mask_bits >= 256 {
+            return value;
+        }
+        let mask = (U256::from(1u8) << self.value_mask_bits) - U256::from(1u8);
+        value & mask
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -174,9 +220,6 @@ impl InstalledDefinition {
         let definition_hash = keccak256(bytes);
 
         if let Some(native) = raw.ratspeak {
-            if native.kind != "nativeTransfer" {
-                return Err(Error::UnsupportedDefinition("unknown RatSpeak native kind"));
-            }
             if native.definition_id.is_empty()
                 || !native
                     .definition_id
@@ -184,20 +227,60 @@ impl InstalledDefinition {
                     .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
             {
                 return Err(Error::UnsupportedDefinition(
-                    "native definition id contains unsafe characters",
+                    "RatSpeak definition id contains unsafe characters",
                 ));
             }
-            return Ok(Self {
-                raw: bytes.to_vec(),
-                definition_hash,
-                definition_id: native.definition_id,
-                kind: DefinitionKind::Native(NativeDefinition {
-                    chain_id: native.chain_id,
-                    network: native.network,
-                    symbol: native.symbol,
-                    decimals: native.decimals,
-                }),
-            });
+            match native.kind.as_str() {
+                "nativeTransfer" => {
+                    return Ok(Self {
+                        raw: bytes.to_vec(),
+                        definition_hash,
+                        definition_id: native.definition_id,
+                        kind: DefinitionKind::Native(NativeDefinition {
+                            chain_id: native.chain_id,
+                            network: native.network,
+                            symbol: native.symbol,
+                            decimals: native.decimals,
+                        }),
+                    });
+                }
+                "erc20Balance" => {
+                    let contract: Address = native
+                        .contract
+                        .ok_or(Error::UnsupportedDefinition(
+                            "balance definition is missing contract",
+                        ))?
+                        .parse()
+                        .map_err(|_| Error::InvalidAddress)?;
+                    let storage = native.storage.ok_or(Error::UnsupportedDefinition(
+                        "balance definition is missing storage layout",
+                    ))?;
+                    if storage.value_mask_bits == 0 || storage.value_mask_bits > 256 {
+                        return Err(Error::UnsupportedDefinition(
+                            "balance definition has invalid value mask",
+                        ));
+                    }
+                    return Ok(Self {
+                        raw: bytes.to_vec(),
+                        definition_hash,
+                        definition_id: native.definition_id,
+                        kind: DefinitionKind::Balance(BalanceDefinition {
+                            chain_id: native.chain_id,
+                            contract,
+                            network: native.network,
+                            symbol: native.symbol,
+                            decimals: native.decimals,
+                            mapping_slot: U256::from(storage.mapping_slot),
+                            value_mask_bits: storage.value_mask_bits,
+                        }),
+                    });
+                }
+                _ => {
+                    return Err(Error::UnsupportedDefinition(
+                        "unknown RatSpeak definition kind",
+                    ));
+                }
+            }
         }
 
         if raw.schema.as_deref()
@@ -325,6 +408,7 @@ impl InstalledDefinition {
                     kind: ReviewKind::NativeTransfer,
                 }))
             }
+            DefinitionKind::Balance(_) => Ok(None),
             DefinitionKind::Erc7730(d) => {
                 if op.chain_id != d.chain_id || op.to != d.contract {
                     return Ok(None);
@@ -483,6 +567,37 @@ impl DefinitionRegistry {
             return Err(error);
         }
         Err(Error::NoMatchingDefinition)
+    }
+
+    pub fn balance_query(
+        &self,
+        definition_id: &str,
+        owner: Address,
+    ) -> Result<BalanceProofQuery> {
+        let definition = self
+            .definitions
+            .iter()
+            .find(|definition| definition.definition_id() == definition_id)
+            .ok_or(Error::NoMatchingDefinition)?;
+        let DefinitionKind::Balance(balance) = &definition.kind else {
+            return Err(Error::UnsupportedDefinition(
+                "definition is not a balance-proof definition",
+            ));
+        };
+
+        let mut encoded = [0u8; 64];
+        encoded[12..32].copy_from_slice(owner.as_slice());
+        encoded[32..64].copy_from_slice(&balance.mapping_slot.to_be_bytes::<32>());
+        Ok(BalanceProofQuery {
+            definition_id: definition.definition_id.clone(),
+            chain_id: balance.chain_id,
+            contract: balance.contract,
+            network: balance.network.clone(),
+            symbol: balance.symbol.clone(),
+            decimals: balance.decimals,
+            storage_key: keccak256(encoded),
+            value_mask_bits: balance.value_mask_bits,
+        })
     }
 
     pub fn load_dir(path: &Path) -> Result<Self> {
