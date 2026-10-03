@@ -103,6 +103,24 @@ impl EthereumNodeStore {
         Ok(result)
     }
 
+    /// Persists a transaction produced by the clear-sign wallet path after
+    /// native user authorization. The wallet review digest remains the durable
+    /// link to the exact locally reviewed operation.
+    pub fn record_clear_signed_transaction(
+        &mut self,
+        raw_transaction: &[u8],
+        expected_sender: [u8; 20],
+        review_digest: [u8; 32],
+        signed_at_unix: u64,
+    ) -> Result<(RecordOutcome, StoredSignedTransaction)> {
+        self.record_locally_signed_transaction(
+            raw_transaction,
+            expected_sender,
+            review_digest,
+            signed_at_unix,
+        )
+    }
+
     pub fn signed_transaction(
         &self,
         chain_id: u64,
