@@ -24,6 +24,7 @@ mod consensus;
 mod evidence;
 mod field_node;
 mod messaging;
+mod readiness;
 mod receipt;
 mod schema;
 mod transaction;
@@ -58,6 +59,9 @@ pub use messaging::{
     OutboundTransactionStatusRequest, PendingBulkEvidenceReview, PendingEvidenceImportOutcome,
     PendingMessageEvidence, RelayObservation, StoredTransactionStatusObservation,
     TransactionStatus, TransactionStatusContinuity, TransactionStatusHistoryView,
+};
+pub use readiness::{
+    OfflineReadiness, OfflineReadinessReport, assess_offline_readiness,
 };
 pub use receipt::StoredReceiptRecord;
 pub use transaction::StoredSignedTransaction;
