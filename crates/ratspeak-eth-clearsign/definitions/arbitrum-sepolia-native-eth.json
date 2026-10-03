@@ -1,0 +1,10 @@
+{
+  "ratspeak": {
+    "definitionId": "arbitrum-sepolia-native-eth-v1",
+    "kind": "nativeTransfer",
+    "chainId": 421614,
+    "network": "Arbitrum Sepolia",
+    "symbol": "ETH",
+    "decimals": 18
+  }
+}
