@@ -1,7 +1,7 @@
 use alloy_consensus::transaction::SignerRecoverable;
 use alloy_consensus::{Header, Transaction as _, TxEnvelope};
 use alloy_eips::eip2718::Decodable2718;
-use alloy_primitives::{TxKind, U256};
+use alloy_primitives::TxKind;
 use alloy_rlp::Decodable;
 use ratspeak_eth_verifier::{BeaconCheckpointRoot, MAX_BUNDLE_BYTES, SEPOLIA_CHAIN_ID, Verifier};
 use sha2::{Digest, Sha256};
@@ -31,7 +31,6 @@ const KIND_TRANSACTION_STATUS_REQUEST: u8 = 8;
 const KIND_TRANSACTION_STATUS_OBSERVATION: u8 = 9;
 const MAX_CONTROL_BYTES: usize = 4 * 1024;
 const MAX_SIGNED_TRANSACTION_BYTES: usize = 256;
-const NATIVE_TRANSFER_GAS_LIMIT: u64 = 21_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessagingEvidenceKind {
