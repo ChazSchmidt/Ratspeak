@@ -34,7 +34,7 @@ use ratspeak_eth_node::{
     TransactionStatusHistoryView,
 };
 #[cfg(any(target_os = "android", target_os = "linux", test))]
-use ratspeak_eth_wallet::OperationId;
+use ratspeak_eth_wallet::{OperationId, PreparedClearSignedOperation};
 use ratspeak_eth_wallet::{WalletAccount, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK};
 #[cfg(any(target_os = "android", test))]
 use rns_identity::{destination::Destination, identity::Identity};
@@ -252,6 +252,8 @@ struct EthereumScopedState {
     pending_reviews: HashMap<[u8; 16], EthereumTransferReviewView>,
     pending_native_transfers: HashMap<[u8; 16], PreparedFieldTransfer>,
     #[cfg(any(target_os = "android", target_os = "linux", test))]
+    pending_clear_signed_operations: HashMap<[u8; 16], PreparedClearSignedOperation>,
+    #[cfg(any(target_os = "android", target_os = "linux", test))]
     pending_native_cancellations: HashSet<PendingNativeCancellation>,
 }
 
@@ -273,6 +275,8 @@ impl EthereumApplicationState {
                 profile_binding: None,
                 pending_reviews: HashMap::new(),
                 pending_native_transfers: HashMap::new(),
+                #[cfg(any(target_os = "android", target_os = "linux", test))]
+                pending_clear_signed_operations: HashMap::new(),
                 #[cfg(any(target_os = "android", target_os = "linux", test))]
                 pending_native_cancellations: HashSet::new(),
             }),
@@ -340,6 +344,8 @@ impl EthereumApplicationState {
             let generation = EthereumProfileGeneration(scoped.generation);
             scoped.pending_reviews.clear();
             scoped.pending_native_transfers.clear();
+            #[cfg(any(target_os = "android", target_os = "linux", test))]
+            scoped.pending_clear_signed_operations.clear();
             scoped.profile_binding = Some(EthereumProfileBinding {
                 generation,
                 profile_dir: profile_dir.clone(),
@@ -396,6 +402,8 @@ impl EthereumApplicationState {
             let generation = EthereumProfileGeneration(scoped.generation);
             scoped.pending_reviews.clear();
             scoped.pending_native_transfers.clear();
+            #[cfg(any(target_os = "android", target_os = "linux", test))]
+            scoped.pending_clear_signed_operations.clear();
             scoped.profile_binding = Some(EthereumProfileBinding {
                 generation,
                 profile_dir: profile_dir.clone(),
@@ -513,7 +521,19 @@ impl EthereumApplicationState {
                 .configured_gateway_source_hash = Some(source_hash);
             return Ok(());
         }
-        if !scoped.pending_reviews.is_empty() || !scoped.pending_native_transfers.is_empty() {
+        if !scoped.pending_reviews.is_empty()
+            || !scoped.pending_native_transfers.is_empty()
+            || {
+                #[cfg(any(target_os = "android", target_os = "linux", test))]
+                {
+                    !scoped.pending_clear_signed_operations.is_empty()
+                }
+                #[cfg(not(any(target_os = "android", target_os = "linux", test)))]
+                {
+                    false
+                }
+            }
+        {
             return Err("ethereum_gateway_change_blocked");
         }
         let mut store = EthereumNodeStore::open_in_profile(&profile_dir)
@@ -913,6 +933,82 @@ impl EthereumApplicationState {
     }
 
     #[cfg(any(target_os = "android", target_os = "linux", test))]
+    pub(crate) fn register_prepared_clear_signed_operation(
+        &self,
+        generation: EthereumProfileGeneration,
+        pending: PreparedClearSignedOperation,
+    ) -> Result<(), &'static str> {
+        let operation_id = *pending.review().operation_id.as_bytes();
+        let mut scoped = self
+            .scoped
+            .write()
+            .map_err(|_| "ethereum_state_unavailable")?;
+        let binding = scoped
+            .profile_binding
+            .as_ref()
+            .ok_or("ethereum_profile_unavailable")?;
+        let account = binding
+            .public_account
+            .ok_or("ethereum_wallet_unavailable")?;
+        if binding.generation != generation
+            || pending.review().from != account.address()
+        {
+            return Err("ethereum_profile_changed");
+        }
+        if scoped.pending_clear_signed_operations.len() >= MAX_PENDING_REVIEW_SURFACES
+            && !scoped
+                .pending_clear_signed_operations
+                .contains_key(&operation_id)
+        {
+            return Err("ethereum_review_capacity_reached");
+        }
+        scoped
+            .pending_clear_signed_operations
+            .insert(operation_id, pending);
+        Ok(())
+    }
+
+    #[cfg(any(target_os = "android", target_os = "linux", test))]
+    pub(crate) fn with_native_clear_signed_operation<T>(
+        &self,
+        identity_hash: [u8; 16],
+        identity_session_generation: u64,
+        account: WalletAccount,
+        candidate: &NativeClearSignedCandidate,
+        operation: impl FnOnce(&Path, PreparedClearSignedOperation) -> T,
+    ) -> Result<T, &'static str> {
+        let mut scoped = self
+            .scoped
+            .write()
+            .map_err(|_| "ethereum_state_unavailable")?;
+        let binding = scoped
+            .profile_binding
+            .as_ref()
+            .ok_or("ethereum_profile_unavailable")?;
+        if binding.ratspeak_identity_hash != identity_hash
+            || binding.identity_session_generation != identity_session_generation
+            || binding.public_account != Some(account)
+            || candidate.sender != format!("{:#x}", account.address())
+        {
+            return Err("ethereum_profile_changed");
+        }
+        let profile_dir = binding.profile_dir.clone();
+        let operation_id = candidate.operation_id;
+        let matches = scoped
+            .pending_clear_signed_operations
+            .get(&operation_id)
+            .is_some_and(|pending| candidate.matches(pending));
+        if !matches {
+            return Err("ethereum_review_mismatch");
+        }
+        let pending = scoped
+            .pending_clear_signed_operations
+            .remove(&operation_id)
+            .ok_or("ethereum_review_mismatch")?;
+        Ok(operation(&profile_dir, pending))
+    }
+
+    #[cfg(any(target_os = "android", target_os = "linux", test))]
     pub(crate) fn with_native_transfer<T>(
         &self,
         identity_hash: [u8; 16],
@@ -1057,6 +1153,52 @@ impl EthereumApplicationState {
             .read()
             .map(|scoped| scoped.pending_reviews.get(&operation_id).cloned())
             .map_err(|_| "ethereum_state_unavailable")
+    }
+}
+
+#[cfg(any(target_os = "android", target_os = "linux", test))]
+#[cfg_attr(target_os = "linux", allow(dead_code))]
+#[derive(Clone, Debug)]
+pub(crate) struct NativeClearSignedCandidate {
+    pub(crate) operation_id: [u8; 16],
+    pub(crate) chain_id: u64,
+    pub(crate) sender: String,
+    pub(crate) network: String,
+    pub(crate) definition_hash: [u8; 32],
+    pub(crate) operation_hash: [u8; 32],
+    pub(crate) asset_symbol: String,
+    pub(crate) asset_decimals: u8,
+    pub(crate) recipient: String,
+    pub(crate) amount: String,
+    pub(crate) nonce: u64,
+    pub(crate) gas_limit: u64,
+    pub(crate) max_fee_per_gas_wei: u128,
+    pub(crate) max_priority_fee_per_gas_wei: u128,
+    pub(crate) expires_at_unix: u64,
+    pub(crate) canonical_signing_payload: Vec<u8>,
+}
+
+#[cfg(any(target_os = "android", target_os = "linux", test))]
+#[cfg_attr(target_os = "linux", allow(dead_code))]
+impl NativeClearSignedCandidate {
+    fn matches(&self, pending: &PreparedClearSignedOperation) -> bool {
+        let review = pending.review();
+        review.operation_id.as_bytes() == &self.operation_id
+            && review.chain_id == self.chain_id
+            && format!("{:#x}", review.from) == self.sender
+            && review.clear_sign.network == self.network
+            && review.clear_sign.definition_hash.0 == self.definition_hash
+            && review.clear_sign.operation_hash.0 == self.operation_hash
+            && review.clear_sign.asset_symbol == self.asset_symbol
+            && review.clear_sign.asset_decimals == self.asset_decimals
+            && format!("{:#x}", review.clear_sign.recipient) == self.recipient
+            && review.clear_sign.amount.to_string() == self.amount
+            && review.nonce == self.nonce
+            && review.gas_limit == self.gas_limit
+            && review.max_fee_per_gas == self.max_fee_per_gas_wei
+            && review.max_priority_fee_per_gas == self.max_priority_fee_per_gas_wei
+            && review.expires_at_unix == self.expires_at_unix
+            && pending.canonical_signing_bytes() == self.canonical_signing_payload
     }
 }
 
