@@ -401,6 +401,15 @@ class EthereumNativeWalletControllerTest {
             return NativeWalletResult.Success(transactionHash)
         }
 
+        override fun signClearSignedOperation(
+            review: ExactClearSignedReview,
+            secret: SensitiveWalletBytes,
+        ): NativeWalletResult<String> {
+            signCalls++
+            signedNonce = review.nonce
+            return NativeWalletResult.Success(transactionHash)
+        }
+
         private fun pendingWallet(secret: SensitiveWalletBytes) =
             PendingNativeWallet(ADDRESS, phrase(), secret, PendingWalletHandle(1))
     }
