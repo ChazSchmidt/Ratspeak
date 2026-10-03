@@ -15,6 +15,7 @@ use alloy_trie::{EMPTY_ROOT_HASH, KECCAK_EMPTY, Nibbles, TrieAccount};
 use flate2::bufread::GzDecoder;
 use sha2::{Digest, Sha256};
 
+mod base_sepolia;
 mod composite;
 mod consensus;
 mod execution;
@@ -23,6 +24,7 @@ mod manual_checkpoint;
 mod receipt;
 mod storage;
 
+pub use base_sepolia::BaseSepoliaSequencerAnchor;
 pub use composite::{
     AccountStateEvidencePackage, FinalizedReceiptEvidencePackage, VerifiedAccountStateEvidence,
     VerifiedFinalizedReceiptEvidence,
