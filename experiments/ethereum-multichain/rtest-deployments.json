@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "token": {
+    "name": "RatSpeak Test Token",
+    "symbol": "RTEST",
+    "decimals": 18,
+    "balanceMappingSlot": 0
+  },
+  "initialSupply": "1000000000000000000000000",
+  "deployments": [
+    {
+      "chainId": 11155111,
+      "network": "Ethereum Sepolia",
+      "address": null,
+      "status": "not-deployed"
+    },
+    {
+      "chainId": 84532,
+      "network": "Base Sepolia",
+      "address": null,
+      "status": "not-deployed"
+    },
+    {
+      "chainId": 11155420,
+      "network": "OP Sepolia",
+      "address": null,
+      "status": "not-deployed"
+    },
+    {
+      "chainId": 421614,
+      "network": "Arbitrum Sepolia",
+      "address": null,
+      "status": "not-deployed"
+    },
+    {
+      "chainId": 46630,
+      "network": "Robinhood Chain Testnet",
+      "address": null,
+      "status": "not-deployed"
+    }
+  ]
+}
