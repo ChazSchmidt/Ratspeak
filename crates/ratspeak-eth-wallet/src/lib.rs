@@ -1545,6 +1545,169 @@ mod tests {
         }
     }
 
+    fn poc_native_registry() -> DefinitionRegistry {
+        let mut registry = DefinitionRegistry::new();
+        registry.install_poc_native_definitions().unwrap();
+        registry
+    }
+
+    fn erc20_definition(chain_id: u64, contract: Address) -> Vec<u8> {
+        serde_json::to_vec(&serde_json::json!({
+            "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
+            "context": {
+                "$id": "RatSpeak Test Token",
+                "contract": {
+                    "deployments": [{
+                        "chainId": chain_id,
+                        "address": format!("{contract:#x}")
+                    }]
+                }
+            },
+            "metadata": {
+                "owner": "RatSpeak PoC",
+                "contractName": "RatSpeak Test Token",
+                "token": {
+                    "name": "RatSpeak Test Token",
+                    "ticker": "RTEST",
+                    "decimals": 18
+                }
+            },
+            "display": {
+                "formats": {
+                    "transfer(address to,uint256 value)": {
+                        "intent": "Send",
+                        "interpolatedIntent": "Send {value} to {to}",
+                        "fields": [
+                            {
+                                "path": "value",
+                                "label": "Amount",
+                                "format": "tokenAmount",
+                                "params": {"tokenPath": "@.to"}
+                            },
+                            {
+                                "path": "to",
+                                "label": "To",
+                                "format": "addressName"
+                            }
+                        ]
+                    }
+                }
+            }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn clear_signed_native_eth_binds_all_five_poc_chain_ids() {
+        let secret = secret();
+        let account = secret.account().unwrap();
+        let recipient = address("2222222222222222222222222222222222222222");
+        let registry = poc_native_registry();
+
+        for (index, chain_id) in [
+            11_155_111u64,
+            84_532,
+            11_155_420,
+            421_614,
+            46_630,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let prepared = account
+                .prepare_clear_signed_operation(
+                    ClearSignedIntent {
+                        chain_id,
+                        from: account.address(),
+                        to: recipient,
+                        value: U256::from(1_000_000_000_000_000u64),
+                        input: Bytes::new(),
+                        nonce: index as u64,
+                        gas_limit: 21_000,
+                        max_fee_per_gas: 1_000_000_000,
+                        max_priority_fee_per_gas: 100_000_000,
+                    },
+                    &registry,
+                    operation(20 + index as u8),
+                    1_000,
+                    1_100,
+                )
+                .unwrap();
+
+            let mut authorizer = ClearAuthorizer {
+                review_digest: prepared.review().review_digest,
+                calls: 0,
+            };
+            let signed = prepared
+                .authorize_and_sign(&secret, &mut authorizer, 1_001)
+                .unwrap();
+            let mut remaining = signed.raw_transaction();
+            let envelope = TxEnvelope::decode_2718(&mut remaining).unwrap();
+            assert!(remaining.is_empty());
+            assert_eq!(envelope.chain_id(), Some(chain_id));
+        }
+    }
+
+    #[test]
+    fn same_erc20_clear_sign_and_signing_path_works_on_all_five_networks() {
+        let secret = secret();
+        let account = secret.account().unwrap();
+        let recipient = address("2222222222222222222222222222222222222222");
+        let contract = address("3333333333333333333333333333333333333333");
+
+        for (index, chain_id) in [
+            11_155_111u64,
+            84_532,
+            11_155_420,
+            421_614,
+            46_630,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut registry = DefinitionRegistry::new();
+            registry
+                .install_bytes(&erc20_definition(chain_id, contract))
+                .unwrap();
+            let prepared = account
+                .prepare_clear_signed_operation(
+                    ClearSignedIntent {
+                        chain_id,
+                        from: account.address(),
+                        to: contract,
+                        value: U256::ZERO,
+                        input: erc20_transfer_calldata(
+                            recipient,
+                            U256::from(5_000_000_000_000_000_000u64),
+                        ),
+                        nonce: index as u64,
+                        gas_limit: 70_000,
+                        max_fee_per_gas: 1_000_000_000,
+                        max_priority_fee_per_gas: 100_000_000,
+                    },
+                    &registry,
+                    operation(30 + index as u8),
+                    1_000,
+                    1_100,
+                )
+                .unwrap();
+            assert_eq!(prepared.review().clear_sign.asset_symbol, "RTEST");
+            assert_eq!(prepared.review().clear_sign.recipient, recipient);
+
+            let mut authorizer = ClearAuthorizer {
+                review_digest: prepared.review().review_digest,
+                calls: 0,
+            };
+            let signed = prepared
+                .authorize_and_sign(&secret, &mut authorizer, 1_001)
+                .unwrap();
+            let mut remaining = signed.raw_transaction();
+            let envelope = TxEnvelope::decode_2718(&mut remaining).unwrap();
+            assert!(remaining.is_empty());
+            assert_eq!(envelope.chain_id(), Some(chain_id));
+        }
+    }
+
     #[test]
     fn clear_signed_base_sepolia_usdc_binds_chain_id_84532() {
         let secret = secret();
