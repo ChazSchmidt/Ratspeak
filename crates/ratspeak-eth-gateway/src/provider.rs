@@ -593,6 +593,8 @@ where
         };
         let input = parse_account_proof_result(
             &proof,
+            SEPOLIA_CHAIN_ID,
+            SEPOLIA_NETWORK,
             self.clock.now_unix()?,
             self.builder.execution_block_number(),
             block_hash,
@@ -956,6 +958,8 @@ fn validate_block_anchor(
 
 fn parse_account_proof_result(
     value: &Value,
+    chain_id: u64,
+    network: &str,
     captured_at_unix: u64,
     block_number: u64,
     block_hash: [u8; 32],
@@ -996,9 +1000,13 @@ fn parse_account_proof_result(
         }
         account_proof.push(node);
     }
+    let definition = chain_definition(chain_id).ok_or(GatewayProviderFailure::Permanent)?;
+    if definition.network != network {
+        return Err(GatewayProviderFailure::Permanent);
+    }
     Ok(UntrustedAccountProofRpcInput {
-        chain_id: SEPOLIA_CHAIN_ID,
-        network: SEPOLIA_NETWORK.to_owned(),
+        chain_id,
+        network: network.to_owned(),
         captured_at_unix,
         block_number,
         block_hash,
@@ -1493,7 +1501,16 @@ mod tests {
             "storageProof": [],
         });
         let input =
-            parse_account_proof_result(&result, 77, 42, [0x22; 32], state_root, address).unwrap();
+            parse_account_proof_result(
+                &result,
+                SEPOLIA_CHAIN_ID,
+                SEPOLIA_NETWORK,
+                77,
+                42,
+                [0x22; 32],
+                state_root,
+                address,
+            ).unwrap();
         let bytes = crate::encode_account_proof(&input).unwrap();
         Verifier::sepolia()
             .verify_and_import(
@@ -1506,7 +1523,16 @@ mod tests {
         let mut wrong = result;
         wrong["balance"] = json!("0x075bcd15");
         assert_eq!(
-            parse_account_proof_result(&wrong, 77, 42, [0x22; 32], state_root, address),
+            parse_account_proof_result(
+                &wrong,
+                SEPOLIA_CHAIN_ID,
+                SEPOLIA_NETWORK,
+                77,
+                42,
+                [0x22; 32],
+                state_root,
+                address,
+            ),
             Err(GatewayProviderFailure::Permanent)
         );
     }
