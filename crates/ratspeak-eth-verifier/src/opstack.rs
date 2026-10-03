@@ -1,5 +1,5 @@
 use alloy_primitives::{Address, B256, Signature, U256, keccak256};
-use ethereum_ssz_derive::Decode;
+use ssz_derive::Decode;
 use ssz::Decode as _;
 use ssz_types::{FixedVector, VariableList};
 
