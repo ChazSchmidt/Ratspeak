@@ -1,4 +1,4 @@
-use ratspeak_eth_verifier::SEPOLIA_NETWORK;
+use ratspeak_eth_verifier::{SEPOLIA_NETWORK, chain_definition};
 use rusqlite::{OptionalExtension, Transaction, TransactionBehavior};
 use sha2::{Digest, Sha256};
 
@@ -176,7 +176,7 @@ impl EthereumNodeStore {
             &transaction,
             AssuranceEventInput {
                 chain_id,
-                network: SEPOLIA_NETWORK,
+                network,
                 subject_kind: AssuranceSubjectKind::Checkpoint,
                 subject_key: checkpoint_root,
                 event_kind: AssuranceEventKind::CheckpointRevoked,
@@ -197,7 +197,7 @@ impl EthereumNodeStore {
         evidence_hash: [u8; 32],
         observed_at_unix: u64,
     ) -> Result<RecordOutcome> {
-        ensure_supported_network(chain_id, SEPOLIA_NETWORK)?;
+        let network = transaction_network(chain_id)?;
         if evidence_hash == [0; 32] || observed_at_unix == 0 {
             return Err(NodeStoreError::new(
                 "transaction observation is missing public evidence",
@@ -210,7 +210,7 @@ impl EthereumNodeStore {
         if crate::transaction::read_signed_transaction(
             &transaction,
             chain_id,
-            SEPOLIA_NETWORK,
+            network,
             tx_hash,
         )?
         .is_none()
@@ -255,15 +255,21 @@ impl EthereumNodeStore {
         chain_id: u64,
         tx_hash: [u8; 32],
     ) -> Result<Vec<StoredAssuranceEvent>> {
-        ensure_supported_network(chain_id, SEPOLIA_NETWORK)?;
+        let network = transaction_network(chain_id)?;
         read_assurance_history(
             &self.connection,
             chain_id,
-            SEPOLIA_NETWORK,
+            network,
             AssuranceSubjectKind::Transaction,
             tx_hash,
         )
     }
+}
+
+fn transaction_network(chain_id: u64) -> Result<&'static str> {
+    chain_definition(chain_id)
+        .map(|definition| definition.network)
+        .ok_or_else(|| NodeStoreError::new(format!("unsupported Ethereum chain {chain_id}")))
 }
 
 pub(crate) fn record_assurance(
