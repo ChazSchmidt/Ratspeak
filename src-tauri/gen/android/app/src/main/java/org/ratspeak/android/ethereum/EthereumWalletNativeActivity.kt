@@ -22,6 +22,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import org.ratspeak.android.R
+import java.math.BigInteger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.UUID
 
@@ -62,6 +63,7 @@ internal class EthereumWalletNativeActivity : Activity() {
         controller = nativeController
         launchRequest?.activeAddress?.let(nativeController::markExistingWalletActive)
         launchRequest?.review?.let(nativeController::beginTransferReview)
+        launchRequest?.clearSignReview?.let(nativeController::beginClearSignedReview)
     }
 
     override fun onStop() {
@@ -112,6 +114,8 @@ internal class EthereumWalletNativeActivity : Activity() {
                 cancelButton()
             }
             is EthereumNativeWalletController.State.Reviewing -> renderReview(state.review)
+            is EthereumNativeWalletController.State.ClearSigningReviewing ->
+                renderClearSignReview(state.review)
             is EthereumNativeWalletController.State.Signed -> {
                 body(getString(R.string.ethereum_native_signed_hash, state.transactionHash))
                 val callback = request?.onSigned
@@ -209,6 +213,36 @@ internal class EthereumWalletNativeActivity : Activity() {
         cancelButton()
     }
 
+    private fun renderClearSignReview(review: ExactClearSignedReview) {
+        body(getString(R.string.ethereum_native_review_warning))
+        reviewLine(R.string.ethereum_native_network, review.network)
+        reviewLine(R.string.ethereum_native_sender, review.sender)
+        reviewLine(R.string.ethereum_native_recipient, review.recipient)
+        reviewLine(
+            R.string.ethereum_native_value,
+            "${review.displayAmount} ${review.assetSymbol}",
+        )
+        reviewLine(R.string.ethereum_native_nonce, review.nonce)
+        reviewLine(R.string.ethereum_native_gas, review.gasLimit.toString())
+        reviewLine(R.string.ethereum_native_max_fee, review.maxFeePerGasWei)
+        reviewLine(R.string.ethereum_native_priority_fee, review.maxPriorityFeePerGasWei)
+        val maximumFee = try {
+            BigInteger(review.maxFeePerGasWei)
+                .multiply(BigInteger.valueOf(review.gasLimit))
+                .toString()
+        } catch (_: Throwable) {
+            ""
+        }
+        if (maximumFee.isNotEmpty()) {
+            reviewLine(R.string.ethereum_native_maximum_total_fee, maximumFee)
+        }
+        reviewLine(R.string.ethereum_native_expiry, review.expiresAtEpochMillis.toString())
+        button(getString(R.string.ethereum_native_approve_and_sign)) {
+            controller?.approveClearSignedOperation()
+        }
+        cancelButton()
+    }
+
     private fun title(value: String) {
         content.addView(TextView(this).apply {
             text = value
@@ -291,6 +325,7 @@ internal object EthereumNativeWalletLauncher {
         val engine: EthereumNativeWalletEngine = RustEthereumNativeWalletEngine,
         val activeAddress: String? = null,
         val review: ExactSepoliaTransferReview? = null,
+        val clearSignReview: ExactClearSignedReview? = null,
         val onSigned: ((String) -> Unit)? = null,
         val onClosed: (() -> Unit)? = null,
     )
@@ -300,6 +335,7 @@ internal object EthereumNativeWalletLauncher {
 
         fun expire() {
             request.review?.close()
+            request.clearSignReview?.close()
             closeOnce.close()
         }
     }
@@ -310,14 +346,16 @@ internal object EthereumNativeWalletLauncher {
     @Synchronized
     fun launch(activity: Activity, request: Request): Boolean {
         purgeExpiredLocked()
-        if (!request.engine.isAvailable) {
+        if (!request.engine.isAvailable || (request.review != null && request.clearSignReview != null)) {
             request.review?.close()
+            request.clearSignReview?.close()
             return false
         }
         val token = UUID.randomUUID().toString()
         val expiresAt = SystemClock.elapsedRealtime() + REQUEST_LIFETIME_MILLIS
         if (!ceremonyLease.acquire(token, expiresAt)) {
             request.review?.close()
+            request.clearSignReview?.close()
             return false
         }
         requests[token] = PendingRequest(request)
@@ -325,7 +363,10 @@ internal object EthereumNativeWalletLauncher {
             activity.startActivity(EthereumWalletNativeActivity.intent(activity, token))
             true
         } catch (_: Throwable) {
-            requests.remove(token)?.request?.review?.close()
+            requests.remove(token)?.request?.let { failed ->
+                failed.review?.close()
+                failed.clearSignReview?.close()
+            }
             ceremonyLease.release(token)
             false
         }
