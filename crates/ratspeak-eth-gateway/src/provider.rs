@@ -21,9 +21,9 @@ use serde_json::{Map, Value, json};
 use url::{Host, Url};
 
 use crate::{
-    AcceptedEvidenceRequest, AcceptedSignedRelay, AcceptedTransactionStatusRequest, GatewayBundle,
-    GatewayExecutionProvider, GatewayProviderFailure, MessagingEvidenceKind,
-    RelayProviderObservation, RelayProviderStatus, SepoliaGatewayBuilder,
+    AcceptedEvidenceRequest, AcceptedSignedRelay, AcceptedTransactionStatusRequest,
+    EvmAnchorGatewayBuilder, GatewayBundle, GatewayExecutionProvider, GatewayProviderFailure,
+    MessagingEvidenceKind, RelayProviderObservation, RelayProviderStatus, SepoliaGatewayBuilder,
     TransactionStatusObservation, UntrustedAccountProofRpcInput, UntrustedTxReceiptProofRpcInput,
 };
 use ratspeak_eth_verifier::{
@@ -341,6 +341,266 @@ impl ExactReceiptProofBackend for UnsupportedReceiptProofBackend {
         _captured_at_unix: u64,
     ) -> Result<UntrustedTxReceiptProofRpcInput, GatewayProviderFailure> {
         Err(GatewayProviderFailure::Permanent)
+    }
+}
+
+/// Execution provider pinned to one already verified EVM anchor.
+///
+/// One instance is bound to one chain. The app may keep one configured agent
+/// contact per installed chain and route a signed relay by the chain ID decoded
+/// from its EIP-1559 envelope. RPC data remains untrusted and is locally
+/// reverified against the anchor before evidence is emitted.
+pub struct EvmAnchorRpcProvider<T, C = SystemUnixClock, R = UnsupportedReceiptProofBackend> {
+    builder: EvmAnchorGatewayBuilder,
+    transport: T,
+    clock: C,
+    receipt_backend: R,
+    policy: ProviderHttpPolicy,
+    next_rpc_id: u64,
+}
+
+impl<T, C, R> std::fmt::Debug for EvmAnchorRpcProvider<T, C, R> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("EvmAnchorRpcProvider")
+            .field("chain_id", &self.builder.anchor().chain_id())
+            .field("block_number", &self.builder.anchor().block_number())
+            .field("policy", &self.policy)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<T, C> EvmAnchorRpcProvider<T, C, UnsupportedReceiptProofBackend> {
+    pub fn new(
+        builder: EvmAnchorGatewayBuilder,
+        transport: T,
+        clock: C,
+        policy: ProviderHttpPolicy,
+    ) -> Result<Self, ProviderConfigurationError> {
+        Ok(Self {
+            builder,
+            transport,
+            clock,
+            receipt_backend: UnsupportedReceiptProofBackend,
+            policy: policy.validate()?,
+            next_rpc_id: 1,
+        })
+    }
+}
+
+impl<T, C, R> EvmAnchorRpcProvider<T, C, R> {
+    pub fn with_receipt_backend<R2>(
+        self,
+        receipt_backend: R2,
+    ) -> EvmAnchorRpcProvider<T, C, R2> {
+        EvmAnchorRpcProvider {
+            builder: self.builder,
+            transport: self.transport,
+            clock: self.clock,
+            receipt_backend,
+            policy: self.policy,
+            next_rpc_id: self.next_rpc_id,
+        }
+    }
+
+    pub fn into_transport(self) -> T {
+        self.transport
+    }
+}
+
+impl<T, C, R> GatewayExecutionProvider for EvmAnchorRpcProvider<T, C, R>
+where
+    T: GatewayHttpTransport,
+    C: UnixClock,
+    R: ExactReceiptProofBackend,
+{
+    fn submit_signed_relay(
+        &mut self,
+        relay: &AcceptedSignedRelay,
+    ) -> Result<RelayProviderObservation, GatewayProviderFailure> {
+        prevalidate_relay(relay)?;
+        if relay.chain_id() != self.builder.anchor().chain_id() {
+            return Err(GatewayProviderFailure::Permanent);
+        }
+
+        let expected_hash = relay.tx_hash();
+        let reply = self.rpc_call(
+            RpcMethod::SendRawTransaction,
+            json!([canonical_data_hex(relay.raw_transaction())]),
+        )?;
+        match reply {
+            RpcReply::Result(value) => {
+                if parse_fixed_hex::<32>(&value)? != expected_hash {
+                    return Err(GatewayProviderFailure::Permanent);
+                }
+                Ok(RelayProviderObservation::new(
+                    expected_hash,
+                    RelayProviderStatus::Accepted,
+                ))
+            }
+            RpcReply::Rejected { .. } => Ok(RelayProviderObservation::new(
+                expected_hash,
+                RelayProviderStatus::Rejected,
+            )),
+        }
+    }
+
+    fn fetch_verified_evidence(
+        &mut self,
+        request: &AcceptedEvidenceRequest,
+    ) -> Result<GatewayBundle, GatewayProviderFailure> {
+        match request.evidence_kind() {
+            MessagingEvidenceKind::AccountProof => {
+                self.fetch_account_evidence(request.subject())
+            }
+            MessagingEvidenceKind::ReceiptProof => {
+                let captured_at_unix = self.clock.now_unix()?;
+                let anchor = self.builder.anchor();
+                let mut input = self.receipt_backend.fetch_exact_receipt_proof(
+                    request.subject(),
+                    anchor.block_number(),
+                    anchor.block_hash(),
+                    captured_at_unix,
+                )?;
+                input.captured_at_unix = captured_at_unix;
+                if input.chain_id != anchor.chain_id()
+                    || input.network != anchor.network()
+                    || input.tx_hash != request.subject()
+                    || input.block_number != anchor.block_number()
+                    || input.block_hash != anchor.block_hash()
+                    || input.transactions_root != anchor.transactions_root()
+                    || input.receipts_root != anchor.receipts_root()
+                {
+                    return Err(GatewayProviderFailure::Permanent);
+                }
+                self.builder
+                    .build_tx_receipt_proof(&input)
+                    .map_err(|_| GatewayProviderFailure::Permanent)
+            }
+            // Stack-anchor and aggregate-package transport remain distinct from
+            // the shared EVM proof layer. The phone verifies those inputs before
+            // constructing this provider.
+            MessagingEvidenceKind::Consensus
+            | MessagingEvidenceKind::ExecutionHeader
+            | MessagingEvidenceKind::AccountStatePackage
+            | MessagingEvidenceKind::FinalizedReceiptPackage => {
+                Err(GatewayProviderFailure::Permanent)
+            }
+        }
+    }
+
+    fn observe_transaction_status(
+        &mut self,
+        _request: &AcceptedTransactionStatusRequest,
+    ) -> Result<TransactionStatusObservation, GatewayProviderFailure> {
+        Err(GatewayProviderFailure::Permanent)
+    }
+}
+
+impl<T, C, R> EvmAnchorRpcProvider<T, C, R>
+where
+    T: GatewayHttpTransport,
+    C: UnixClock,
+{
+    fn fetch_account_evidence(
+        &mut self,
+        subject: [u8; 32],
+    ) -> Result<GatewayBundle, GatewayProviderFailure> {
+        if subject[..12] != [0; 12] {
+            return Err(GatewayProviderFailure::Permanent);
+        }
+        let mut address = [0u8; 20];
+        address.copy_from_slice(&subject[12..]);
+
+        let (chain_id, network, block_number, block_hash, state_root) = {
+            let anchor = self.builder.anchor();
+            (
+                anchor.chain_id(),
+                anchor.network().to_owned(),
+                anchor.block_number(),
+                anchor.block_hash(),
+                anchor.state_root(),
+            )
+        };
+
+        let block = self.rpc_call(
+            RpcMethod::GetBlockByHash,
+            json!([canonical_data_hex(&block_hash), false]),
+        )?;
+        let RpcReply::Result(block) = block else {
+            return Err(GatewayProviderFailure::Permanent);
+        };
+        validate_anchor_block(&block, self.builder.anchor())?;
+
+        let selector = json!({
+            "blockHash": canonical_data_hex(&block_hash),
+            "requireCanonical": true
+        });
+        let proof_reply = self.rpc_call(
+            RpcMethod::GetProof,
+            json!([canonical_data_hex(&address), [], selector]),
+        )?;
+        let proof = match proof_reply {
+            RpcReply::Result(proof) => proof,
+            RpcReply::Rejected { code: -32602 } => match self.rpc_call(
+                RpcMethod::GetProof,
+                json!([
+                    canonical_data_hex(&address),
+                    [],
+                    format!("0x{block_number:x}")
+                ]),
+            )? {
+                RpcReply::Result(proof) => proof,
+                RpcReply::Rejected { .. } => return Err(GatewayProviderFailure::Permanent),
+            },
+            RpcReply::Rejected { .. } => return Err(GatewayProviderFailure::Permanent),
+        };
+
+        let input = parse_account_proof_result(
+            &proof,
+            chain_id,
+            &network,
+            self.clock.now_unix()?,
+            block_number,
+            block_hash,
+            state_root,
+            address,
+        )?;
+        self.builder
+            .build_account_proof(&input)
+            .map_err(|_| GatewayProviderFailure::Permanent)
+    }
+
+    fn rpc_call(
+        &mut self,
+        method: RpcMethod,
+        params: Value,
+    ) -> Result<RpcReply, GatewayProviderFailure> {
+        let id = self.next_rpc_id;
+        self.next_rpc_id = self.next_rpc_id.checked_add(1).unwrap_or(1);
+        let body = serde_json::to_vec(&json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": method.as_str(),
+            "params": params,
+        }))
+        .map_err(|_| GatewayProviderFailure::Permanent)?;
+        let response = self
+            .transport
+            .post_json(
+                &body,
+                self.policy.maximum_json_response_bytes,
+                self.policy.request_timeout,
+            )
+            .map_err(map_transport_failure)?;
+        if response.body().len() > self.policy.maximum_json_response_bytes {
+            return Err(GatewayProviderFailure::Permanent);
+        }
+        match response.status() {
+            200..=299 => parse_rpc_reply(response.body(), id),
+            408 | 425 | 429 | 500..=599 => Err(GatewayProviderFailure::Transient),
+            _ => Err(GatewayProviderFailure::Permanent),
+        }
     }
 }
 
@@ -937,6 +1197,23 @@ fn validate_json_limits_bounded(
         }
     }
     visit(value, 0, &mut 0, maximum_json_values)
+}
+
+fn validate_anchor_block(
+    value: &Value,
+    anchor: &ratspeak_eth_verifier::VerifiedEvmAnchor,
+) -> Result<(), GatewayProviderFailure> {
+    let object = value.as_object().ok_or(GatewayProviderFailure::Permanent)?;
+    if parse_field_fixed_hex::<32>(object, "hash")? != anchor.block_hash()
+        || parse_field_quantity_u64(object, "number")? != anchor.block_number()
+        || parse_field_fixed_hex::<32>(object, "stateRoot")? != anchor.state_root()
+        || parse_field_fixed_hex::<32>(object, "transactionsRoot")?
+            != anchor.transactions_root()
+        || parse_field_fixed_hex::<32>(object, "receiptsRoot")? != anchor.receipts_root()
+    {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    Ok(())
 }
 
 fn validate_block_anchor(
