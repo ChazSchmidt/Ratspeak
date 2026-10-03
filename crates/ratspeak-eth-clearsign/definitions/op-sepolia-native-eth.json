@@ -1,0 +1,10 @@
+{
+  "ratspeak": {
+    "definitionId": "op-sepolia-native-eth-v1",
+    "kind": "nativeTransfer",
+    "chainId": 11155420,
+    "network": "OP Sepolia",
+    "symbol": "ETH",
+    "decimals": 18
+  }
+}
