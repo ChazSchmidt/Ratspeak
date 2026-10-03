@@ -55,7 +55,7 @@ pub use manual_checkpoint::{
     manual_checkpoint_file_fingerprint,
 };
 pub use nitro::NitroConfirmedEndpoint;
-pub use opstack::OpStackSequencerAnchor;
+pub use opstack::{OpStackSequencerAnchor, OpStackSignerProofQuery};
 pub use receipt::{TxReceiptProofBundle, VerifiedEvmTxReceipt, VerifiedTxReceipt};
 pub use storage::{StorageProofBundle, VerifiedStorageValue};
 
