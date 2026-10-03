@@ -2,14 +2,13 @@ use alloy_consensus::transaction::SignerRecoverable;
 use alloy_consensus::{Transaction, TxEnvelope};
 use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::{TxKind, U256};
-use ratspeak_eth_verifier::{SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK};
+use ratspeak_eth_verifier::{SEPOLIA_CHAIN_ID, chain_definition};
 use rusqlite::{OptionalExtension, Transaction as SqliteTransaction, TransactionBehavior};
 use sha2::{Digest, Sha256};
 
 use crate::assurance::{
     AssuranceEventInput, AssuranceEventKind, AssuranceSubjectKind, record_assurance,
 };
-use crate::checkpoint::ensure_supported_network;
 use crate::evidence::{EvidenceKind, record_replay};
 use crate::{
     EthereumNodeStore, NodeStoreError, RecordOutcome, Result, parse_stored_u64, stored_array,
@@ -75,7 +74,7 @@ impl StoredSignedTransaction {
 }
 
 impl EthereumNodeStore {
-    /// Validates and atomically stores an exact locally signed Sepolia EIP-1559 transaction.
+    /// Validates and atomically stores an exact locally signed EIP-1559 transaction on a supported chain.
     ///
     /// The signature is recovered from `raw_transaction` and must match
     /// `expected_sender`. `intent_review_digest` is a caller-supplied link to a
@@ -109,8 +108,8 @@ impl EthereumNodeStore {
         chain_id: u64,
         tx_hash: [u8; 32],
     ) -> Result<Option<StoredSignedTransaction>> {
-        ensure_supported_network(chain_id, SEPOLIA_NETWORK)?;
-        read_signed_transaction(&self.connection, chain_id, SEPOLIA_NETWORK, tx_hash)
+        let network = supported_network(chain_id)?;
+        read_signed_transaction(&self.connection, chain_id, network, tx_hash)
     }
 
     /// Returns the most recently persisted locally signed transaction.
@@ -123,7 +122,7 @@ impl EthereumNodeStore {
         &self,
         chain_id: u64,
     ) -> Result<Option<StoredSignedTransaction>> {
-        ensure_supported_network(chain_id, SEPOLIA_NETWORK)?;
+        let network = supported_network(chain_id)?;
         let tx_hash = self
             .connection
             .query_row(
@@ -132,7 +131,7 @@ impl EthereumNodeStore {
                  WHERE chain_id = ?1 AND network = ?2
                  ORDER BY rowid DESC
                  LIMIT 1",
-                rusqlite::params![chain_id.to_string(), SEPOLIA_NETWORK],
+                rusqlite::params![chain_id.to_string(), network],
                 |row| row.get::<_, Vec<u8>>(0),
             )
             .optional()
@@ -140,7 +139,7 @@ impl EthereumNodeStore {
             .map(|value| stored_array(&value, "latest transaction hash"))
             .transpose()?;
         tx_hash
-            .map(|hash| read_signed_transaction(&self.connection, chain_id, SEPOLIA_NETWORK, hash))
+            .map(|hash| read_signed_transaction(&self.connection, chain_id, network, hash))
             .transpose()
             .map(Option::flatten)
     }
@@ -151,8 +150,8 @@ impl EthereumNodeStore {
         &self,
         chain_id: u64,
     ) -> Result<Vec<StoredSignedTransaction>> {
-        ensure_supported_network(chain_id, SEPOLIA_NETWORK)?;
-        read_unconfirmed_signed_transactions(&self.connection, chain_id, SEPOLIA_NETWORK)
+        let network = supported_network(chain_id)?;
+        read_unconfirmed_signed_transactions(&self.connection, chain_id, network)
     }
 }
 
@@ -209,9 +208,10 @@ pub(crate) fn record_locally_signed_transaction_in(
             "locally signed transaction recovered an unexpected sender",
         ));
     }
+    let network = supported_network(decoded.chain_id)?;
     let stored = StoredSignedTransaction {
-        chain_id: SEPOLIA_CHAIN_ID,
-        network: SEPOLIA_NETWORK.to_owned(),
+        chain_id: decoded.chain_id,
+        network: network.to_owned(),
         tx_hash: decoded.tx_hash,
         signing_hash: decoded.signing_hash,
         sender: decoded.sender,
@@ -316,6 +316,7 @@ pub(crate) fn record_locally_signed_transaction_in(
 
 #[derive(Debug)]
 struct DecodedSignedTransaction {
+    chain_id: u64,
     tx_hash: [u8; 32],
     signing_hash: [u8; 32],
     sender: [u8; 20],
@@ -350,34 +351,20 @@ fn decode_signed_transaction(raw_transaction: &[u8]) -> Result<DecodedSignedTran
             "locally signed transaction must call an address",
         ));
     }
-    if transaction.gas_limit != NATIVE_TRANSFER_GAS_LIMIT {
-        return Err(NodeStoreError::new(
-            "locally signed native transfer must use 21000 gas",
-        ));
-    }
-    if transaction.value == U256::ZERO {
-        return Err(NodeStoreError::new(
-            "locally signed native transfer value must be nonzero",
-        ));
-    }
-    if !transaction.input.is_empty() {
-        return Err(NodeStoreError::new(
-            "locally signed native transfer must have empty calldata",
-        ));
-    }
     if !transaction.access_list.is_empty() {
         return Err(NodeStoreError::new(
-            "locally signed native transfer must have an empty access list",
+            "locally signed transaction must have an empty access list",
         ));
     }
     let chain_id = envelope
         .chain_id()
         .ok_or_else(|| NodeStoreError::new("signed transaction has no chain id"))?;
-    ensure_supported_network(chain_id, SEPOLIA_NETWORK)?;
+    supported_network(chain_id)?;
     let sender = envelope
         .recover_signer()
         .map_err(|error| NodeStoreError::new(format!("invalid transaction signature: {error}")))?;
     Ok(DecodedSignedTransaction {
+        chain_id,
         tx_hash: envelope.tx_hash().0,
         signing_hash: envelope.signature_hash().0,
         sender: *sender.0,
@@ -434,8 +421,8 @@ pub(crate) fn read_signed_transaction(
         || decoded.signing_hash != stored.signing_hash
         || decoded.sender != stored.sender
         || decoded.nonce != stored.nonce
-        || stored.chain_id != SEPOLIA_CHAIN_ID
-        || stored.network != SEPOLIA_NETWORK
+        || decoded.chain_id != stored.chain_id
+        || supported_network(stored.chain_id)? != stored.network
         || stored.intent_review_digest == [0; 32]
         || stored_array::<32>(&row.9, "signed transaction record digest")?
             != signed_transaction_digest(&stored)
@@ -445,6 +432,12 @@ pub(crate) fn read_signed_transaction(
         ));
     }
     Ok(Some(stored))
+}
+
+fn supported_network(chain_id: u64) -> Result<&'static str> {
+    chain_definition(chain_id)
+        .map(|definition| definition.network)
+        .ok_or_else(|| NodeStoreError::new(format!("unsupported Ethereum chain {chain_id}")))
 }
 
 fn signed_transaction_digest(transaction: &StoredSignedTransaction) -> [u8; 32] {
