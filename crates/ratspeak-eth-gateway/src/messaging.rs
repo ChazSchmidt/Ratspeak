@@ -414,9 +414,6 @@ impl AcceptedTransactionStatusRequest {
     pub fn expires_at_unix(&self) -> u64 {
         self.expires_at_unix
     }
-    pub fn chain_id(&self) -> u64 {
-        self.chain_id
-    }
     pub fn tx_hash(&self) -> [u8; 32] {
         self.tx_hash
     }
@@ -435,6 +432,9 @@ impl std::fmt::Debug for AcceptedSignedRelay {
 impl AcceptedSignedRelay {
     pub fn request_id(&self) -> [u8; 16] {
         self.request_id
+    }
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
     }
     pub fn tx_hash(&self) -> [u8; 32] {
         self.tx_hash
