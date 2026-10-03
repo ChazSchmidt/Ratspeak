@@ -18,7 +18,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 [features]
 default = ["lxst-voice"]
 lxst-voice = ["ratspeak-tauri/lxst-voice"]
-experimental-ethereum = ["dep:alloy-primitives", "dep:gtk", "dep:ratspeak-eth-node", "dep:ratspeak-eth-verifier", "dep:ratspeak-eth-wallet", "dep:ratspeak-eth-wallet-linux", "dep:reqwest", "dep:rns-identity", "dep:rustix", "dep:rustls"]
+experimental-ethereum = ["dep:alloy-primitives", "dep:gtk", "dep:ratspeak-eth-clearsign", "dep:ratspeak-eth-node", "dep:ratspeak-eth-verifier", "dep:ratspeak-eth-wallet", "dep:ratspeak-eth-wallet-linux", "dep:reqwest", "dep:rns-identity", "dep:rustix", "dep:rustls"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -35,6 +35,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["full"] }
 base64 = "0.22"
 alloy-primitives = { version = "=1.6.0", optional = true }
+ratspeak-eth-clearsign = { path = "../crates/ratspeak-eth-clearsign", version = "=1.0.31", optional = true }
 ratspeak-eth-node = { path = "../crates/ratspeak-eth-node", version = "=1.0.31", optional = true }
 ratspeak-eth-verifier = { path = "../crates/ratspeak-eth-verifier", version = "=1.0.31", optional = true }
 ratspeak-eth-wallet = { path = "../crates/ratspeak-eth-wallet", version = "=1.0.31", optional = true }
