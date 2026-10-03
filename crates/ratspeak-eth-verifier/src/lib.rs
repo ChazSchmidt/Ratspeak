@@ -48,6 +48,8 @@ pub const MAGIC: &[u8; 6] = b"RSETH1";
 pub const VERSION: u8 = 1;
 pub const SEPOLIA_CHAIN_ID: u64 = 11_155_111;
 pub const SEPOLIA_NETWORK: &str = "sepolia";
+pub const BASE_SEPOLIA_CHAIN_ID: u64 = 84_532;
+pub const BASE_SEPOLIA_NETWORK: &str = "base-sepolia";
 pub const MAX_BUNDLE_BYTES: usize = 2 * 1024 * 1024;
 /// Aggregate limit for a self-contained evidence package transported as a Resource.
 pub const MAX_COMPOSITE_EVIDENCE_BYTES: usize = MAX_BUNDLE_BYTES;
@@ -179,6 +181,22 @@ impl PinnedCheckpoint {
         Self {
             chain_id: SEPOLIA_CHAIN_ID,
             network: SEPOLIA_NETWORK,
+            execution_block_number,
+            execution_block_hash,
+            state_root,
+        }
+    }
+
+    /// Constructs a Base Sepolia checkpoint obtained from an independently
+    /// verified OP-Stack execution anchor.
+    pub fn base_sepolia(
+        execution_block_number: u64,
+        execution_block_hash: [u8; 32],
+        state_root: [u8; 32],
+    ) -> Self {
+        Self {
+            chain_id: BASE_SEPOLIA_CHAIN_ID,
+            network: BASE_SEPOLIA_NETWORK,
             execution_block_number,
             execution_block_hash,
             state_root,
@@ -350,6 +368,15 @@ impl Verifier {
         Self {
             chain_id: SEPOLIA_CHAIN_ID,
             network: SEPOLIA_NETWORK,
+        }
+    }
+
+    /// Verifies Base Sepolia execution-state proof bundles against a Base
+    /// Sepolia checkpoint supplied by an independent OP-Stack trust path.
+    pub fn base_sepolia() -> Self {
+        Self {
+            chain_id: BASE_SEPOLIA_CHAIN_ID,
+            network: BASE_SEPOLIA_NETWORK,
         }
     }
 
