@@ -6,8 +6,8 @@ use alloy_trie::Nibbles;
 use alloy_trie::proof::verify_proof;
 
 use super::{
-    Cursor, KIND_TX_RECEIPT_PROOF, MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, Result,
-    VerifiedExecutionBlock, Verifier, VerifyError, sha256,
+    AnchorAssurance, Cursor, KIND_TX_RECEIPT_PROOF, MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, Result,
+    VerifiedEvmAnchor, VerifiedExecutionBlock, Verifier, VerifyError, sha256,
 };
 
 const MAX_TRANSACTION_BYTES: usize = 512 * 1024;
@@ -109,10 +109,82 @@ impl VerifiedTxReceipt {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VerifiedEvmTxReceipt {
+    chain_id: u64,
+    network: String,
+    block_number: u64,
+    block_hash: [u8; 32],
+    tx_hash: [u8; 32],
+    tx_index: u64,
+    succeeded: bool,
+    cumulative_gas_used: u64,
+    logs_count: u64,
+    assurance: AnchorAssurance,
+    anchor_evidence_hash: [u8; 32],
+    proof_bundle_hash: [u8; 32],
+}
+
+impl VerifiedEvmTxReceipt {
+    pub fn chain_id(&self) -> u64 { self.chain_id }
+    pub fn network(&self) -> &str { &self.network }
+    pub fn block_number(&self) -> u64 { self.block_number }
+    pub fn block_hash(&self) -> [u8; 32] { self.block_hash }
+    pub fn tx_hash(&self) -> [u8; 32] { self.tx_hash }
+    pub fn tx_index(&self) -> u64 { self.tx_index }
+    pub fn succeeded(&self) -> bool { self.succeeded }
+    pub fn cumulative_gas_used(&self) -> u64 { self.cumulative_gas_used }
+    pub fn logs_count(&self) -> u64 { self.logs_count }
+    pub fn assurance(&self) -> AnchorAssurance { self.assurance }
+    pub fn anchor_evidence_hash(&self) -> [u8; 32] { self.anchor_evidence_hash }
+    pub fn proof_bundle_hash(&self) -> [u8; 32] { self.proof_bundle_hash }
+}
+
 impl Verifier {
     pub fn parse_tx_receipt_proof(&self, bytes: &[u8]) -> Result<TxReceiptProofBundle> {
         let canonical = self.canonical_bundle(bytes)?;
         parse_tx_receipt_proof(&canonical, self.chain_id, self.network)
+    }
+
+    /// Verifies exact transaction and receipt inclusion against a shared EVM
+    /// anchor, regardless of the stack that authenticated that anchor.
+    pub fn verify_tx_receipt_from_anchor(
+        &self,
+        bytes: &[u8],
+        anchor: &VerifiedEvmAnchor,
+    ) -> Result<VerifiedEvmTxReceipt> {
+        if anchor.chain_id() != self.chain_id || anchor.network() != self.network {
+            return Err(VerifyError::UnsupportedNetwork {
+                chain_id: anchor.chain_id(),
+                network: anchor.network().to_owned(),
+            });
+        }
+
+        let canonical = self.canonical_bundle(bytes)?;
+        let bundle = parse_tx_receipt_proof(&canonical, self.chain_id, self.network)?;
+        let (succeeded, cumulative_gas_used, logs_count) = verify_tx_receipt_core(
+            &bundle,
+            anchor.chain_id(),
+            anchor.block_number(),
+            anchor.block_hash(),
+            anchor.transactions_root(),
+            anchor.receipts_root(),
+        )?;
+
+        Ok(VerifiedEvmTxReceipt {
+            chain_id: bundle.chain_id,
+            network: bundle.network,
+            block_number: bundle.block_number,
+            block_hash: bundle.block_hash,
+            tx_hash: bundle.tx_hash,
+            tx_index: bundle.tx_index,
+            succeeded,
+            cumulative_gas_used,
+            logs_count,
+            assurance: anchor.assurance(),
+            anchor_evidence_hash: anchor.evidence_hash(),
+            proof_bundle_hash: sha256(&canonical),
+        })
     }
 
     /// Verifies exact inclusion against roots whose provenance is carried by `block`.
@@ -199,13 +271,50 @@ pub(super) fn verify_tx_receipt(
     block: &VerifiedExecutionBlock,
     proof_bundle_hash: [u8; 32],
 ) -> Result<VerifiedTxReceipt> {
-    if bundle.block_number != block.execution_block_number()
-        || bundle.block_hash != block.execution_block_hash()
-        || bundle.transactions_root != block.transactions_root()
-        || bundle.receipts_root != block.receipts_root()
+    let (succeeded, cumulative_gas_used, logs_count) = verify_tx_receipt_core(
+        &bundle,
+        block.chain_id(),
+        block.execution_block_number(),
+        block.execution_block_hash(),
+        block.transactions_root(),
+        block.receipts_root(),
+    )?;
+
+    Ok(VerifiedTxReceipt {
+        chain_id: bundle.chain_id,
+        network: bundle.network,
+        block_number: bundle.block_number,
+        block_hash: bundle.block_hash,
+        tx_hash: bundle.tx_hash,
+        tx_index: bundle.tx_index,
+        succeeded,
+        cumulative_gas_used,
+        logs_count,
+        checkpoint_root: block.checkpoint_root(),
+        provenance: block.provenance(),
+        consensus_bundle_hash: block.consensus_bundle_hash(),
+        execution_header_proof_hash: block.proof_bundle_hash(),
+        proof_bundle_hash,
+    })
+}
+
+fn verify_tx_receipt_core(
+    bundle: &TxReceiptProofBundle,
+    expected_chain_id: u64,
+    expected_block_number: u64,
+    expected_block_hash: [u8; 32],
+    expected_transactions_root: [u8; 32],
+    expected_receipts_root: [u8; 32],
+) -> Result<(bool, u64, u64)> {
+    if bundle.chain_id != expected_chain_id
+        || bundle.block_number != expected_block_number
+        || bundle.block_hash != expected_block_hash
+        || bundle.transactions_root != expected_transactions_root
+        || bundle.receipts_root != expected_receipts_root
     {
         return Err(VerifyError::ReceiptHeaderMismatch);
     }
+
     verify_trie_value(
         bundle.transactions_root,
         bundle.tx_index,
@@ -233,28 +342,19 @@ pub(super) fn verify_tx_receipt(
             "verified transaction bytes do not match transaction hash".to_owned(),
         ));
     }
+
     let receipt = decode_receipt(&bundle.receipt)?;
     if transaction.ty() != receipt.ty() {
         return Err(VerifyError::InvalidReceiptProof(
             "receipt envelope type does not match transaction type".to_owned(),
         ));
     }
-    Ok(VerifiedTxReceipt {
-        chain_id: bundle.chain_id,
-        network: bundle.network,
-        block_number: bundle.block_number,
-        block_hash: bundle.block_hash,
-        tx_hash: bundle.tx_hash,
-        tx_index: bundle.tx_index,
-        succeeded: receipt.status(),
-        cumulative_gas_used: receipt.cumulative_gas_used(),
-        logs_count: receipt.logs().len() as u64,
-        checkpoint_root: block.checkpoint_root(),
-        provenance: block.provenance(),
-        consensus_bundle_hash: block.consensus_bundle_hash(),
-        execution_header_proof_hash: block.proof_bundle_hash(),
-        proof_bundle_hash,
-    })
+
+    Ok((
+        receipt.status(),
+        receipt.cumulative_gas_used(),
+        receipt.logs().len() as u64,
+    ))
 }
 
 fn verify_trie_value(
