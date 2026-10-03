@@ -19,9 +19,6 @@ alloy-trie = { version = "=0.9.5", features = ["ethereum"] }
 alloy-tx-macros = "=1.0.42"
 flate2 = "1"
 helios-consensus-core = { git = "https://github.com/a16z/helios.git", rev = "204c998a927348e1c000a664f08d5b37b1b0d924", package = "helios-consensus-core" }
-ethereum_ssz_derive = "0.9.1"
-ssz_types = "0.11"
-typenum = "1.20"
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["raw_value"] }
 sha2 = "0.10"
