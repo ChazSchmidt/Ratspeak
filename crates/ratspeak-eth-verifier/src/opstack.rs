@@ -1,5 +1,7 @@
-use alloy_primitives::{Address, B256, b256, keccak256};
-use helios_opstack::{SequencerCommitment, types::ExecutionPayload};
+use alloy_primitives::{Address, B256, Signature, U256, keccak256};
+use ethereum_ssz_derive::Decode;
+use ssz::Decode as _;
+use ssz_types::{FixedVector, VariableList};
 
 use super::{
     AnchorAssurance, ETHEREUM_SEPOLIA_CHAIN_ID, ETHEREUM_SEPOLIA, Result, StackConfig,
@@ -7,11 +9,49 @@ use super::{
 };
 use crate::execution::decode_header;
 
-const UNSAFE_SIGNER_SLOT: B256 =
-    b256!("65a7ed542fb37fe237fdfbdd70b31598523fe5b32879e307bae27a0bd9581c08");
+const UNSAFE_SIGNER_SLOT: B256 = B256::new([
+    0x65, 0xa7, 0xed, 0x54, 0x2f, 0xb3, 0x7f, 0xe2,
+    0x37, 0xfd, 0xfb, 0xdd, 0x70, 0xb3, 0x15, 0x98,
+    0x52, 0x3f, 0xe5, 0xb3, 0x28, 0x79, 0xe3, 0x07,
+    0xba, 0xe2, 0x7a, 0x0b, 0xd9, 0x58, 0x1c, 0x08,
+]);
+
+#[derive(Debug, Clone, Decode)]
+struct OpExecutionPayload {
+    parent_hash: B256,
+    fee_recipient: Address,
+    state_root: B256,
+    receipts_root: B256,
+    logs_bloom: FixedVector<u8, typenum::U256>,
+    prev_randao: B256,
+    block_number: u64,
+    gas_limit: u64,
+    gas_used: u64,
+    timestamp: u64,
+    extra_data: VariableList<u8, typenum::U32>,
+    base_fee_per_gas: U256,
+    block_hash: B256,
+    transactions: VariableList<VariableList<u8, typenum::U1073741824>, typenum::U1048576>,
+    withdrawals: VariableList<OpWithdrawal, typenum::U16>,
+    blob_gas_used: u64,
+    excess_blob_gas: u64,
+    withdrawals_root: B256,
+}
+
+#[derive(Debug, Clone, Decode)]
+struct OpWithdrawal {
+    index: u64,
+    validator_index: u64,
+    address: Address,
+    amount: u64,
+}
 
 /// OP-Stack execution head authenticated by a sequencer signature whose signer
 /// was independently proven from the chain's L1 SystemConfig storage.
+///
+/// The online agent may decompress the wire commitment before sending it over
+/// RatSpeak. Decompression is not trusted: the phone verifies the sequencer
+/// signature over the exact decompressed commitment data.
 ///
 /// This intentionally represents the fast unsafe/sequencer-authenticated path.
 /// It must not be presented as L1-derived safe or finalized state.
@@ -30,9 +70,12 @@ pub struct OpStackSequencerAnchor {
 }
 
 impl OpStackSequencerAnchor {
+    /// Verifies a decompressed Helios-compatible OP Stack commitment:
+    /// 65-byte ECDSA signature followed by signed data. The signed data begins
+    /// with a 32-byte commitment prefix followed by the SSZ execution payload.
     pub fn verify(
         chain_id: u64,
-        compressed_commitment: &[u8],
+        decompressed_commitment: &[u8],
         verified_signer_storage: &VerifiedStorageValue,
     ) -> Result<Self> {
         let definition = chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
@@ -53,19 +96,28 @@ impl OpStackSequencerAnchor {
         {
             return Err(VerifyError::CheckpointMismatch);
         }
+        if decompressed_commitment.len() <= 65 + 32 {
+            return Err(VerifyError::Malformed("OP-Stack sequencer commitment is too short"));
+        }
 
         let signer_bytes = verified_signer_storage.value().to_be_bytes::<32>();
-        let signer = Address::from_slice(&signer_bytes[12..]);
-        if signer == Address::ZERO {
+        let expected_signer = Address::from_slice(&signer_bytes[12..]);
+        if expected_signer == Address::ZERO {
             return Err(VerifyError::Malformed("OP-Stack sequencer signer is zero"));
         }
 
-        let commitment = SequencerCommitment::new(compressed_commitment)
-            .map_err(|_| VerifyError::Malformed("invalid OP-Stack sequencer commitment"))?;
-        commitment
-            .verify(signer, chain_id)
+        let signature = Signature::try_from(&decompressed_commitment[..65])
             .map_err(|_| VerifyError::Malformed("invalid OP-Stack sequencer signature"))?;
-        let payload = ExecutionPayload::try_from(&commitment)
+        let signed_data = &decompressed_commitment[65..];
+        let message_hash = op_signature_hash(signed_data, chain_id);
+        let recovered = signature
+            .recover_address_from_prehash(&message_hash)
+            .map_err(|_| VerifyError::Malformed("invalid OP-Stack sequencer signature"))?;
+        if recovered != expected_signer {
+            return Err(VerifyError::Malformed("OP-Stack sequencer signer mismatch"));
+        }
+
+        let payload = OpExecutionPayload::from_ssz_bytes(&signed_data[32..])
             .map_err(|_| VerifyError::Malformed("invalid OP-Stack execution payload"))?;
 
         Ok(Self {
@@ -76,9 +128,9 @@ impl OpStackSequencerAnchor {
             state_root: payload.state_root.0,
             receipts_root: payload.receipts_root.0,
             timestamp: payload.timestamp,
-            sequencer_signer: signer.0,
+            sequencer_signer: expected_signer.0,
             signer_storage_proof_hash: verified_signer_storage.proof_bundle_hash(),
-            sequencer_commitment_hash: keccak256(compressed_commitment).0,
+            sequencer_commitment_hash: keccak256(decompressed_commitment).0,
         })
     }
 
@@ -120,6 +172,17 @@ impl OpStackSequencerAnchor {
     }
 }
 
+fn op_signature_hash(data: &[u8], chain_id: u64) -> B256 {
+    let mut chain_word = [0u8; 32];
+    chain_word[24..].copy_from_slice(&chain_id.to_be_bytes());
+    let payload_hash = keccak256(data);
+    let mut bytes = [0u8; 96];
+    // First 32 bytes are the zero domain used by the Helios OP Stack feed.
+    bytes[32..64].copy_from_slice(&chain_word);
+    bytes[64..96].copy_from_slice(payload_hash.as_slice());
+    keccak256(bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,5 +195,18 @@ mod tests {
             assert!(matches!(definition.stack, StackConfig::OpStack(_)));
             assert_eq!(definition.parent_chain_id, Some(ETHEREUM_SEPOLIA_CHAIN_ID));
         }
+    }
+
+    #[test]
+    fn op_signature_domain_commits_chain_id_and_data() {
+        let data = b"op-stack-test";
+        assert_ne!(
+            op_signature_hash(data, BASE_SEPOLIA_CHAIN_ID),
+            op_signature_hash(data, OP_SEPOLIA_CHAIN_ID)
+        );
+        assert_ne!(
+            op_signature_hash(data, BASE_SEPOLIA_CHAIN_ID),
+            op_signature_hash(b"op-stack-changed", BASE_SEPOLIA_CHAIN_ID)
+        );
     }
 }
