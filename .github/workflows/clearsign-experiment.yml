@@ -56,3 +56,6 @@ jobs:
       - name: Test wallet clear-sign binding
         run: cargo test -p ratspeak-eth-wallet --locked
         working-directory: Ratspeak
+      - name: Test Base Sepolia proof verifier
+        run: cargo test -p ratspeak-eth-verifier --locked base_sepolia
+        working-directory: Ratspeak
