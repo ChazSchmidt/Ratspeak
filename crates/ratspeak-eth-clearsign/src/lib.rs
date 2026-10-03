@@ -10,6 +10,7 @@ use alloy_primitives::{Address, B256, Bytes, U256, keccak256};
 use serde::Deserialize;
 
 pub const BASE_CHAIN_ID: u64 = 8453;
+pub const BASE_SEPOLIA_CHAIN_ID: u64 = 84_532;
 pub const ERC20_TRANSFER_SELECTOR: [u8; 4] = [0xa9, 0x05, 0x9c, 0xbb];
 
 #[derive(Debug, thiserror::Error)]
@@ -412,6 +413,7 @@ fn network_label(chain_id: u64) -> String {
     match chain_id {
         1 => "Ethereum".to_owned(),
         BASE_CHAIN_ID => "Base".to_owned(),
+        BASE_SEPOLIA_CHAIN_ID => "Base Sepolia".to_owned(),
         11_155_111 => "Sepolia".to_owned(),
         other => format!("EIP-155 {other}"),
     }
