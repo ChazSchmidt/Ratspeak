@@ -120,6 +120,27 @@ internal object RustEthereumNativeWalletEngine : EthereumNativeWalletEngine {
         }
     }
 
+    internal fun cancelClearSignedOperation(
+        identityHash: ByteArray,
+        identitySessionGeneration: Long,
+        operationId: ByteArray,
+    ) {
+        try {
+            if (identityHash.size == 16 && operationId.size == 16) {
+                nativeCancelClearSignedOperation(
+                    identityHash,
+                    identitySessionGeneration,
+                    operationId,
+                )
+            }
+        } catch (_: UnsatisfiedLinkError) {
+            // Process teardown already made the preparation unusable.
+        } finally {
+            identityHash.fill(0)
+            operationId.fill(0)
+        }
+    }
+
     /** Cancels one exact Rust-owned preparation when its native ceremony closes. */
     internal fun cancelExactTransfer(
         identityHash: ByteArray,
@@ -353,6 +374,11 @@ internal object RustEthereumNativeWalletEngine : EthereumNativeWalletEngine {
         review: ByteArray,
         secret: ByteArray,
     ): ByteArray
+    @JvmStatic private external fun nativeCancelClearSignedOperation(
+        identityHash: ByteArray,
+        identitySessionGeneration: Long,
+        operationId: ByteArray,
+    )
     @JvmStatic private external fun nativeCancelExactTransfer(
         identityHash: ByteArray,
         identitySessionGeneration: Long,
