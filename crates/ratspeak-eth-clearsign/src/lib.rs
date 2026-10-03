@@ -10,7 +10,11 @@ use alloy_primitives::{Address, B256, Bytes, U256, keccak256};
 use serde::Deserialize;
 
 pub const BASE_CHAIN_ID: u64 = 8453;
+pub const ETHEREUM_SEPOLIA_CHAIN_ID: u64 = 11_155_111;
 pub const BASE_SEPOLIA_CHAIN_ID: u64 = 84_532;
+pub const OP_SEPOLIA_CHAIN_ID: u64 = 11_155_420;
+pub const ARBITRUM_SEPOLIA_CHAIN_ID: u64 = 421_614;
+pub const ROBINHOOD_TESTNET_CHAIN_ID: u64 = 46_630;
 pub const ERC20_TRANSFER_SELECTOR: [u8; 4] = [0xa9, 0x05, 0x9c, 0xbb];
 
 #[derive(Debug, thiserror::Error)]
@@ -497,8 +501,11 @@ fn network_label(chain_id: u64) -> String {
     match chain_id {
         1 => "Ethereum".to_owned(),
         BASE_CHAIN_ID => "Base".to_owned(),
+        ETHEREUM_SEPOLIA_CHAIN_ID => "Ethereum Sepolia".to_owned(),
         BASE_SEPOLIA_CHAIN_ID => "Base Sepolia".to_owned(),
-        11_155_111 => "Sepolia".to_owned(),
+        OP_SEPOLIA_CHAIN_ID => "OP Sepolia".to_owned(),
+        ARBITRUM_SEPOLIA_CHAIN_ID => "Arbitrum Sepolia".to_owned(),
+        ROBINHOOD_TESTNET_CHAIN_ID => "Robinhood Chain Testnet".to_owned(),
         other => format!("EIP-155 {other}"),
     }
 }
@@ -534,6 +541,22 @@ impl DefinitionRegistry {
             .retain(|d| d.definition_id() != definition.definition_id());
         self.definitions.push(definition);
         Ok(hash)
+    }
+
+    /// Installs the native-ETH definitions required by the five-network proof
+    /// of concept. This is intended to be called automatically by the app's
+    /// support-bundle installer; users should not have to select definitions.
+    pub fn install_poc_native_definitions(&mut self) -> Result<()> {
+        for bytes in [
+            include_bytes!("../definitions/ethereum-sepolia-native-eth.json").as_slice(),
+            include_bytes!("../definitions/base-sepolia-native-eth.json").as_slice(),
+            include_bytes!("../definitions/op-sepolia-native-eth.json").as_slice(),
+            include_bytes!("../definitions/arbitrum-sepolia-native-eth.json").as_slice(),
+            include_bytes!("../definitions/robinhood-testnet-native-eth.json").as_slice(),
+        ] {
+            self.install_bytes(bytes)?;
+        }
+        Ok(())
     }
 
     pub fn remove(&mut self, definition_id: &str) -> bool {
@@ -691,6 +714,36 @@ mod tests {
             r.install_bytes(d).unwrap();
         }
         r
+    }
+
+    #[test]
+    fn poc_native_support_bundle_covers_all_five_networks() {
+        let mut registry = DefinitionRegistry::new();
+        registry.install_poc_native_definitions().unwrap();
+        let recipient = address("1111111111111111111111111111111111111111");
+
+        for (chain_id, network) in [
+            (ETHEREUM_SEPOLIA_CHAIN_ID, "Ethereum Sepolia"),
+            (BASE_SEPOLIA_CHAIN_ID, "Base Sepolia"),
+            (OP_SEPOLIA_CHAIN_ID, "OP Sepolia"),
+            (ARBITRUM_SEPOLIA_CHAIN_ID, "Arbitrum Sepolia"),
+            (ROBINHOOD_TESTNET_CHAIN_ID, "Robinhood Chain Testnet"),
+        ] {
+            let review = registry
+                .review(&EvmOperation {
+                    chain_id,
+                    to: recipient,
+                    value: U256::from(1_000_000_000_000_000u64),
+                    input: Bytes::new(),
+                    gas_limit: 21_000,
+                    max_fee_per_gas: 1_000_000_000,
+                    max_priority_fee_per_gas: 100_000_000,
+                })
+                .unwrap();
+            assert_eq!(review.network, network);
+            assert_eq!(review.asset_symbol, "ETH");
+            assert_eq!(review.kind, ReviewKind::NativeTransfer);
+        }
     }
 
     #[test]
