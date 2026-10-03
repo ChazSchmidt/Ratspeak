@@ -46,6 +46,13 @@ struct OpWithdrawal {
     amount: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OpStackSignerProofQuery {
+    pub parent_chain_id: u64,
+    pub system_config: Address,
+    pub storage_key: B256,
+}
+
 /// OP-Stack execution head authenticated by a sequencer signature whose signer
 /// was independently proven from the chain's L1 SystemConfig storage.
 ///
@@ -70,6 +77,27 @@ pub struct OpStackSequencerAnchor {
 }
 
 impl OpStackSequencerAnchor {
+    pub fn signer_proof_query(chain_id: u64) -> Result<OpStackSignerProofQuery> {
+        let definition = chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
+            chain_id,
+            network: "unknown".to_owned(),
+        })?;
+        let StackConfig::OpStack(config) = definition.stack else {
+            return Err(VerifyError::UnsupportedNetwork {
+                chain_id,
+                network: definition.network.to_owned(),
+            });
+        };
+        let parent_chain_id = definition
+            .parent_chain_id
+            .ok_or(VerifyError::CheckpointMismatch)?;
+        Ok(OpStackSignerProofQuery {
+            parent_chain_id,
+            system_config: config.system_config,
+            storage_key: UNSAFE_SIGNER_SLOT,
+        })
+    }
+
     /// Verifies a decompressed Helios-compatible OP Stack commitment:
     /// 65-byte ECDSA signature followed by signed data. The signed data begins
     /// with a 32-byte commitment prefix followed by the SSZ execution payload.
