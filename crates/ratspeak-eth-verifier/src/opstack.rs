@@ -1,7 +1,4 @@
-use alloy_primitives::{Address, B256, Signature, U256, keccak256};
-use ssz_derive::Decode;
-use ssz::Decode as _;
-use ssz_types::{FixedVector, VariableList};
+use alloy_primitives::{Address, B256, Signature, keccak256};
 
 use super::{
     AnchorAssurance, ETHEREUM_SEPOLIA_CHAIN_ID, ETHEREUM_SEPOLIA, Result, StackConfig,
@@ -16,34 +13,78 @@ const UNSAFE_SIGNER_SLOT: B256 = B256::new([
     0xba, 0xe2, 0x7a, 0x0b, 0xd9, 0x58, 0x1c, 0x08,
 ]);
 
-#[derive(Debug, Clone, Decode)]
-struct OpExecutionPayload {
-    parent_hash: B256,
-    fee_recipient: Address,
-    state_root: B256,
-    receipts_root: B256,
-    logs_bloom: FixedVector<u8, typenum::U256>,
-    prev_randao: B256,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OpExecutionPayloadCommitments {
+    state_root: [u8; 32],
+    receipts_root: [u8; 32],
     block_number: u64,
-    gas_limit: u64,
-    gas_used: u64,
     timestamp: u64,
-    extra_data: VariableList<u8, typenum::U32>,
-    base_fee_per_gas: U256,
-    block_hash: B256,
-    transactions: VariableList<VariableList<u8, typenum::U1073741824>, typenum::U1048576>,
-    withdrawals: VariableList<OpWithdrawal, typenum::U16>,
-    blob_gas_used: u64,
-    excess_blob_gas: u64,
-    withdrawals_root: B256,
+    block_hash: [u8; 32],
 }
 
-#[derive(Debug, Clone, Decode)]
-struct OpWithdrawal {
-    index: u64,
-    validator_index: u64,
-    address: Address,
-    amount: u64,
+const OP_EXECUTION_PAYLOAD_FIXED_BYTES: usize = 560;
+
+fn parse_execution_payload_commitments(bytes: &[u8]) -> Result<OpExecutionPayloadCommitments> {
+    if bytes.len() < OP_EXECUTION_PAYLOAD_FIXED_BYTES {
+        return Err(VerifyError::Malformed("OP-Stack execution payload is truncated"));
+    }
+
+    // Pinned Helios OP payload SSZ fixed section:
+    // parent_hash[32], fee_recipient[20], state_root[32], receipts_root[32],
+    // logs_bloom[256], prev_randao[32], block_number/gas_limit/gas_used/timestamp,
+    // extra_data offset, base_fee[32], block_hash[32], tx offset, withdrawal
+    // offset, blob gas fields, withdrawals_root[32].
+    let state_root = bytes[52..84]
+        .try_into()
+        .map_err(|_| VerifyError::Malformed("invalid OP state root"))?;
+    let receipts_root = bytes[84..116]
+        .try_into()
+        .map_err(|_| VerifyError::Malformed("invalid OP receipts root"))?;
+    let block_number = u64::from_le_bytes(
+        bytes[404..412]
+            .try_into()
+            .map_err(|_| VerifyError::Malformed("invalid OP block number"))?,
+    );
+    let timestamp = u64::from_le_bytes(
+        bytes[428..436]
+            .try_into()
+            .map_err(|_| VerifyError::Malformed("invalid OP timestamp"))?,
+    );
+    let block_hash = bytes[472..504]
+        .try_into()
+        .map_err(|_| VerifyError::Malformed("invalid OP block hash"))?;
+
+    let extra_data_offset = u32::from_le_bytes(
+        bytes[436..440]
+            .try_into()
+            .map_err(|_| VerifyError::Malformed("invalid OP extra-data offset"))?,
+    ) as usize;
+    let transactions_offset = u32::from_le_bytes(
+        bytes[504..508]
+            .try_into()
+            .map_err(|_| VerifyError::Malformed("invalid OP transactions offset"))?,
+    ) as usize;
+    let withdrawals_offset = u32::from_le_bytes(
+        bytes[508..512]
+            .try_into()
+            .map_err(|_| VerifyError::Malformed("invalid OP withdrawals offset"))?,
+    ) as usize;
+
+    if extra_data_offset < OP_EXECUTION_PAYLOAD_FIXED_BYTES
+        || extra_data_offset > transactions_offset
+        || transactions_offset > withdrawals_offset
+        || withdrawals_offset > bytes.len()
+    {
+        return Err(VerifyError::Malformed("invalid OP variable-field offsets"));
+    }
+
+    Ok(OpExecutionPayloadCommitments {
+        state_root,
+        receipts_root,
+        block_number,
+        timestamp,
+        block_hash,
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,16 +186,15 @@ impl OpStackSequencerAnchor {
             return Err(VerifyError::Malformed("OP-Stack sequencer signer mismatch"));
         }
 
-        let payload = OpExecutionPayload::from_ssz_bytes(&signed_data[32..])
-            .map_err(|_| VerifyError::Malformed("invalid OP-Stack execution payload"))?;
+        let payload = parse_execution_payload_commitments(&signed_data[32..])?;
 
         Ok(Self {
             chain_id,
             network: definition.network,
             block_number: payload.block_number,
-            block_hash: payload.block_hash.0,
-            state_root: payload.state_root.0,
-            receipts_root: payload.receipts_root.0,
+            block_hash: payload.block_hash,
+            state_root: payload.state_root,
+            receipts_root: payload.receipts_root,
             timestamp: payload.timestamp,
             sequencer_signer: expected_signer.0,
             signer_storage_proof_hash: verified_signer_storage.proof_bundle_hash(),
