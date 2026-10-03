@@ -16,7 +16,6 @@ use flate2::bufread::GzDecoder;
 use sha2::{Digest, Sha256};
 
 mod anchor;
-mod base_sepolia;
 mod chains;
 mod composite;
 mod consensus;
@@ -29,7 +28,6 @@ mod receipt;
 mod storage;
 
 pub use anchor::{AnchorAssurance, VerifiedEvmAnchor};
-pub use base_sepolia::{BaseSepoliaSequencerAnchor, VerifiedBaseSepoliaHeader};
 pub use chains::{
     ARBITRUM_SEPOLIA, ARBITRUM_SEPOLIA_CHAIN_ID, BASE_SEPOLIA, BASE_SEPOLIA_CHAIN_ID,
     ChainDefinition, ETHEREUM_SEPOLIA, ETHEREUM_SEPOLIA_CHAIN_ID, NitroConfig, OP_SEPOLIA,
