@@ -127,6 +127,24 @@ pub static SUPPORTED_CHAINS: [ChainDefinition; 5] = [
     ROBINHOOD_TESTNET,
 ];
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ChainSupportRequirements {
+    pub chain_id: u64,
+    pub family: VerificationFamily,
+    pub requires_ethereum_sepolia_bootstrap: bool,
+    pub parent_chain_id: Option<u64>,
+}
+
+pub fn support_requirements(chain_id: u64) -> Option<ChainSupportRequirements> {
+    let chain = chain_definition(chain_id)?;
+    Some(ChainSupportRequirements {
+        chain_id,
+        family: chain.family,
+        requires_ethereum_sepolia_bootstrap: true,
+        parent_chain_id: chain.parent_chain_id,
+    })
+}
+
 pub fn chain_definition(chain_id: u64) -> Option<&'static ChainDefinition> {
     SUPPORTED_CHAINS.iter().find(|chain| chain.chain_id == chain_id)
 }
@@ -134,6 +152,22 @@ pub fn chain_definition(chain_id: u64) -> Option<&'static ChainDefinition> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_poc_network_resolves_to_one_ethereum_bootstrap_dependency() {
+        for chain in SUPPORTED_CHAINS {
+            let requirements = support_requirements(chain.chain_id).unwrap();
+            assert!(requirements.requires_ethereum_sepolia_bootstrap);
+            if chain.chain_id == ETHEREUM_SEPOLIA_CHAIN_ID {
+                assert_eq!(requirements.parent_chain_id, None);
+            } else {
+                assert_eq!(
+                    requirements.parent_chain_id,
+                    Some(ETHEREUM_SEPOLIA_CHAIN_ID)
+                );
+            }
+        }
+    }
 
     #[test]
     fn five_network_poc_has_three_verifier_families() {
