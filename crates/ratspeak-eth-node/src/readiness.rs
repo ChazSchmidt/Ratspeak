@@ -1,6 +1,8 @@
 use ratspeak_eth_clearsign::DefinitionRegistry;
 use ratspeak_eth_verifier::{VerificationFamily, chain_definition, support_requirements};
 
+use crate::{EthereumNodeStore, NodeStoreError, Result};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OfflineReadiness {
     Ready,
@@ -23,6 +25,33 @@ pub struct OfflineReadinessReport {
 impl OfflineReadinessReport {
     pub fn is_ready(&self) -> bool {
         self.readiness == OfflineReadiness::Ready
+    }
+}
+
+impl EthereumNodeStore {
+    pub fn offline_readiness(
+        &self,
+        chain_id: u64,
+        now_unix: u64,
+        definitions: &DefinitionRegistry,
+        clear_sign_definition_id: Option<&str>,
+        balance_definition_id: Option<&str>,
+    ) -> Result<OfflineReadinessReport> {
+        if now_unix == 0 {
+            return Err(NodeStoreError::new(
+                "offline readiness requires a valid local time",
+            ));
+        }
+        let ethereum_bootstrap_available =
+            crate::bootstrap::active_checkpoint_available_at(self, now_unix)
+                .map_err(|error| NodeStoreError::new(error.to_string()))?;
+        Ok(assess_offline_readiness(
+            chain_id,
+            ethereum_bootstrap_available,
+            definitions,
+            clear_sign_definition_id,
+            balance_definition_id,
+        ))
     }
 }
 
