@@ -183,7 +183,12 @@ pub(crate) fn read_unconfirmed_signed_transactions(
     for hash in hashes {
         let transaction = read_signed_transaction(connection, chain_id, network, hash)?
             .ok_or_else(|| NodeStoreError::new("unconfirmed signed transaction disappeared"))?;
-        if crate::receipt::read_receipt_by_tx_hash(connection, chain_id, network, hash)?.is_none() {
+        let legacy_verified =
+            crate::receipt::read_receipt_by_tx_hash(connection, chain_id, network, hash)?.is_some();
+        let generic_verified =
+            crate::evm_receipt::read_evm_receipt_by_tx_hash(connection, chain_id, network, hash)?
+                .is_some();
+        if !legacy_verified && !generic_verified {
             unconfirmed.push(transaction);
         }
     }
