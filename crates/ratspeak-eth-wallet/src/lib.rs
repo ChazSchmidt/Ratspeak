@@ -1507,6 +1507,16 @@ mod tests {
             .unwrap();
         registry
     }
+    fn base_sepolia_usdc_registry() -> DefinitionRegistry {
+        let mut registry = DefinitionRegistry::new();
+        registry
+            .install_bytes(include_bytes!(
+                "../../ratspeak-eth-clearsign/definitions/base-sepolia-usdc.json"
+            ))
+            .unwrap();
+        registry
+    }
+
 
     fn erc20_transfer_calldata(recipient: Address, amount: U256) -> Bytes {
         let mut calldata = Vec::with_capacity(68);
@@ -1533,6 +1543,48 @@ mod tests {
             max_fee_per_gas: 1_000_000_000,
             max_priority_fee_per_gas: 100_000_000,
         }
+    }
+
+    #[test]
+    fn clear_signed_base_sepolia_usdc_binds_chain_id_84532() {
+        let secret = secret();
+        let account = secret.account().unwrap();
+        let recipient = address("2222222222222222222222222222222222222222");
+        let prepared = account
+            .prepare_clear_signed_operation(
+                ClearSignedIntent {
+                    chain_id: 84_532,
+                    from: account.address(),
+                    to: address("036CbD53842c5426634e7929541eC2318f3dCF7e"),
+                    value: U256::ZERO,
+                    input: erc20_transfer_calldata(recipient, U256::from(10_000_000u64)),
+                    nonce: 3,
+                    gas_limit: 65_000,
+                    max_fee_per_gas: 1_000_000_000,
+                    max_priority_fee_per_gas: 100_000_000,
+                },
+                &base_sepolia_usdc_registry(),
+                operation(12),
+                1_000,
+                1_100,
+            )
+            .unwrap();
+
+        assert_eq!(prepared.review().clear_sign.network, "Base Sepolia");
+        assert_eq!(prepared.review().clear_sign.asset_symbol, "USDC");
+        assert_eq!(prepared.review().clear_sign.recipient, recipient);
+
+        let mut authorizer = ClearAuthorizer {
+            review_digest: prepared.review().review_digest,
+            calls: 0,
+        };
+        let signed = prepared
+            .authorize_and_sign(&secret, &mut authorizer, 1_001)
+            .unwrap();
+        let mut remaining = signed.raw_transaction();
+        let envelope = TxEnvelope::decode_2718(&mut remaining).unwrap();
+        assert!(remaining.is_empty());
+        assert_eq!(envelope.chain_id(), Some(84_532));
     }
 
     #[test]
