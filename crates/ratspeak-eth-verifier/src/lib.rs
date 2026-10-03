@@ -470,6 +470,22 @@ impl Verifier {
         Ok(verified)
     }
 
+    /// Verifies and records an account against any stack-authenticated EVM anchor.
+    pub fn verify_account_from_anchor(
+        &self,
+        bytes: &[u8],
+        anchor: &VerifiedEvmAnchor,
+        account_store: &mut impl VerifiedAccountStore,
+    ) -> Result<VerifiedAccount> {
+        if anchor.chain_id() != self.chain_id || anchor.network() != self.network {
+            return Err(VerifyError::UnsupportedNetwork {
+                chain_id: anchor.chain_id(),
+                network: anchor.network().to_owned(),
+            });
+        }
+        self.verify_and_import(bytes, &anchor.pinned_checkpoint(), account_store)
+    }
+
     /// Verifies and records an account against a consensus-derived execution header.
     pub fn verify_account_from_consensus(
         &self,
