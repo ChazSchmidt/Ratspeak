@@ -6,7 +6,7 @@ use alloy_trie::Nibbles;
 use alloy_trie::proof::verify_proof;
 
 use super::{
-    Cursor, KIND_TX_RECEIPT_PROOF, MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, Result, SEPOLIA_CHAIN_ID,
+    Cursor, KIND_TX_RECEIPT_PROOF, MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, Result,
     VerifiedExecutionBlock, Verifier, VerifyError, sha256,
 };
 
@@ -222,10 +222,11 @@ pub(super) fn verify_tx_receipt(
     )?;
 
     let transaction = decode_transaction(&bundle.raw_tx)?;
-    if transaction.chain_id() != Some(SEPOLIA_CHAIN_ID) {
-        return Err(VerifyError::InvalidTransaction(
-            "transaction does not commit to Sepolia chain id".to_owned(),
-        ));
+    if transaction.chain_id() != Some(bundle.chain_id) {
+        return Err(VerifyError::InvalidTransaction(format!(
+            "transaction does not commit to expected chain id {}",
+            bundle.chain_id
+        )));
     }
     if transaction.tx_hash().0 != bundle.tx_hash {
         return Err(VerifyError::InvalidTransaction(
