@@ -219,6 +219,28 @@ addresses are fabricated in this branch.
 Once deployed, each chain gets the same RTEST definition semantics with only
 chain ID and contract address changing.
 
+## Profile-local readiness and persistence
+
+`ratspeak-eth-node` now exposes `assess_offline_readiness`, which collapses
+the internal dependency graph into one application-facing state:
+
+- `Ready`
+- `MissingChainSupport`
+- `MissingEthereumBootstrap`
+- `MissingAssetDefinitions`
+
+The node store now accepts signed EIP-1559 calls on all five supported chain
+IDs, including ERC-20 calldata, while the Ethereum checkpoint subsystem remains
+strictly Sepolia-specific.
+
+A separate `eth_verified_evm_receipts` schema (v18) stores stack-neutral
+verified receipts with their real anchor assurance and evidence hash. The
+legacy Beacon-finalized receipt table remains unchanged, so OP/Nitro evidence
+is never given fake Ethereum-finality metadata.
+
+Unconfirmed transaction queries now consider either legacy finalized Ethereum
+receipts or generic verified EVM receipts.
+
 ## User experience
 
 The target surface is demonstrated in
@@ -284,13 +306,16 @@ Do not add a dedicated CI workflow solely for this experiment.
 
 ## Remaining work
 
-1. Compile and fix any API/version mismatches discovered by Cargo.
+1. Compile and fix any API/version mismatches discovered by Cargo in a normal
+   Rust workspace; this execution environment has no `cargo` binary.
 2. Exercise a real Base Sepolia signed OP commitment end-to-end.
-3. Establish the equivalent signed-commitment source for OP Sepolia.
+3. Establish and exercise the equivalent signed-commitment source for OP
+   Sepolia.
 4. Exercise a real Arbitrum Sepolia `AssertionConfirmed` L1 receipt proof.
 5. Exercise the same Nitro path against Robinhood Chain Testnet.
 6. Deploy RTEST to the five networks and fill the deployment manifest.
 7. Generate/install RTEST clear-sign + balance definitions from those addresses.
-8. Wire the static demo concepts into the Android UI.
+8. Wire the readiness/asset bundle APIs into the Android surface rather than
+   leaving the HTML as the only visual demonstration.
 9. Later: replace long Nitro parent-header ancestry with BoLD history inclusion
    proofs.
