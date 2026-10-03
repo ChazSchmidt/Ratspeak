@@ -154,6 +154,96 @@ internal object EthereumNativeWalletBridge {
         return launched
     }
 
+    @JvmStatic
+    fun launchClearSignedOperation(
+        identityHash: ByteArray,
+        identitySessionGeneration: Long,
+        operationId: ByteArray,
+        chainId: Long,
+        sender: String,
+        network: String,
+        definitionHash: ByteArray,
+        operationHash: ByteArray,
+        assetSymbol: String,
+        assetDecimals: Int,
+        recipient: String,
+        amount: String,
+        nonce: String,
+        gasLimit: Long,
+        maxFeePerGasWei: String,
+        maxPriorityFeePerGasWei: String,
+        expiresAtEpochMillis: Long,
+        canonicalSigningPayload: ByteArray,
+    ): Boolean {
+        if (identityHash.size != IDENTITY_BYTES || identityHash.all { it == 0.toByte() } ||
+            identitySessionGeneration < 0L ||
+            operationId.size != OPERATION_BYTES || operationId.all { it == 0.toByte() }
+        ) {
+            identityHash.fill(0)
+            operationId.fill(0)
+            definitionHash.fill(0)
+            operationHash.fill(0)
+            canonicalSigningPayload.fill(0)
+            return false
+        }
+        val identity = identityHash.copyOf()
+        val operation = operationId.copyOf()
+        identityHash.fill(0)
+        operationId.fill(0)
+        val review = ExactClearSignedReview.checked(
+            chainId,
+            sender,
+            network,
+            definitionHash,
+            operationHash,
+            assetSymbol,
+            assetDecimals,
+            recipient,
+            amount,
+            nonce,
+            gasLimit,
+            maxFeePerGasWei,
+            maxPriorityFeePerGasWei,
+            expiresAtEpochMillis,
+            operation,
+            canonicalSigningPayload,
+        )
+        definitionHash.fill(0)
+        operationHash.fill(0)
+        canonicalSigningPayload.fill(0)
+        if (review == null) {
+            identity.fill(0)
+            operation.fill(0)
+            return false
+        }
+        val launched = onResumedActivity { owner ->
+            EthereumNativeWalletLauncher.launch(
+                owner,
+                EthereumNativeWalletLauncher.Request(
+                    activeAddress = sender,
+                    clearSignReview = review,
+                    onSigned = {
+                        identity.fill(0)
+                        operation.fill(0)
+                    },
+                    onClosed = {
+                        RustEthereumNativeWalletEngine.cancelClearSignedOperation(
+                            identity,
+                            identitySessionGeneration,
+                            operation,
+                        )
+                    },
+                ),
+            )
+        }
+        if (!launched) {
+            review.close()
+            identity.fill(0)
+            operation.fill(0)
+        }
+        return launched
+    }
+
     /**
      * Starts the native-only bulk evidence review. Rust supplies a public
      * display projection plus an opaque process-local token; the Activity
