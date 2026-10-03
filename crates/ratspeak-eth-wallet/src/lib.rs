@@ -688,6 +688,7 @@ pub struct ClearSignedIntent {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClearSignedTransferReview {
     pub operation_id: OperationId,
+    pub chain_id: u64,
     pub clear_sign: ClearSignReview,
     pub from: Address,
     pub nonce: u64,
@@ -769,6 +770,7 @@ impl WalletAccount {
 
         let mut review = ClearSignedTransferReview {
             operation_id,
+            chain_id: intent.chain_id,
             clear_sign,
             from: intent.from,
             nonce: intent.nonce,
@@ -890,6 +892,7 @@ fn compute_clear_signed_review_digest(
     let mut bytes = Vec::with_capacity(signing_bytes.len() + 256);
     bytes.extend_from_slice(b"ratspeak.ethereum.clearsign-review.v1\0");
     bytes.extend_from_slice(review.operation_id.as_bytes());
+    bytes.extend_from_slice(&review.chain_id.to_be_bytes());
     bytes.extend_from_slice(review.clear_sign.definition_hash.as_slice());
     bytes.extend_from_slice(review.clear_sign.operation_hash.as_slice());
     bytes.extend_from_slice(review.from.as_slice());
