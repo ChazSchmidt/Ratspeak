@@ -440,6 +440,11 @@ private object UnavailableNativeWalletEngine : EthereumNativeWalletEngine {
         review: ExactSepoliaTransferReview,
         secret: SensitiveWalletBytes,
     ) = NativeWalletResult.Failure(NativeWalletFailure.UNAVAILABLE)
+
+    override fun signClearSignedOperation(
+        review: ExactClearSignedReview,
+        secret: SensitiveWalletBytes,
+    ) = NativeWalletResult.Failure(NativeWalletFailure.UNAVAILABLE)
 }
 
 /** Draws recovery words without creating an immutable String containing them. */
