@@ -27,7 +27,7 @@ use crate::{
     TransactionStatusObservation, UntrustedAccountProofRpcInput, UntrustedTxReceiptProofRpcInput,
 };
 use ratspeak_eth_verifier::{
-    MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK,
+    MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, chain_definition,
 };
 
 const MAX_SIGNED_TRANSACTION_BYTES: usize = 256;
@@ -701,19 +701,24 @@ fn prevalidate_raw_relay(
     let mut remaining = raw;
     let envelope =
         TxEnvelope::decode_2718(&mut remaining).map_err(|_| GatewayProviderFailure::Permanent)?;
-    if !remaining.is_empty() || envelope.chain_id() != Some(SEPOLIA_CHAIN_ID) {
+    if !remaining.is_empty() {
         return Err(GatewayProviderFailure::Permanent);
     }
+    let chain_id = envelope
+        .chain_id()
+        .ok_or(GatewayProviderFailure::Permanent)?;
+    if chain_definition(chain_id).is_none() {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+
+    // The relay is deliberately semantics-agnostic. Clear-sign policy belongs
+    // on the signing device; the gateway only verifies that the exact signed
+    // bytes are a supported EIP-1559 call from the claimed sender.
     let TxEnvelope::Eip1559(signed) = &envelope else {
         return Err(GatewayProviderFailure::Permanent);
     };
     let tx = signed.tx();
-    if !matches!(tx.to, TxKind::Call(_))
-        || tx.gas_limit != NATIVE_TRANSFER_GAS_LIMIT
-        || tx.value == U256::ZERO
-        || !tx.input.is_empty()
-        || !tx.access_list.is_empty()
-    {
+    if !matches!(tx.to, TxKind::Call(_)) || !tx.access_list.is_empty() {
         return Err(GatewayProviderFailure::Permanent);
     }
     let sender = envelope
