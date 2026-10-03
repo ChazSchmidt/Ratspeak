@@ -140,6 +140,19 @@ pub struct BalanceProofQuery {
     pub value_mask_bits: u16,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InstalledAssetBundle {
+    pub chain_id: u64,
+    pub contract: Address,
+    pub network: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub clear_sign_definition_id: String,
+    pub balance_definition_id: String,
+    pub clear_sign_definition_hash: B256,
+    pub balance_definition_hash: B256,
+}
+
 impl BalanceProofQuery {
     pub fn interpret_storage_value(&self, value: U256) -> U256 {
         if self.value_mask_bits >= 256 {
@@ -559,6 +572,63 @@ impl DefinitionRegistry {
         Ok(())
     }
 
+    /// Installs one user-facing ERC-20 asset as an atomic pair of internal
+    /// definitions: operation meaning and balance-state interpretation.
+    pub fn install_asset_bundle(
+        &mut self,
+        clear_sign_bytes: &[u8],
+        balance_bytes: &[u8],
+    ) -> Result<InstalledAssetBundle> {
+        let clear = InstalledDefinition::parse(clear_sign_bytes)?;
+        let balance = InstalledDefinition::parse(balance_bytes)?;
+
+        let DefinitionKind::Erc7730(clear_meta) = &clear.kind else {
+            return Err(Error::UnsupportedDefinition(
+                "asset clear-sign definition must be ERC-7730",
+            ));
+        };
+        let DefinitionKind::Balance(balance_meta) = &balance.kind else {
+            return Err(Error::UnsupportedDefinition(
+                "asset balance definition must be a balance-proof definition",
+            ));
+        };
+        if clear_meta.chain_id != balance_meta.chain_id
+            || clear_meta.contract != balance_meta.contract
+            || clear_meta.symbol != balance_meta.symbol
+            || clear_meta.decimals != balance_meta.decimals
+        {
+            return Err(Error::UnsupportedDefinition(
+                "asset definition pair does not describe the same token",
+            ));
+        }
+
+        let installed = InstalledAssetBundle {
+            chain_id: clear_meta.chain_id,
+            contract: clear_meta.contract,
+            network: clear_meta.network.clone(),
+            symbol: clear_meta.symbol.clone(),
+            decimals: clear_meta.decimals,
+            clear_sign_definition_id: clear.definition_id.clone(),
+            balance_definition_id: balance.definition_id.clone(),
+            clear_sign_definition_hash: clear.definition_hash,
+            balance_definition_hash: balance.definition_hash,
+        };
+
+        self.definitions.retain(|definition| {
+            definition.definition_id() != clear.definition_id()
+                && definition.definition_id() != balance.definition_id()
+        });
+        self.definitions.push(clear);
+        self.definitions.push(balance);
+        Ok(installed)
+    }
+
+    pub fn contains(&self, definition_id: &str) -> bool {
+        self.definitions
+            .iter()
+            .any(|definition| definition.definition_id() == definition_id)
+    }
+
     pub fn remove(&mut self, definition_id: &str) -> bool {
         let before = self.definitions.len();
         self.definitions
@@ -744,6 +814,23 @@ mod tests {
             assert_eq!(review.asset_symbol, "ETH");
             assert_eq!(review.kind, ReviewKind::NativeTransfer);
         }
+    }
+
+    #[test]
+    fn one_asset_install_binds_clear_sign_and_balance_definitions() {
+        let mut registry = DefinitionRegistry::new();
+        let installed = registry
+            .install_asset_bundle(BASE_SEPOLIA_USDC, BASE_SEPOLIA_USDC_BALANCE)
+            .unwrap();
+        assert_eq!(installed.chain_id, BASE_SEPOLIA_CHAIN_ID);
+        assert_eq!(installed.symbol, "USDC");
+        assert_eq!(installed.decimals, 6);
+        assert_eq!(
+            installed.contract,
+            address("036CbD53842c5426634e7929541eC2318f3dCF7e")
+        );
+        assert!(registry.contains(&installed.clear_sign_definition_id));
+        assert!(registry.contains(&installed.balance_definition_id));
     }
 
     #[test]
