@@ -12,6 +12,7 @@ alloy-consensus = { version = "=1.0.42", default-features = false, features = ["
 alloy-eips = { version = "=1.0.42", default-features = false }
 alloy-primitives = "=1.6.0"
 alloy-rlp = "=0.3.15"
+ratspeak-eth-clearsign = { workspace = true }
 ratspeak-eth-verifier = { workspace = true }
 ratspeak-eth-wallet = { workspace = true }
 rusqlite = { workspace = true }
