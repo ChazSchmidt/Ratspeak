@@ -1,7 +1,4 @@
-use super::{
-    BASE_SEPOLIA_CHAIN_ID, BASE_SEPOLIA_NETWORK, PinnedCheckpoint, VerifiedBaseSepoliaHeader,
-    VerifiedExecutionBlock,
-};
+use super::{PinnedCheckpoint, VerifiedExecutionBlock};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AnchorAssurance {
@@ -97,22 +94,4 @@ impl From<&VerifiedExecutionBlock> for VerifiedEvmAnchor {
     }
 }
 
-impl From<&VerifiedBaseSepoliaHeader> for VerifiedEvmAnchor {
-    fn from(header: &VerifiedBaseSepoliaHeader) -> Self {
-        debug_assert_eq!(header.chain_id(), BASE_SEPOLIA_CHAIN_ID);
-        debug_assert_eq!(header.network(), BASE_SEPOLIA_NETWORK);
-        Self::new(
-            header.chain_id(),
-            header.network(),
-            header.block_number(),
-            header.block_hash(),
-            header.parent_hash(),
-            header.state_root(),
-            header.transactions_root(),
-            header.receipts_root(),
-            header.timestamp(),
-            AnchorAssurance::SequencerAuthenticated,
-            header.anchor_hash(),
-        )
-    }
-}
+
