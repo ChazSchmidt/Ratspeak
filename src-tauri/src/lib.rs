@@ -1,4 +1,33 @@
 mod channel_deep_link;
+#[cfg(feature = "experimental-ethereum")]
+mod ethereum;
+#[cfg(all(feature = "experimental-ethereum", any(target_os = "android", test)))]
+mod ethereum_android;
+#[cfg(all(feature = "experimental-ethereum", target_os = "linux"))]
+mod ethereum_linux;
+#[cfg(feature = "experimental-ethereum")]
+mod ethereum_online;
+#[cfg(feature = "experimental-ethereum")]
+mod ethereum_transport;
+
+/// Keeps the generic Contact-card command authoritative while giving the
+/// optional Ethereum coordinator an immediate wake after a durable Contact
+/// identity becomes available.
+#[cfg(feature = "experimental-ethereum")]
+#[tauri::command]
+async fn import_contact_card(
+    runtime: tauri::State<'_, std::sync::Arc<ratspeak_tauri::state::AppState>>,
+    ethereum: tauri::State<'_, ethereum::EthereumApplicationState>,
+    payload: String,
+) -> ratspeak_tauri::error::AppResult<serde_json::Value> {
+    let result = ratspeak_tauri::commands::contact_card::import_contact_card_payload(
+        runtime.inner(),
+        &payload,
+    )
+    .await?;
+    ethereum.wake_outbound();
+    Ok(result)
+}
 #[cfg(any(target_os = "android", target_os = "ios", test))]
 #[cfg_attr(
     all(test, not(any(target_os = "android", target_os = "ios"))),
@@ -956,6 +985,38 @@ pub fn run() {
 
     let app = builder
         .invoke_handler(tauri::generate_handler![
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_feature_status,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_setup_status,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_latest_transaction,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_public_account,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_synchronize,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_update_transaction_status,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_transfer_review,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_transaction_assurance,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_launch_native_wallet,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_review_pending_bulk_evidence,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_review_pending_checkpoint,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_import_checkpoint_file,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_connect_sepolia,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_import_gateway_card,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_add_public_service_contact,
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_review_pending_gateway_card,
             open_external_url,
             open_support_email,
             set_window_decorations,
@@ -1040,6 +1101,9 @@ pub fn run() {
             ratspeak_tauri::commands::peers::api_get_peers_snapshot,
             ratspeak_tauri::commands::contact_card::api_contact_card,
             ratspeak_tauri::commands::contact_card::api_preview_contact_card,
+            #[cfg(feature = "experimental-ethereum")]
+            import_contact_card,
+            #[cfg(not(feature = "experimental-ethereum"))]
             ratspeak_tauri::commands::contact_card::import_contact_card,
             ratspeak_tauri::commands::contacts::add_contact,
             ratspeak_tauri::commands::contacts::remove_contact,
@@ -1237,14 +1301,36 @@ pub fn run() {
             std::fs::create_dir_all(&data_dir).ok();
             tracing::debug!("resolved Ratspeak data directory");
 
+            #[cfg(feature = "experimental-ethereum")]
+            app.manage(ethereum::EthereumApplicationState::new());
+
             // setup() has no Tokio runtime; leak one for process-lifetime tasks.
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             let tauri_handle = handle.clone();
+            let core_data_dir = data_dir.clone();
             let state = rt.block_on(async move {
-                ratspeak_tauri::init_core(data_dir, tauri_handle)
+                ratspeak_tauri::init_core(core_data_dir, tauri_handle)
                     .await
                     .expect("Failed to start Ratspeak core")
             });
+
+            #[cfg(feature = "experimental-ethereum")]
+            ethereum::install_runtime_adapter(handle.clone(), &state)
+                .expect("Failed to install Ethereum LXMF persistence adapter");
+
+            #[cfg(all(feature = "experimental-ethereum", target_os = "android"))]
+            if let Err(error) =
+                ethereum_android::install(handle.clone(), data_dir.clone(), state.clone())
+            {
+                tracing::error!(error, "native Android Ethereum wallet engine unavailable");
+            }
+
+            #[cfg(all(feature = "experimental-ethereum", target_os = "linux"))]
+            if let Err(error) =
+                ethereum_linux::install(handle.clone(), data_dir.clone(), state.clone())
+            {
+                tracing::error!(error, "native Linux Ethereum wallet engine unavailable");
+            }
 
             // Window prefs must be read before the window is built.
             #[cfg(not(any(target_os = "android", target_os = "ios")))]

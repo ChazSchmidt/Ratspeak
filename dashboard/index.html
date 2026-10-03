@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual">
     <meta name="theme-color" content="#FAF7F3">
-    <script src="/static/js/theme.js?v=ui-20260815-7"></script>
-    <script src="/static/js/text_scale.js?v=ui-20260815-7"></script>
+    <script src="/static/js/theme.js?v=ui-20260826-1"></script>
+    <script src="/static/js/text_scale.js?v=ui-20260826-1"></script>
     <!-- Safe-area insets (--sat/--sab/--sal/--sar) are defined in 00-tokens.css
          via env(safe-area-inset-*). iOS feeds env() through viewport-fit=cover +
          WKWebView contentInsetAdjustmentBehavior=.never; Android MainActivity
          injects pixel values via evaluateJavascript; desktop falls back to 0. -->
     <title>Ratspeak - Dashboard</title>
-    <link rel="stylesheet" href="/static/fonts/fonts.css?v=ui-20260815-7">
-    <link rel="stylesheet" href="/static/style.css?v=ui-20260815-7">
+    <link rel="stylesheet" href="/static/fonts/fonts.css?v=ui-20260826-1">
+    <link rel="stylesheet" href="/static/style.css?v=ui-20260826-1">
 </head>
 <body class="checking-setup">
 
@@ -86,6 +86,10 @@
         <a class="nav-item" data-view="identity" href="#identity" title="Identity">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 17.4A2 2 0 0 0 2 18.8V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.2a2 2 0 0 0 1.4-.6l.8-.8A6.5 6.5 0 1 0 9.4 10.6z"/><circle cx="16.5" cy="7.5" r="1.5"/></svg>
             <span class="nav-label">Identity</span>
+        </a>
+        <a class="nav-item ethereum-feature-entry hidden" data-view="ethereum" href="#ethereum" title="Ethereum">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2-6 10 6 3.5 6-3.5z"/><path d="m6 13.5 6 8.5 6-8.5-6 3.5z"/></svg>
+            <span class="nav-label">Ethereum</span>
         </a>
         <a class="nav-item" data-view="games" href="#games" title="Games">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h4M8 9v4"/><line x1="15" y1="12" x2="15.01" y2="12"/><line x1="18" y1="10" x2="18.01" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>
@@ -178,6 +182,10 @@
             <button class="bottom-sheet-item" type="button" data-view="identity">
                 <svg viewBox="0 0 24 24"><path d="M2.6 17.4A2 2 0 0 0 2 18.8V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.2a2 2 0 0 0 1.4-.6l.8-.8A6.5 6.5 0 1 0 9.4 10.6z"/><circle cx="16.5" cy="7.5" r="1.5"/></svg>
                 Identity
+            </button>
+            <button class="bottom-sheet-item ethereum-feature-entry hidden" type="button" data-view="ethereum">
+                <svg viewBox="0 0 24 24"><path d="m12 2-6 10 6 3.5 6-3.5z"/><path d="m6 13.5 6 8.5 6-8.5-6 3.5z"/></svg>
+                Ethereum
             </button>
             <button class="bottom-sheet-item" type="button" data-view="games">
                 <svg viewBox="0 0 24 24"><path d="M6 11h4M8 9v4"/><line x1="15" y1="12" x2="15.01" y2="12"/><line x1="18" y1="10" x2="18.01" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>
@@ -1150,6 +1158,219 @@
             </div>
         </div>
 
+        <div class="view" id="view-ethereum">
+            <div class="ethereum-page">
+                <header class="ethereum-page-header">
+                    <div>
+                        <div class="ethereum-title-row">
+                            <h2>Ethereum</h2>
+                            <span class="ethereum-network-badge">Sepolia</span>
+                        </div>
+                        <p>Experimental, unaudited wallet and proof verification over Ratspeak.</p>
+                    </div>
+                    <button class="nr-btn nr-btn-ghost" id="ethereum-refresh-btn" type="button">Refresh</button>
+                </header>
+
+                <div class="ethereum-notice" role="note">
+                    <strong>Sepolia testnet — test ETH only.</strong>
+                    Test ETH has no real-world value. Mainnet is not supported. Do not import a wallet that holds real funds.
+                </div>
+
+                <details class="panel ethereum-setup" id="ethereum-setup" open>
+                    <summary class="panel-header ethereum-setup-header">
+                        <div>
+                            <h3 id="ethereum-setup-title">Set up Ethereum</h3>
+                            <p>Ratspeak will guide you through wallet setup, bootstrapping a trusted Sepolia checkpoint, and choosing an Ethereum service.</p>
+                        </div>
+                        <span class="ethereum-setup-summary" id="ethereum-setup-summary">Setup incomplete</span>
+                        <span class="ethereum-setup-disclosure" aria-hidden="true"></span>
+                    </summary>
+                    <div class="panel-body ethereum-setup-steps">
+                        <section class="ethereum-setup-step" id="ethereum-wallet-step" data-state="current">
+                            <span class="ethereum-step-number" aria-hidden="true">1</span>
+                            <div class="ethereum-step-content">
+                                <div class="ethereum-step-heading">
+                                    <h4>Create or import a wallet</h4>
+                                    <span class="ethereum-step-state" id="ethereum-wallet-step-state">Checking this device</span>
+                                </div>
+                                <p id="ethereum-native-status" aria-live="polite">Create a wallet or import one with its Secret Recovery Phrase. Signing stays outside the web interface.</p>
+                                <button class="nr-btn" id="ethereum-manage-wallet-btn" type="button" disabled>Create or import wallet</button>
+                            </div>
+                        </section>
+
+                        <section class="ethereum-setup-step" id="ethereum-checkpoint-step" data-state="pending">
+                            <span class="ethereum-step-number" aria-hidden="true">2</span>
+                            <div class="ethereum-step-content">
+                                <div class="ethereum-step-heading">
+                                    <h4>Bootstrap network checkpoint</h4>
+                                    <span class="ethereum-step-state" id="ethereum-checkpoint-step-state">Not bootstrapped</span>
+                                </div>
+                                <p>Ratspeak needs a trusted starting point before it can independently verify Sepolia balances and transactions.</p>
+                                <div class="ethereum-inline-status" id="ethereum-checkpoint-status" role="status" aria-live="polite">No approved Sepolia checkpoint detected.</div>
+                                <button class="nr-btn" id="ethereum-connect-sepolia-btn" type="button" disabled>Bootstrap Sepolia checkpoint</button>
+                                <button class="nr-btn nr-btn-ghost hidden" id="ethereum-change-checkpoint-btn" type="button">Change checkpoint</button>
+                                <button class="nr-btn hidden" id="ethereum-review-pending-checkpoint-btn" type="button" disabled>Review checkpoint</button>
+                                <details class="ethereum-advanced hidden" id="ethereum-checkpoint-details">
+                                    <summary>Verification details</summary>
+                                    <p>Ratspeak verifies checkpoint bootstrap data locally with Helios before saving it. Online setup also requires two configured Sepolia sources to agree on the exact epoch and root; custom offline imports rely on your explicit approval. You can check the recorded sources yourself, though an online source may publish a newer checkpoint after this one was saved.</p>
+                                    <div id="ethereum-checkpoint-verification-summary" class="ethereum-step-note"></div>
+                                    <dl class="ethereum-facts">
+                                        <div><dt>Checkpoint epoch</dt><dd id="ethereum-checkpoint-epoch">...</dd></div>
+                                        <div><dt>Checkpoint root</dt><dd><code id="ethereum-checkpoint-root" class="ethereum-selectable">...</code> <button class="nr-btn nr-btn-ghost" id="ethereum-copy-checkpoint-root-btn" type="button" disabled>Copy root</button></dd></div>
+                                        <div><dt>Approved (local time)</dt><dd id="ethereum-checkpoint-approved-local">...</dd></div>
+                                        <div><dt>Approved (Unix)</dt><dd id="ethereum-checkpoint-approved-unix">...</dd></div>
+                                        <div><dt>Valid until (local time)</dt><dd id="ethereum-checkpoint-valid-until-local">...</dd></div>
+                                        <div><dt>Valid until (Unix)</dt><dd id="ethereum-checkpoint-valid-until-unix">...</dd></div>
+                                    </dl>
+                                    <p><strong>Independent sources</strong></p>
+                                    <ul id="ethereum-checkpoint-sources" class="ethereum-checkpoint-sources"></ul>
+                                    <p class="hidden" id="ethereum-checkpoint-bootstrap-source">For the built-in online path, bootstrap bytes came from <a id="ethereum-checkpoint-bootstrap-link" href="#" target="_blank" rel="noopener noreferrer">PublicNode’s Sepolia Beacon API</a>. PublicNode was transport only: Helios accepted the data only after its cryptographic root matched the independently agreed checkpoint.</p>
+                                </details>
+                                <details class="ethereum-advanced" id="ethereum-checkpoint-advanced">
+                                    <summary>Advanced</summary>
+                                    <p>Import a checkpoint file only when online setup is unavailable. Verify its source independently: a bad checkpoint can make false Ethereum state appear valid.</p>
+                                    <button class="nr-btn nr-btn-ghost" id="ethereum-import-checkpoint-file-btn" type="button" disabled>Choose checkpoint file</button>
+                                </details>
+                            </div>
+                        </section>
+
+                        <section class="ethereum-setup-step" id="ethereum-gateway-step" data-state="pending">
+                            <span class="ethereum-step-number" aria-hidden="true">3</span>
+                            <div class="ethereum-step-content">
+                                <div class="ethereum-step-heading">
+                                    <h4>Choose an Ethereum service</h4>
+                                    <span class="ethereum-step-state" id="ethereum-gateway-step-state">No service selected</span>
+                                </div>
+                                <p>This is the network connection step. Choose a verified Ratspeak Contact that can carry requests through Reticulum to an Ethereum RPC. The service cannot sign transactions or decide what Ethereum state is valid.</p>
+                                <p class="ethereum-step-note" id="ethereum-gateway-pairing-note">Ratspeak opens your profile’s verified Contacts and rechecks the selected identity before saving it.</p>
+                                <div class="ethereum-service-contact hidden" id="ethereum-setup-service-contact">
+                                    <span class="contacts-avatar" id="ethereum-setup-service-avatar" aria-hidden="true"></span>
+                                    <span class="contacts-row-content">
+                                        <span class="contacts-row-name" id="ethereum-setup-service-name"></span>
+                                        <span class="ethereum-service-contact-role">Selected Ethereum service</span>
+                                    </span>
+                                </div>
+                                <div class="ethereum-inline-status" id="ethereum-gateway-status" role="status" aria-live="polite">No Ethereum service selected.</div>
+                                <button class="nr-btn hidden" id="ethereum-add-public-service-btn" type="button" disabled>Add public test service to Contacts</button>
+                                <button class="nr-btn" id="ethereum-import-gateway-card-btn" type="button" disabled>Choose Ethereum service</button>
+                                <button class="nr-btn nr-btn-ghost" id="ethereum-open-contacts-btn" type="button">Manage Ratspeak Contacts</button>
+                                <button class="nr-btn hidden" id="ethereum-review-gateway-card-btn" type="button" disabled>Review Ethereum service</button>
+                            </div>
+                        </section>
+
+                        <section class="ethereum-setup-step" id="ethereum-sync-step" data-state="pending">
+                            <span class="ethereum-step-number" aria-hidden="true">4</span>
+                            <div class="ethereum-step-content">
+                                <div class="ethereum-step-heading">
+                                    <h4>Check your account</h4>
+                                    <span class="ethereum-step-state" id="ethereum-sync-step-state">Waiting for setup</span>
+                                </div>
+                                <p>Ratspeak requests account evidence, then verifies it against your approved checkpoint on this device.</p>
+                                <div class="ethereum-inline-status" id="ethereum-sync-status" role="status" aria-live="polite">Complete the earlier steps to continue.</div>
+                                <details class="ethereum-advanced hidden" id="ethereum-account-check-times">
+                                    <summary>Request timing details</summary>
+                                    <dl class="ethereum-facts">
+                                        <div><dt>Started (local time)</dt><dd id="ethereum-account-check-created-local">...</dd></div>
+                                        <div><dt>Started (Unix)</dt><dd id="ethereum-account-check-created-unix">...</dd></div>
+                                        <div><dt>Expires (local time)</dt><dd id="ethereum-account-check-expires-local">...</dd></div>
+                                        <div><dt>Expires (Unix)</dt><dd id="ethereum-account-check-expires-unix">...</dd></div>
+                                    </dl>
+                                </details>
+                                <button class="nr-btn hidden" id="ethereum-sync-btn" type="button" disabled>Check my account</button>
+                                <button class="nr-btn hidden" id="ethereum-review-pending-evidence-btn" type="button" disabled>Review download details</button>
+                            </div>
+                        </section>
+                    </div>
+                </details>
+
+                <div class="ethereum-notice" role="note">
+                    A gateway delivery or RPC reply is not Ethereum confirmation. Ratspeak shows success or failure only after it verifies the exact finalized receipt itself.
+                </div>
+
+                <div class="ethereum-grid">
+                    <section class="panel ethereum-account-card" aria-labelledby="ethereum-account-title">
+                        <div class="panel-header" id="ethereum-account-title">Sepolia account</div>
+                        <div class="panel-body">
+                            <div class="ethereum-balance-label">Verified balance</div>
+                            <div class="ethereum-balance" id="ethereum-balance" aria-live="polite">...</div>
+                            <button class="ethereum-address" id="ethereum-address" type="button" disabled>Wallet not available</button>
+                            <dl class="ethereum-facts">
+                                <div><dt>Nonce</dt><dd id="ethereum-nonce">...</dd></div>
+                                <div><dt>Evidence</dt><dd id="ethereum-evidence-age">...</dd></div>
+                                <div><dt>Assurance</dt><dd id="ethereum-account-assurance">Loading...</dd></div>
+                            </dl>
+                        </div>
+                    </section>
+
+                    <section class="panel ethereum-send-card" aria-labelledby="ethereum-send-title">
+                        <div class="panel-header" id="ethereum-send-title">Send native ETH</div>
+                        <form class="panel-body ethereum-transfer-form" id="ethereum-transfer-form" novalidate>
+                            <p class="ethereum-form-intro">Enter public transfer intent here. Ratspeak prepares the exact transaction and hands review and authorization to the native wallet.</p>
+                            <label for="ethereum-recipient">Recipient</label>
+                            <input class="modal-input" id="ethereum-recipient" name="recipient" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="0x..." maxlength="42" required>
+                            <label for="ethereum-value-eth">Amount (ETH)</label>
+                            <input class="modal-input" id="ethereum-value-eth" name="value_eth" type="text" inputmode="decimal" autocomplete="off" placeholder="0.001" maxlength="80" required>
+                            <div class="ethereum-fee-grid">
+                                <div>
+                                    <label for="ethereum-max-fee-gwei">Max fee (gwei)</label>
+                                    <input class="modal-input" id="ethereum-max-fee-gwei" name="max_fee_gwei" type="text" inputmode="decimal" autocomplete="off" placeholder="20" maxlength="48" required>
+                                </div>
+                                <div>
+                                    <label for="ethereum-priority-fee-gwei">Priority fee (gwei)</label>
+                                    <input class="modal-input" id="ethereum-priority-fee-gwei" name="priority_fee_gwei" type="text" inputmode="decimal" autocomplete="off" placeholder="1" maxlength="48" required>
+                                </div>
+                            </div>
+                            <div class="ethereum-cost-summary" aria-live="polite">
+                                <span>Amount</span><strong id="ethereum-review-amount">...</strong>
+                                <span>Maximum fee (21,000 gas)</span><strong id="ethereum-review-fee">...</strong>
+                                <span>Maximum total</span><strong id="ethereum-review-total">...</strong>
+                            </div>
+                            <p class="ethereum-form-error" id="ethereum-transfer-error" role="alert"></p>
+                            <button class="nr-btn w-full" id="ethereum-review-native-btn" type="submit" disabled>Review in native wallet</button>
+                        </form>
+                    </section>
+
+                    <section class="panel ethereum-assurance-card" aria-labelledby="ethereum-assurance-title">
+                        <div class="panel-header" id="ethereum-assurance-title">Latest transaction</div>
+                        <div class="panel-body">
+                            <dl class="ethereum-facts">
+                                <div><dt>Transaction hash</dt><dd class="mono" id="ethereum-transaction-hash">...</dd></div>
+                                <div><dt>Assurance</dt><dd id="ethereum-transaction-assurance">No exact verified receipt available</dd></div>
+                            </dl>
+                            <p class="ethereum-assurance-note" id="ethereum-transaction-note">Signed, relayed, and RPC-visible transactions remain unconfirmed until exact receipt evidence verifies locally.</p>
+                            <div class="ethereum-service-contact hidden" id="ethereum-transaction-service-contact">
+                                <span class="contacts-avatar" id="ethereum-transaction-service-avatar" aria-hidden="true"></span>
+                                <span class="contacts-row-content">
+                                    <span class="contacts-row-name" id="ethereum-transaction-service-name"></span>
+                                    <span class="ethereum-service-contact-role">RPC status source</span>
+                                </span>
+                            </div>
+                            <div class="ethereum-transaction-actions">
+                                <button class="nr-btn nr-btn-ghost hidden" id="ethereum-update-transaction-status-btn" type="button">Update status</button>
+                                <p id="ethereum-transaction-status-feedback" role="status" aria-live="polite"></p>
+                            </div>
+                            <ol class="ethereum-transaction-timeline" id="ethereum-transaction-timeline" aria-label="Transaction progress">
+                                <li class="ethereum-transaction-stage" data-state="empty">
+                                    <span class="ethereum-transaction-stage-marker" aria-hidden="true"></span>
+                                    <div class="ethereum-transaction-stage-content">
+                                        <div class="ethereum-transaction-stage-heading">
+                                            <strong>No transaction yet</strong>
+                                            <span class="ethereum-transaction-authority">This device</span>
+                                        </div>
+                                        <p>Review and sign a transaction to see durable progress here.</p>
+                                    </div>
+                                </li>
+                            </ol>
+                            <details class="ethereum-transaction-technical hidden" id="ethereum-transaction-technical">
+                                <summary>Verification and technical details</summary>
+                                <dl class="ethereum-facts" id="ethereum-transaction-technical-facts"></dl>
+                            </details>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
         <div class="view" id="view-settings">
             <div class="settings-page settings-detail-mode">
                 <div class="settings-page-shell">
@@ -1302,7 +1523,7 @@
                             <div class="settings-row" id="settings-row-notifications" style="display:none;">
                                 <div class="settings-row-info">
                                     <span class="settings-row-label">Notifications</span>
-                                    <span class="settings-row-desc">Show a system notification when a new message arrives while Ratspeak is in the background</span>
+                                    <span class="settings-row-desc">Show background alerts; sound and haptics follow device settings</span>
                                 </div>
                                 <button class="selector-badge selector-badge-no-caret" id="settings-notification-action" type="button" style="display:none;">Open Settings</button>
                                 <label class="prop-toggle" aria-label="Notifications">
@@ -1985,43 +2206,44 @@
 <!-- Synchronous load order matters: state/constants/setup/nav before any caller
      of their module-level functions; tauri_events.js last (wires everything above).
      Reordering breaks fresh boots silently. -->
-<script src="/static/js/state.js?v=ui-20260815-7"></script>
-<script src="/static/js/constants.js?v=ui-20260815-7"></script>
-<script src="/static/js/setup.js?v=ui-20260815-7"></script>
-<script src="/static/js/nav.js?v=ui-20260815-7"></script>
-<script src="/static/js/gestures.js?v=ui-20260815-7"></script>
-<script src="/static/js/view_stack.js?v=ui-20260815-7"></script>
+<script src="/static/js/state.js?v=ui-20260826-1"></script>
+<script src="/static/js/constants.js?v=ui-20260826-1"></script>
+<script src="/static/js/setup.js?v=ui-20260826-1"></script>
+<script src="/static/js/nav.js?v=ui-20260826-1"></script>
+<script src="/static/js/gestures.js?v=ui-20260826-1"></script>
+<script src="/static/js/view_stack.js?v=ui-20260826-1"></script>
 
-<script src="/static/js/peers_cache.js?v=ui-20260815-7"></script>
-<script src="/static/js/connections.js?v=ui-20260815-7"></script>
-<script src="/static/js/peers.js?v=ui-20260815-7"></script>
-<script src="/static/js/toasts.js?v=ui-20260815-7"></script>
-<script src="/static/js/dialogs.js?v=ui-20260815-7"></script>
-<script src="/static/js/legal_documents.js?v=ui-20260815-7"></script>
-<script src="/static/js/action_popover.js?v=ui-20260815-7"></script>
-<script src="/static/js/ui_shared.js?v=ui-20260815-7"></script>
-<script src="/static/js/events.js?v=ui-20260815-7"></script>
-<script src="/static/js/activity.js?v=ui-20260815-7"></script>
-<script src="/static/js/health.js?v=ui-20260815-7"></script>
-<script src="/static/js/modals.js?v=ui-20260815-7"></script>
-<script src="/static/js/emoji_data.js?v=ui-20260815-7"></script>
-<script src="/static/js/emoji_picker.js?v=ui-20260815-7"></script>
-<script src="/static/js/voice_ringtones.js?v=ui-20260815-7"></script>
+<script src="/static/js/peers_cache.js?v=ui-20260826-1"></script>
+<script src="/static/js/connections.js?v=ui-20260826-1"></script>
+<script src="/static/js/peers.js?v=ui-20260826-1"></script>
+<script src="/static/js/toasts.js?v=ui-20260826-1"></script>
+<script src="/static/js/dialogs.js?v=ui-20260826-1"></script>
+<script src="/static/js/legal_documents.js?v=ui-20260826-1"></script>
+<script src="/static/js/action_popover.js?v=ui-20260826-1"></script>
+<script src="/static/js/ui_shared.js?v=ui-20260826-1"></script>
+<script src="/static/js/events.js?v=ui-20260826-1"></script>
+<script src="/static/js/activity.js?v=ui-20260826-1"></script>
+<script src="/static/js/health.js?v=ui-20260826-1"></script>
+<script src="/static/js/modals.js?v=ui-20260826-1"></script>
+<script src="/static/js/emoji_data.js?v=ui-20260826-1"></script>
+<script src="/static/js/emoji_picker.js?v=ui-20260826-1"></script>
+<script src="/static/js/voice_ringtones.js?v=ui-20260826-1"></script>
 <script src="/static/js/vendor/jsQR.js"></script>
-<script src="/static/js/contact_card.js?v=ui-20260815-7"></script>
-<script src="/static/js/lxmf.js?v=ui-20260815-7"></script>
-<script src="/static/js/voice_memos.js?v=ui-20260815-7"></script>
-<script src="/static/js/channels.js?v=ui-20260815-7"></script>
-<script src="/static/js/channel_hub.js?v=ui-20260815-7"></script>
-<script src="/static/js/propagation.js?v=ui-20260815-7"></script>
-<script src="/static/js/settings.js?v=ui-20260815-7"></script>
-<script src="/static/js/identity.js?v=ui-20260815-7"></script>
-<script src="/static/js/confetti.js?v=ui-20260815-7"></script>
-<script src="/static/js/game_registry.js?v=ui-20260815-7"></script>
-<script src="/static/js/four_in_a_row_view.js?v=ui-20260815-7"></script>
-<script src="/static/js/games_tab.js?v=ui-20260815-7"></script>
-<script src="/static/js/native_channel_share.js?v=ui-20260815-7"></script>
-<script src="/static/js/tauri_events.js?v=ui-20260815-7"></script>
-<script src="/static/js/init_dom_handlers.js?v=ui-20260815-7"></script>
+<script src="/static/js/contact_card.js?v=ui-20260826-1"></script>
+<script src="/static/js/lxmf.js?v=ui-20260826-1"></script>
+<script src="/static/js/voice_memos.js?v=ui-20260826-1"></script>
+<script src="/static/js/channels.js?v=ui-20260826-1"></script>
+<script src="/static/js/channel_hub.js?v=ui-20260826-1"></script>
+<script src="/static/js/propagation.js?v=ui-20260826-1"></script>
+<script src="/static/js/settings.js?v=ui-20260826-1"></script>
+<script src="/static/js/identity.js?v=ui-20260826-1"></script>
+<script src="/static/js/ethereum_wallet.js?v=ui-20260829-1"></script>
+<script src="/static/js/confetti.js?v=ui-20260826-1"></script>
+<script src="/static/js/game_registry.js?v=ui-20260826-1"></script>
+<script src="/static/js/four_in_a_row_view.js?v=ui-20260826-1"></script>
+<script src="/static/js/games_tab.js?v=ui-20260826-1"></script>
+<script src="/static/js/native_channel_share.js?v=ui-20260826-1"></script>
+<script src="/static/js/tauri_events.js?v=ui-20260826-1"></script>
+<script src="/static/js/init_dom_handlers.js?v=ui-20260826-1"></script>
 </body>
 </html>

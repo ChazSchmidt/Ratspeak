@@ -20,8 +20,8 @@ var responsiveCss = fs.readFileSync(path.join(dashboardRoot, 'static', 'css', '1
 
 assert(navSource.includes("var MOBILE_TAB_SLOTS = ['peers', 'message', 'channels', 'more'];"),
     'mobile swipes must traverse the four visible bottom-bar destinations');
-assert(navSource.includes("var MORE_VIEWS = ['contacts', 'identity', 'network', 'games', 'settings'];"),
-    'Contacts must route through More after Channels takes its bottom-bar slot');
+assert(navSource.includes("var MORE_VIEWS = ['contacts', 'identity', 'ethereum', 'network', 'games', 'settings'];"),
+    'Contacts and feature-gated Ethereum must route through More after Channels takes its bottom-bar slot');
 assert(!navSource.includes("if (viewId === 'channels') return 'message';"),
     'Channels must own its selected state instead of aliasing Direct Messages');
 assert(!indexSource.includes('channel-hub-add-btn'),

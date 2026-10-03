@@ -1,0 +1,4 @@
+pub mod ratspeak_eth_wallet_linux
+pub const ratspeak_eth_wallet_linux::LINUX_CUSTODY_PRIMITIVES_AVAILABLE: bool
+pub const ratspeak_eth_wallet_linux::LINUX_NATIVE_DIALOG_ADAPTER_INCLUDED: bool
+pub const ratspeak_eth_wallet_linux::PLAINTEXT_CUSTODY_FALLBACK_AVAILABLE: bool

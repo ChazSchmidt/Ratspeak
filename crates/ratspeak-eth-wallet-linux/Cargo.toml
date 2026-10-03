@@ -1,0 +1,24 @@
+[package]
+name = "ratspeak-eth-wallet-linux"
+description = "Linux-native custody boundary for the experimental Ratspeak Ethereum wallet"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+argon2 = { version = "=0.5.3", default-features = false, features = ["alloc", "zeroize"] }
+alloy-primitives = "=1.6.0"
+gtk = "=0.18.2"
+ratspeak-eth-wallet = { path = "../ratspeak-eth-wallet", version = "=1.0.31" }
+ring = "=0.17.14"
+rustix = { version = "=1.1.4", features = ["fs", "process"] }
+secret-service = { version = "=5.1.0", default-features = false, features = ["rt-async-io-crypto-rust"] }
+thiserror = "=2.0.19"
+zeroize = "=1.9.0"
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+static_assertions = "=1.1.0"
+tempfile = "=3.27.0"

@@ -227,7 +227,7 @@ export function validateDependencySet(set) {
 
   const expectedComponents = new Map([
     ["rsreticulum", ["rsReticulum", "https://github.com/ratspeak/rsReticulum.git", "../rsReticulum"]],
-    ["rslxmf", ["rsLXMF", "https://github.com/ratspeak/rsLXMF.git", "../rsLXMF"]],
+    ["rslxmf", ["rsLXMF", "https://github.com/ChazSchmidt/rsLXMF.git", "../rsLXMF"]],
     ["rslxst", ["rsLXST", "https://github.com/ratspeak/rsLXST.git", "../rsLXST"]],
     ["lrgp", ["lrgp-rs", "https://github.com/ratspeak/lrgp-rs.git", "../lrgp-rs"]],
   ]);

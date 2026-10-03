@@ -179,6 +179,52 @@ pub(crate) async fn emit_peer_delta_for(state: &Arc<AppState>, dest_hash: &str) 
     }
 }
 
+/// Resolve a peer row for one exact identity session, then recheck that
+/// session before emitting. This lets callers release the lifecycle lock while
+/// the DB read runs without projecting old-profile data after a switch.
+pub(crate) async fn emit_peer_delta_for_identity(
+    state: &Arc<AppState>,
+    dest_hash: &str,
+    identity_id: &str,
+    identity_session_generation: u64,
+) {
+    let pool = state.db.clone();
+    let key = dest_hash.to_string();
+    let identity_id_for_db = identity_id.to_string();
+    let resolved = db::spawn_db(pool, move |p| {
+        db::get_peers_by_hashes(&p, &[key], &identity_id_for_db)
+    })
+    .await
+    .unwrap_or_default();
+
+    let _identity_lifecycle = state.identity_switch_lock.lock().await;
+    if active_identity_id(state) != identity_id
+        || state.current_identity_session_generation() != identity_session_generation
+    {
+        return;
+    }
+    if let Some(row) = resolved.into_iter().next() {
+        state.emit_to_all(
+            "peers_updated",
+            json!({
+                "peers": [{
+                    "hash": row.hash,
+                    "identity_hash": row.identity_hash,
+                    "last_seen": row.last_seen,
+                    "first_seen": row.first_seen,
+                    "display_name": row.display_name,
+                    "profile_status": row.profile_status,
+                    "is_contact": row.is_contact,
+                    "last_interface": row.last_interface,
+                    "services": row.services,
+                }]
+            }),
+        );
+    } else {
+        state.emit_to_all("peer_removed", json!({ "hash": dest_hash }));
+    }
+}
+
 #[tauri::command]
 pub async fn add_contact(
     state: State<'_, Arc<AppState>>,

@@ -22,7 +22,7 @@ const CONTACT_CARD_FORMAT: &str = "ratspeak.contact.v1";
 const CONTACT_CARD_NAME_BYTES: usize = 40;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ContactCard {
+pub struct ContactCard {
     pub display_name: String,
     pub lxmf_hash: String,
     pub identity_hash: String,
@@ -72,7 +72,7 @@ fn parse_hex16(value: &str, label: &str) -> Result<[u8; 16], String> {
     Ok(out)
 }
 
-pub(crate) fn parse_contact_card_payload(payload: &str) -> Result<ContactCard, String> {
+pub fn parse_contact_card_payload(payload: &str) -> Result<ContactCard, String> {
     let trimmed = payload.trim();
     let raw = trimmed
         .strip_prefix(CONTACT_CARD_PREFIX)
@@ -198,8 +198,22 @@ pub async fn import_contact_card(
     state: State<'_, Arc<AppState>>,
     payload: String,
 ) -> AppResult<Value> {
-    let card = parse_contact_card_payload(&payload).map_err(AppError::bad_request)?;
-    let identity_id = active_identity_id(&state);
+    import_contact_card_payload(state.inner(), &payload).await
+}
+
+/// Imports one already selected public contact card through the same exact
+/// validation, persistence, remote-identity hydration, and event path as the
+/// WebView contact-card flow. Native integrations use this so public identity
+/// material never has to cross their WebView boundary.
+pub async fn import_contact_card_payload(state: &Arc<AppState>, payload: &str) -> AppResult<Value> {
+    let card = parse_contact_card_payload(payload).map_err(AppError::bad_request)?;
+    // Keep admission, the durable write, and the matching in-memory mutation in
+    // one identity lifecycle turn. Identity changes are rare; holding this
+    // fence only through the bounded local DB operation prevents an old-profile
+    // write from being reported as a failed import after a concurrent switch.
+    let _identity_lifecycle = state.identity_switch_lock.lock().await;
+    let identity_id = active_identity_id(state);
+    let identity_session_generation = state.current_identity_session_generation();
     let dest_hash = card.lxmf_hash.to_ascii_lowercase();
     let display_name = card.display_name.clone();
     let identity_hash = card.identity_hash.clone();
@@ -209,12 +223,8 @@ pub async fn import_contact_card(
     let name_for_db = display_name.clone();
     let id_for_db = identity_id.clone();
     let key_for_db = public_key_hex.clone();
-    let contacts_list = db::spawn_db(state.db.clone(), move |p| {
-        let conn = match p.get() {
-            Ok(c) => c,
-            Err(_) => return Vec::<Value>::new(),
-        };
-        db::save_contact_with_identity_pubkey(
+    let contacts_list = db::spawn_db(state.db.clone(), move |p| -> Result<Vec<Value>, String> {
+        db::try_save_contact_with_identity_pubkey(
             &p,
             &dest_for_db,
             if name_for_db.is_empty() {
@@ -225,7 +235,12 @@ pub async fn import_contact_card(
             Some(&key_for_db),
             "trusted",
             &id_for_db,
-        );
+        )?;
+        let stored = db::get_contact(&p, &dest_for_db, &id_for_db)
+            .ok_or_else(|| "stored contact could not be read back".to_string())?;
+        if stored.get("identity_pubkey").and_then(Value::as_str) != Some(key_for_db.as_str()) {
+            return Err("stored contact identity key mismatch".to_string());
+        }
         db::touch_identity_activity_for_service(
             &p,
             &[(
@@ -237,11 +252,15 @@ pub async fn import_contact_card(
             Some(&identity_hash),
             db::PEER_SERVICE_LXMF_DELIVERY,
         );
+        let conn = p
+            .get()
+            .map_err(|error| format!("contact list pool: {error}"))?;
         let contacts = db::get_all_contacts_conn(&conn, &id_for_db);
-        format_contacts_list(&contacts)
+        Ok(format_contacts_list(&contacts))
     })
     .await
-    .map_err(|_| AppError::internal("contact-card import db task panicked"))?;
+    .map_err(|_| AppError::internal("contact-card import db task panicked"))?
+    .map_err(AppError::internal)?;
 
     let identity_changed = state
         .lxmf
@@ -254,19 +273,6 @@ pub async fn import_contact_card(
             })
         })
         .unwrap_or(false);
-    if identity_changed {
-        if let Err(error) = ratspeak_runtime::lxmf_persistence::persist_current_delta(
-            &state,
-            true,
-            &[],
-            false,
-            "contact_import",
-        )
-        .await
-        {
-            tracing::warn!(%error, "contact-card identity persistence failed");
-        }
-    }
 
     state.emit_to_all("contacts_update", json!(contacts_list));
     state.emit_to_all(
@@ -280,7 +286,28 @@ pub async fn import_contact_card(
             },
         }),
     );
-    super::contacts::emit_peer_delta_for(&state, &dest_hash).await;
+    drop(_identity_lifecycle);
+
+    if identity_changed {
+        if let Err(error) = ratspeak_runtime::lxmf_persistence::persist_current_delta(
+            state,
+            true,
+            &[],
+            false,
+            "contact_import",
+        )
+        .await
+        {
+            tracing::warn!(%error, "contact-card identity persistence failed");
+        }
+    }
+    super::contacts::emit_peer_delta_for_identity(
+        state,
+        &dest_hash,
+        &identity_id,
+        identity_session_generation,
+    )
+    .await;
     Ok(contact_card_json(&card, Some(payload.trim())))
 }
 

@@ -693,6 +693,12 @@ pub enum LxmfSubmissionFailure {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AttachmentAuthenticationPolicy {
+    Compatible,
+    Strict,
+}
+
 /// Stable string identifier for the chosen `DeliveryMethod`. Persisted in the
 /// `messages.delivery_method` column and surfaced to the frontend so the UI can
 /// render proof-aware state icons.
@@ -2098,12 +2104,38 @@ impl LxmfManager {
         &mut self,
         request: AttachmentMessageRequest<'_>,
     ) -> Result<LxmfQueuedMessage, LxmfSubmissionFailure> {
-        self.send_message_with_attachment_fields_preference_internal(request)
+        self.send_message_with_attachment_fields_preference_internal(
+            request,
+            AttachmentAuthenticationPolicy::Compatible,
+        )
+    }
+
+    /// Submit one canonical attachment only when the active manager identity
+    /// can produce a valid LXMF signature for its currently claimed source.
+    ///
+    /// Unlike the compatibility send APIs, this entry point fails before file
+    /// or database persistence and before router admission if the identity
+    /// binding or final packed signature cannot be verified. The request must
+    /// use `Auto`, empty content/title, no staging file or image mode, and the
+    /// final message contains only `FIELD_FILE_ATTACHMENTS`. Reply-ticket
+    /// fields are deliberately excluded. The generic router may still apply a
+    /// previously learned ticket as the standard unsigned anti-spam stamp; the
+    /// ticket itself is never packed as a field. This is intended for protocol
+    /// adapters whose payloads must never be emitted unsigned.
+    pub fn submit_strict_authenticated_attachment(
+        &mut self,
+        request: AttachmentMessageRequest<'_>,
+    ) -> Result<LxmfQueuedMessage, LxmfSubmissionFailure> {
+        self.send_message_with_attachment_fields_preference_internal(
+            request,
+            AttachmentAuthenticationPolicy::Strict,
+        )
     }
 
     fn send_message_with_attachment_fields_preference_internal(
         &mut self,
         request: AttachmentMessageRequest<'_>,
+        authentication: AttachmentAuthenticationPolicy,
     ) -> Result<LxmfQueuedMessage, LxmfSubmissionFailure> {
         let AttachmentMessageRequest {
             dest_hash_hex,
@@ -2118,6 +2150,19 @@ impl LxmfManager {
             identity_id,
             preference,
         } = request;
+
+        if authentication == AttachmentAuthenticationPolicy::Strict {
+            self.validate_strict_outbound_source(identity_id)?;
+            if !content.is_empty()
+                || !title.is_empty()
+                || is_image
+                || !image_mime.is_empty()
+                || staged_path.is_some()
+                || preference != DeliveryPreference::Auto
+            {
+                return Err(LxmfSubmissionFailure::PreparationFailed);
+            }
+        }
 
         let dest_bytes =
             hex::decode(dest_hash_hex).map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
@@ -2149,18 +2194,35 @@ impl LxmfManager {
                 .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
         }
 
-        msg.include_ticket = true;
-        self.router
-            .prepare_outbound(&mut msg)
-            .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
-        if let Some(prv_key) = self.identity.get_private_key() {
-            let mut ed_seed = [0u8; 32];
-            ed_seed.copy_from_slice(&prv_key[32..64]);
-            let signing_key = rns_crypto::ed25519::Ed25519PrivateKey::from_bytes(&ed_seed);
-            msg.sign(&signing_key)
+        if authentication == AttachmentAuthenticationPolicy::Compatible {
+            msg.include_ticket = true;
+            self.router
+                .prepare_outbound(&mut msg)
                 .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
         }
+        match authentication {
+            AttachmentAuthenticationPolicy::Compatible => {
+                if let Some(prv_key) = self.identity.get_private_key() {
+                    let mut ed_seed = [0u8; 32];
+                    ed_seed.copy_from_slice(&prv_key[32..64]);
+                    let signing_key = rns_crypto::ed25519::Ed25519PrivateKey::from_bytes(&ed_seed);
+                    msg.sign(&signing_key)
+                        .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
+                }
+            }
+            AttachmentAuthenticationPolicy::Strict => {
+                msg.sign_with(|signed_data| {
+                    self.identity
+                        .sign(signed_data)
+                        .ok_or("identity signing unavailable")
+                })
+                .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
+            }
+        }
         normalize_protocol_delivery_method(&mut msg);
+        if authentication == AttachmentAuthenticationPolicy::Strict {
+            self.validate_strict_packed_signature(&msg, file_name, file_bytes)?;
+        }
         let packed_len = msg
             .packed_len()
             .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
@@ -2237,6 +2299,98 @@ impl LxmfManager {
             message_id: msg_id,
             method,
         })
+    }
+
+    fn validate_strict_outbound_source(
+        &self,
+        identity_id: &str,
+    ) -> Result<(), LxmfSubmissionFailure> {
+        if !self.identity.has_private_key() && !self.identity.has_backend() {
+            return Err(LxmfSubmissionFailure::PreparationFailed);
+        }
+
+        let current_identity_hash = self.identity.hexhash();
+        let current_lxmf_source =
+            Destination::hash_from_name_and_identity(LXMF_APP_NAME, Some(&self.identity.hash));
+        if identity_id != current_identity_hash
+            || self.identity_hash != current_identity_hash
+            || self.lxmf_dest_hash != current_lxmf_source
+            || self.lxmf_hash != hex::encode(current_lxmf_source)
+        {
+            return Err(LxmfSubmissionFailure::PreparationFailed);
+        }
+
+        Ok(())
+    }
+
+    fn validate_strict_packed_signature(
+        &self,
+        msg: &LxMessage,
+        expected_file_name: &str,
+        expected_file_bytes: &[u8],
+    ) -> Result<(), LxmfSubmissionFailure> {
+        if !msg.title.is_empty()
+            || !msg.content.is_empty()
+            || msg.include_ticket
+            || msg.outbound_ticket.is_some()
+            || msg.fields.len() != 1
+            || msg.msgpack_field_ids.len() != 1
+            || !msg
+                .fields
+                .contains_key(&lxmf_core::constants::FIELD_FILE_ATTACHMENTS)
+            || !msg
+                .msgpack_field_ids
+                .contains(&lxmf_core::constants::FIELD_FILE_ATTACHMENTS)
+        {
+            return Err(LxmfSubmissionFailure::PreparationFailed);
+        }
+
+        let packed = msg
+            .pack()
+            .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
+        let mut packed_message =
+            LxMessage::unpack(&packed).map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
+        if packed_message.destination_hash != msg.destination_hash
+            || packed_message.source_hash != self.lxmf_dest_hash
+            || packed_message.signature.is_none()
+            || packed_message.signature != msg.signature
+            || packed_message.fields.len() != 1
+            || packed_message.msgpack_field_ids.len() != 1
+            || packed_message.title != msg.title
+            || packed_message.content != msg.content
+        {
+            return Err(LxmfSubmissionFailure::PreparationFailed);
+        }
+        let attachment_field = packed_message
+            .fields
+            .get(&lxmf_core::constants::FIELD_FILE_ATTACHMENTS)
+            .ok_or(LxmfSubmissionFailure::PreparationFailed)?;
+        let attachment_value = rmpv::decode::read_value(&mut attachment_field.as_slice())
+            .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
+        let attachment = attachment_value
+            .as_array()
+            .filter(|attachments| attachments.len() == 1)
+            .and_then(|attachments| attachments.first())
+            .and_then(rmpv::Value::as_array)
+            .filter(|attachment| attachment.len() == 2)
+            .ok_or(LxmfSubmissionFailure::PreparationFailed)?;
+        if attachment[0].as_str() != Some(expected_file_name)
+            || attachment[1].as_slice() != Some(expected_file_bytes)
+        {
+            return Err(LxmfSubmissionFailure::PreparationFailed);
+        }
+
+        let public_key = self.identity.get_public_key();
+        let signing_public_key: [u8; 32] = public_key[32..]
+            .try_into()
+            .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
+        let verify_key = rns_crypto::ed25519::Ed25519PublicKey::from_bytes(&signing_public_key)
+            .map_err(|_| LxmfSubmissionFailure::PreparationFailed)?;
+        if !packed_message.verify(&verify_key) {
+            return Err(LxmfSubmissionFailure::PreparationFailed);
+        }
+
+        Ok(())
     }
 
     /// Queue a standards-based LXMF voice message as
@@ -9900,6 +10054,206 @@ mod tests {
         assert_eq!(states, vec![(hex::encode(message_id), "failed")]);
         assert!(!mgr.in_flight_propagation.contains_key(&message_id));
         assert!(!mgr.auto_live_fallback.contains(&message_id));
+    }
+
+    fn assert_strict_attachment_rejected_without_side_effects(
+        mgr: &LxmfManager,
+        pool: &DbPool,
+        dest: &str,
+        identity_id: &str,
+    ) {
+        assert!(mgr.router.pending_outbound.is_empty());
+        assert!(mgr.auto_live_fallback.is_empty());
+        assert!(db::get_conversation(pool, dest, identity_id, 10).is_empty());
+        assert_eq!(
+            std::fs::read_dir(mgr.files_dir())
+                .unwrap()
+                .filter_map(Result::ok)
+                .count(),
+            0
+        );
+    }
+
+    #[test]
+    fn strict_authenticated_attachment_rejects_unavailable_signer_before_side_effects() {
+        let pool = test_pool();
+        let mut mgr = test_manager();
+        let dest = "e1".repeat(16);
+        let identity_id = mgr.identity_hash.clone();
+        mgr.identity = Identity::from_public_key(&mgr.identity.get_public_key()).unwrap();
+
+        let result = mgr.submit_strict_authenticated_attachment(AttachmentMessageRequest {
+            dest_hash_hex: &dest,
+            content: "",
+            title: "",
+            file_name: "protocol.bin",
+            file_bytes: b"exact protocol bytes",
+            staged_path: None,
+            is_image: false,
+            image_mime: "",
+            db_pool: &pool,
+            identity_id: &identity_id,
+            preference: DeliveryPreference::Auto,
+        });
+
+        assert_eq!(result, Err(LxmfSubmissionFailure::PreparationFailed));
+        assert_strict_attachment_rejected_without_side_effects(&mgr, &pool, &dest, &identity_id);
+    }
+
+    #[test]
+    fn strict_authenticated_attachment_rejects_claimed_source_mismatch_before_side_effects() {
+        let pool = test_pool();
+        let mut mgr = test_manager();
+        let dest = "e2".repeat(16);
+        let identity_id = mgr.identity_hash.clone();
+        mgr.lxmf_dest_hash = [0xA5; 16];
+
+        let result = mgr.submit_strict_authenticated_attachment(AttachmentMessageRequest {
+            dest_hash_hex: &dest,
+            content: "",
+            title: "",
+            file_name: "protocol.bin",
+            file_bytes: b"exact protocol bytes",
+            staged_path: None,
+            is_image: false,
+            image_mime: "",
+            db_pool: &pool,
+            identity_id: &identity_id,
+            preference: DeliveryPreference::Auto,
+        });
+
+        assert_eq!(result, Err(LxmfSubmissionFailure::PreparationFailed));
+        assert_strict_attachment_rejected_without_side_effects(&mgr, &pool, &dest, &identity_id);
+    }
+
+    #[test]
+    fn strict_authenticated_attachment_rejects_noncanonical_request_before_side_effects() {
+        let pool = test_pool();
+        let mut mgr = test_manager();
+        let dest = "e3".repeat(16);
+        let identity_id = mgr.identity_hash.clone();
+
+        let result = mgr.submit_strict_authenticated_attachment(AttachmentMessageRequest {
+            dest_hash_hex: &dest,
+            content: "protocol label",
+            title: "",
+            file_name: "protocol.bin",
+            file_bytes: b"exact protocol bytes",
+            staged_path: None,
+            is_image: false,
+            image_mime: "",
+            db_pool: &pool,
+            identity_id: &identity_id,
+            preference: DeliveryPreference::Auto,
+        });
+
+        assert_eq!(result, Err(LxmfSubmissionFailure::PreparationFailed));
+
+        let result = mgr.submit_strict_authenticated_attachment(AttachmentMessageRequest {
+            dest_hash_hex: &dest,
+            content: "",
+            title: "",
+            file_name: "protocol.bin",
+            file_bytes: b"exact protocol bytes",
+            staged_path: None,
+            is_image: false,
+            image_mime: "",
+            db_pool: &pool,
+            identity_id: &identity_id,
+            preference: DeliveryPreference::Direct,
+        });
+
+        assert_eq!(result, Err(LxmfSubmissionFailure::PreparationFailed));
+        assert_strict_attachment_rejected_without_side_effects(&mgr, &pool, &dest, &identity_id);
+    }
+
+    #[test]
+    fn strict_authenticated_attachment_queues_exact_signed_auto_message_without_tickets() {
+        let pool = test_pool();
+        let mut mgr = test_manager();
+        let dest = "e4".repeat(16);
+        let dest_hash: [u8; 16] = hex::decode(&dest).unwrap().try_into().unwrap();
+        let identity_id = mgr.identity_hash.clone();
+        let file_name = "protocol.bin";
+        let file_bytes = b"exact protocol bytes";
+        let learned_ticket = [0x77; 16];
+        mgr.router
+            .remember_ticket(dest_hash, learned_ticket, f64::MAX);
+        assert_eq!(
+            mgr.router.get_outbound_ticket(&dest_hash),
+            Some(learned_ticket)
+        );
+        assert!(mgr.router.get_inbound_tickets().is_empty());
+
+        let queued = mgr
+            .submit_strict_authenticated_attachment(AttachmentMessageRequest {
+                dest_hash_hex: &dest,
+                content: "",
+                title: "",
+                file_name,
+                file_bytes,
+                staged_path: None,
+                is_image: false,
+                image_mime: "",
+                db_pool: &pool,
+                identity_id: &identity_id,
+                preference: DeliveryPreference::Auto,
+            })
+            .expect("strict attachment should queue");
+
+        assert_eq!(queued.method, DeliveryMethod::Direct);
+        assert_eq!(mgr.router.pending_outbound.len(), 1);
+        assert_eq!(mgr.auto_live_fallback.len(), 1);
+        let message = mgr.router.pending_outbound.first().unwrap();
+        assert_eq!(
+            message.hash.map(hex::encode).as_deref(),
+            Some(queued.message_id.as_str())
+        );
+        assert_eq!(message.source_hash, mgr.lxmf_dest_hash);
+        assert!(message.signature.is_some());
+        assert!(!message.include_ticket);
+        assert_eq!(message.outbound_ticket, Some(learned_ticket));
+        assert!(
+            message.stamp.is_some(),
+            "a learned ticket is represented only by its standard anti-spam stamp"
+        );
+        assert_eq!(message.fields.len(), 1);
+        assert!(
+            message
+                .fields
+                .contains_key(&lxmf_core::constants::FIELD_FILE_ATTACHMENTS)
+        );
+        assert!(mgr.router.get_inbound_tickets().is_empty());
+
+        let mut packed = LxMessage::unpack(&message.pack().unwrap()).unwrap();
+        let public_key = mgr.identity.get_public_key();
+        let signing_public_key: [u8; 32] = public_key[32..].try_into().unwrap();
+        let verify_key =
+            rns_crypto::ed25519::Ed25519PublicKey::from_bytes(&signing_public_key).unwrap();
+        assert!(packed.verify(&verify_key));
+        assert_eq!(packed.source_hash, mgr.lxmf_dest_hash);
+        assert_eq!(packed.fields.len(), 1);
+        assert!(
+            !packed
+                .fields
+                .contains_key(&lxmf_core::constants::FIELD_TICKET)
+        );
+        assert!(packed.outbound_ticket.is_none());
+        assert_eq!(packed.stamp, message.stamp);
+
+        let conversation = db::get_conversation(&pool, &dest, &identity_id, 10);
+        let row = conversation
+            .iter()
+            .find(|message| message["id"] == queued.message_id)
+            .expect("persisted strict attachment");
+        assert_eq!(row["content"], "");
+        assert_eq!(row["title"], "");
+        assert_eq!(row["delivery_method"], "direct");
+        let stored_name = row["attachments"][0]["stored_name"].as_str().unwrap();
+        assert_eq!(
+            std::fs::read(mgr.get_received_file(stored_name).unwrap()).unwrap(),
+            file_bytes
+        );
     }
 
     #[test]

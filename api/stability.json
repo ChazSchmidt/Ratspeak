@@ -19,35 +19,33 @@
     "sourceCommit": "fc78e4926c696a921f308d238ef1b620e0db0078"
   },
   "snapshotSource": {
-    "commit": "1886478993ab905d9e6ca77ebe3784b85630f88b",
-    "capturedOn": "2026-08-24",
+    "commit": "a5029e20dc73c524ebde4c218ac454475d2c0380",
+    "capturedOn": "2026-08-30",
     "review": {
       "areas": [
-        "application domain and configuration",
-        "database and persistence",
-        "Reticulum and messaging runtime",
-        "Tauri commands and events",
-        "desktop and mobile application shell"
+        "Ethereum gateway and daemon application services",
+        "Ethereum node, verification, and persistence integration",
+        "Ethereum wallet and native custody adapters",
+        "Tauri commands, feature gates, and application configuration"
       ],
       "canonicalDependencies": [
         "lxmf_core::message_api",
         "lxst_telephony::TelephonyService::registered",
         "lrgp::protocol"
       ],
-      "classification": "application-internal lifecycle, persistence, and mobile integration",
+      "classification": "application-internal Ethereum gateway, node, verification, and wallet integration",
       "publicApiDiff": {
-        "added": 123,
+        "added": 1558,
         "removed": 12
       },
-      "semver": "no public-library consequence; application integration only",
+      "semver": "no public-library consequence; the six added crates remain application-internal and non-publishable",
       "deprecations": "none",
-      "wirePersistenceRuntimeImpact": "no wire-format change; retains the reviewed announce, readiness, and persistence boundaries while exposing one application-internal BLE RNode startup-policy helper used to persist firmware Bluetooth availability",
+      "wirePersistenceRuntimeImpact": "no existing Ratspeak message wire-format change; adds application-internal Ethereum proof, wallet custody, node persistence, and gateway/daemon surfaces with feature-gated native integration",
       "platformEvidence": [
-        "rsReticulum full Rust workspace, MSRV, API, and cross-platform CI gates",
-        "Ratspeak full Rust workspace, strict Clippy, source-contract, and dashboard behavior gates",
-        "Android arm64 Kotlin policy, BLE lifecycle, and application compilation gates",
-        "physical Android BLE RNode power-cycle, pairing, reconnect, and interface-resume verification",
-        "desktop and Android message-action and native-selection interaction verification"
+        "Rust workspace and metadata/manifest contract checks cover the six generated application-internal crate snapshots",
+        "gateway, node, verifier, and wallet unit/test gates are covered where available in the current workspace",
+        "Linux native custody is feature-gated and requires GTK/Secret Service host validation; Android device validation remains separate",
+        "one Linux standalone-gateway Sepolia smoke lifecycle reached locally verified finalized-receipt success; broader platform and physical-route validation remains separate"
       ]
     }
   },
@@ -69,6 +67,60 @@
       "snapshot": "api/snapshots/ratspeak-db.txt",
       "itemCount": 686,
       "sha256": "f53dd3f0aef794bb279d6a5f77954bf4034eeabf2e28cccd67e3d67e4484586a"
+    },
+    {
+      "name": "ratspeak-eth-gateway",
+      "manifestPath": "Cargo.toml",
+      "tier": "application-internal",
+      "compatibility": "reviewed-snapshot",
+      "snapshot": "api/snapshots/ratspeak-eth-gateway.txt",
+      "itemCount": 480,
+      "sha256": "a9cf908343445bec2067c3e7738036c51ffd86818cc6b10f5076fd3eccabfd89"
+    },
+    {
+      "name": "ratspeak-eth-gateway-daemon",
+      "manifestPath": "Cargo.toml",
+      "tier": "application-internal",
+      "compatibility": "reviewed-snapshot",
+      "snapshot": "api/snapshots/ratspeak-eth-gateway-daemon.txt",
+      "itemCount": 141,
+      "sha256": "de3c54f21c67ab85fb8125f051bf342a7bf74b59e14e259c31de71148b7566a2"
+    },
+    {
+      "name": "ratspeak-eth-node",
+      "manifestPath": "Cargo.toml",
+      "tier": "application-internal",
+      "compatibility": "reviewed-snapshot",
+      "snapshot": "api/snapshots/ratspeak-eth-node.txt",
+      "itemCount": 464,
+      "sha256": "2d747e7cec4793757c8aebbf547e3531c859ec4eadb8ff8875bd01cc6a2e45f5"
+    },
+    {
+      "name": "ratspeak-eth-verifier",
+      "manifestPath": "Cargo.toml",
+      "tier": "application-internal",
+      "compatibility": "reviewed-snapshot",
+      "snapshot": "api/snapshots/ratspeak-eth-verifier.txt",
+      "itemCount": 283,
+      "sha256": "cc3dfb228c7711c0d259bb0d1100eabb1697c9b3c8bdce6bd25a3cdac408c932"
+    },
+    {
+      "name": "ratspeak-eth-wallet",
+      "manifestPath": "Cargo.toml",
+      "tier": "application-internal",
+      "compatibility": "reviewed-snapshot",
+      "snapshot": "api/snapshots/ratspeak-eth-wallet.txt",
+      "itemCount": 101,
+      "sha256": "1c6caea4decde2546c4aac2aaf99a670c9d1b246a57b84f482a5dbadcbf5a418"
+    },
+    {
+      "name": "ratspeak-eth-wallet-linux",
+      "manifestPath": "Cargo.toml",
+      "tier": "application-internal",
+      "compatibility": "reviewed-snapshot",
+      "snapshot": "api/snapshots/ratspeak-eth-wallet-linux.txt",
+      "itemCount": 4,
+      "sha256": "c001de061ba51dbc7cd485eb60f3e57caa9b0eae8ddc26f27e98a77013bbfbfb"
     },
     {
       "name": "ratspeak-runtime",
