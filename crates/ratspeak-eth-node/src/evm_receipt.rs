@@ -101,7 +101,7 @@ impl EthereumNodeStore {
                     stored.block_hash.as_slice(),
                     stored.tx_hash.as_slice(),
                     stored.tx_index.to_string(),
-                    i64::from(stored.succeeded),
+                    if stored.succeeded { 1_i64 } else { 0_i64 },
                     stored.cumulative_gas_used.to_string(),
                     stored.logs_count.to_string(),
                     stored.verified_at_unix.to_string(),
