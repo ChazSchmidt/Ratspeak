@@ -22,6 +22,7 @@ mod bootstrap;
 mod checkpoint;
 mod consensus;
 mod evidence;
+mod evm_receipt;
 mod field_node;
 mod messaging;
 mod readiness;
@@ -46,6 +47,7 @@ pub use checkpoint::{
 };
 pub use consensus::{StoredExecutionBlock, StoredFinalizedHeader};
 pub use evidence::{EvidenceKind, StoredReplayRecord};
+pub use evm_receipt::StoredEvmReceiptRecord;
 pub use field_node::{
     AccountAssurance, AccountEvidence, FieldNodeClock, FieldTransferRequest, OperationStatus,
     PlatformTransferCustody, PreparedFieldTransfer, TransactionAssurance,
