@@ -391,6 +391,7 @@ impl AcceptedEvidenceRequest {
 
 pub struct AcceptedSignedRelay {
     request_id: [u8; 16],
+    chain_id: u64,
     tx_hash: [u8; 32],
     sender: [u8; 20],
     raw_transaction: Vec<u8>,
@@ -412,6 +413,9 @@ impl AcceptedTransactionStatusRequest {
     }
     pub fn expires_at_unix(&self) -> u64 {
         self.expires_at_unix
+    }
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
     }
     pub fn tx_hash(&self) -> [u8; 32] {
         self.tx_hash
@@ -839,9 +843,10 @@ fn decode(bytes: &[u8]) -> Result<Message, GatewayMessageError> {
             }
             let raw_transaction = cursor.take(size)?.to_vec();
             cursor.finish()?;
-            let (tx_hash, sender) = validate_signed_transaction(&raw_transaction)?;
+            let (chain_id, tx_hash, sender) = validate_signed_transaction(&raw_transaction)?;
             Ok(Message::SignedRelay(AcceptedSignedRelay {
                 request_id,
+                chain_id,
                 tx_hash,
                 sender,
                 raw_transaction,
@@ -897,7 +902,9 @@ fn decode(bytes: &[u8]) -> Result<Message, GatewayMessageError> {
     }
 }
 
-fn validate_signed_transaction(raw: &[u8]) -> Result<([u8; 32], [u8; 20]), GatewayMessageError> {
+fn validate_signed_transaction(
+    raw: &[u8],
+) -> Result<(u64, [u8; 32], [u8; 20]), GatewayMessageError> {
     let mut remaining = raw;
     let envelope = TxEnvelope::decode_2718(&mut remaining)
         .map_err(|_| GatewayMessageError::InvalidSignedRelay)?;
@@ -920,7 +927,7 @@ fn validate_signed_transaction(raw: &[u8]) -> Result<([u8; 32], [u8; 20]), Gatew
     let sender = envelope
         .recover_signer()
         .map_err(|_| GatewayMessageError::InvalidSignedRelay)?;
-    Ok((envelope.tx_hash().0, *sender.0))
+    Ok((chain_id, envelope.tx_hash().0, *sender.0))
 }
 
 fn encode_manifest(
