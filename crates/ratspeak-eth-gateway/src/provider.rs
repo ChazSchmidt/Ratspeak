@@ -1,4 +1,4 @@
-//! Bounded operator-side Sepolia provider.
+//! Bounded operator-side EVM providers.
 //!
 //! Endpoint and authorization values are constructor inputs for the standalone
 //! daemon. They are deliberately absent from gateway messages and durable
@@ -32,7 +32,6 @@ use ratspeak_eth_verifier::{
 };
 
 const MAX_SIGNED_TRANSACTION_BYTES: usize = 256;
-const NATIVE_TRANSFER_GAS_LIMIT: u64 = 21_000;
 const MAX_JSON_DEPTH: usize = 16;
 const MAX_JSON_VALUES: usize = 8_192;
 const MAX_JSON_STRING_BYTES: usize = 1024 * 1024;
