@@ -1137,6 +1137,61 @@ mod tests {
     }
 
     #[test]
+    fn base_sepolia_account_proof_uses_same_trie_verifier() {
+        let address = [0x44; 20];
+        let account = TrieAccount {
+            nonce: 2,
+            balance: U256::from(987_654u64),
+            storage_root: EMPTY_ROOT_HASH,
+            code_hash: KECCAK_EMPTY,
+        };
+        let key = Nibbles::unpack(keccak256(address));
+        let mut builder =
+            HashBuilder::default().with_proof_retainer(ProofRetainer::from_iter([key]));
+        builder.add_leaf(key, &alloy_rlp::encode(account));
+        let state_root: [u8; 32] = builder.root().into();
+        let proof = builder
+            .take_proof_nodes()
+            .into_nodes_sorted()
+            .into_iter()
+            .map(|(_, node)| node.to_vec())
+            .collect::<Vec<_>>();
+        let block_hash = [0x55; 32];
+
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(MAGIC);
+        bytes.push(VERSION);
+        bytes.extend_from_slice(&BASE_SEPOLIA_CHAIN_ID.to_le_bytes());
+        write_string(&mut bytes, BASE_SEPOLIA_NETWORK);
+        bytes.push(KIND_ACCOUNT_PROOF);
+        bytes.extend_from_slice(&1_780_000_000u64.to_le_bytes());
+        bytes.extend_from_slice(&77u64.to_le_bytes());
+        bytes.extend_from_slice(&block_hash);
+        bytes.extend_from_slice(&state_root);
+        bytes.extend_from_slice(&address);
+        bytes.extend_from_slice(&account.balance.to_be_bytes::<32>());
+        bytes.extend_from_slice(&account.nonce.to_le_bytes());
+        bytes.extend_from_slice(account.code_hash.as_slice());
+        bytes.extend_from_slice(account.storage_root.as_slice());
+        bytes.extend_from_slice(&(proof.len() as u32).to_le_bytes());
+        for node in proof {
+            write_bytes(&mut bytes, &node);
+        }
+
+        let verified = Verifier::base_sepolia()
+            .verify_and_import(
+                &bytes,
+                &PinnedCheckpoint::base_sepolia(77, block_hash, state_root),
+                &mut MemoryAccountStore::default(),
+            )
+            .unwrap();
+        assert_eq!(verified.chain_id(), BASE_SEPOLIA_CHAIN_ID);
+        assert_eq!(verified.network(), BASE_SEPOLIA_NETWORK);
+        assert_eq!(verified.address(), address);
+        assert_eq!(verified.balance(), U256::from(987_654u64));
+    }
+
+    #[test]
     fn account_store_failure_does_not_claim_an_import() {
         struct FailingStore;
         impl VerifiedAccountStore for FailingStore {
