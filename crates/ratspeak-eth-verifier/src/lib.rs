@@ -23,6 +23,7 @@ mod consensus;
 mod execution;
 mod finalized_receipt;
 mod manual_checkpoint;
+mod opstack;
 mod receipt;
 mod storage;
 
@@ -54,7 +55,8 @@ pub use manual_checkpoint::{
     MAX_MANUAL_CHECKPOINT_FILE_BYTES, ManualCheckpointFile, encode_manual_checkpoint_file,
     manual_checkpoint_file_fingerprint,
 };
-pub use receipt::{TxReceiptProofBundle, VerifiedTxReceipt};
+pub use opstack::OpStackSequencerAnchor;
+pub use receipt::{TxReceiptProofBundle, VerifiedEvmTxReceipt, VerifiedTxReceipt};
 pub use storage::{StorageProofBundle, VerifiedStorageValue};
 
 pub const MAGIC: &[u8; 6] = b"RSETH1";
