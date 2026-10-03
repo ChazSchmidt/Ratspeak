@@ -20,9 +20,11 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[cfg(any(target_os = "android", target_os = "linux", test))]
-use alloy_primitives::{Address, U256};
+use alloy_primitives::{Address, Bytes, U256, keccak256};
 #[cfg(any(target_os = "android", test))]
 use base64::Engine;
+#[cfg(any(target_os = "android", target_os = "linux", test))]
+use ratspeak_eth_clearsign::DefinitionRegistry;
 #[cfg(any(target_os = "android", target_os = "linux", test))]
 use ratspeak_eth_node::FieldTransferRequest;
 use ratspeak_eth_node::{
@@ -34,7 +36,7 @@ use ratspeak_eth_node::{
     TransactionStatusHistoryView,
 };
 #[cfg(any(target_os = "android", target_os = "linux", test))]
-use ratspeak_eth_wallet::{OperationId, PreparedClearSignedOperation};
+use ratspeak_eth_wallet::{ClearSignedIntent, OperationId, PreparedClearSignedOperation};
 use ratspeak_eth_wallet::{WalletAccount, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK};
 #[cfg(any(target_os = "android", test))]
 use rns_identity::{destination::Destination, identity::Identity};
@@ -933,6 +935,117 @@ impl EthereumApplicationState {
     }
 
     #[cfg(any(target_os = "android", target_os = "linux", test))]
+    pub(crate) fn prepare_clear_signed_operation_for_native(
+        &self,
+        generation: EthereumProfileGeneration,
+        identity_hash: [u8; 16],
+        identity_session_generation: u64,
+        request: &EthereumClearSignedOperationRequest,
+        prepared_at_unix: u64,
+        expires_at_unix: u64,
+    ) -> Result<NativeClearSignedCandidate, &'static str> {
+        let (profile_dir, account) = {
+            let scoped = self
+                .scoped
+                .read()
+                .map_err(|_| "ethereum_state_unavailable")?;
+            let binding = scoped
+                .profile_binding
+                .as_ref()
+                .ok_or("ethereum_profile_unavailable")?;
+            if binding.generation != generation
+                || binding.ratspeak_identity_hash != identity_hash
+                || binding.identity_session_generation != identity_session_generation
+            {
+                return Err("ethereum_profile_changed");
+            }
+            (
+                binding.profile_dir.clone(),
+                binding.public_account.ok_or("ethereum_wallet_unavailable")?,
+            )
+        };
+
+        let definitions_path = profile_dir
+            .join(ratspeak_eth_node::ETHEREUM_STORE_DIRECTORY)
+            .join("definitions");
+        let mut definitions = DefinitionRegistry::load_dir(&definitions_path)
+            .map_err(|_| "ethereum_definition_store_unavailable")?;
+        definitions
+            .install_poc_native_definitions()
+            .map_err(|_| "ethereum_definition_store_unavailable")?;
+
+        let intent = request.intent(account)?;
+        let operation_id = self.next_clear_signed_operation_id(
+            identity_hash,
+            identity_session_generation,
+            request,
+            prepared_at_unix,
+        )?;
+        let prepared = account
+            .prepare_clear_signed_operation(
+                intent,
+                &definitions,
+                operation_id,
+                prepared_at_unix,
+                expires_at_unix,
+            )
+            .map_err(|_| "ethereum_clear_sign_rejected")?;
+        let review = prepared.review();
+        let candidate = NativeClearSignedCandidate {
+            operation_id: *review.operation_id.as_bytes(),
+            chain_id: review.chain_id,
+            sender: format!("{:#x}", review.from),
+            network: review.clear_sign.network.clone(),
+            definition_hash: review.clear_sign.definition_hash.0,
+            operation_hash: review.clear_sign.operation_hash.0,
+            asset_symbol: review.clear_sign.asset_symbol.clone(),
+            asset_decimals: review.clear_sign.asset_decimals,
+            recipient: format!("{:#x}", review.clear_sign.recipient),
+            amount: review.clear_sign.amount.to_string(),
+            nonce: review.nonce,
+            gas_limit: review.gas_limit,
+            max_fee_per_gas_wei: review.max_fee_per_gas,
+            max_priority_fee_per_gas_wei: review.max_priority_fee_per_gas,
+            expires_at_unix: review.expires_at_unix,
+            canonical_signing_payload: prepared.canonical_signing_bytes().to_vec(),
+        };
+        self.register_prepared_clear_signed_operation(generation, prepared)?;
+        Ok(candidate)
+    }
+
+    #[cfg(any(target_os = "android", target_os = "linux", test))]
+    fn next_clear_signed_operation_id(
+        &self,
+        identity_hash: [u8; 16],
+        identity_session_generation: u64,
+        request: &EthereumClearSignedOperationRequest,
+        now_unix: u64,
+    ) -> Result<OperationId, &'static str> {
+        let nonce = self.operation_nonce.fetch_add(1, Ordering::Relaxed);
+        let mut material = Vec::with_capacity(256 + request.calldata_hex.len());
+        material.extend_from_slice(b"ratspeak.ethereum.clear-sign-operation-id.v1\0");
+        material.extend_from_slice(&identity_hash);
+        material.extend_from_slice(&identity_session_generation.to_be_bytes());
+        material.extend_from_slice(&nonce.to_be_bytes());
+        material.extend_from_slice(&now_unix.to_be_bytes());
+        material.extend_from_slice(&request.chain_id.to_be_bytes());
+        material.extend_from_slice(request.target.as_bytes());
+        material.extend_from_slice(request.value_wei.as_bytes());
+        material.extend_from_slice(request.calldata_hex.as_bytes());
+        material.extend_from_slice(&request.nonce.to_be_bytes());
+        material.extend_from_slice(&request.gas_limit.to_be_bytes());
+        material.extend_from_slice(request.max_fee_per_gas_wei.as_bytes());
+        material.extend_from_slice(request.max_priority_fee_per_gas_wei.as_bytes());
+        let digest = keccak256(material);
+        let mut bytes = [0u8; 16];
+        bytes.copy_from_slice(&digest.as_slice()[..16]);
+        if bytes == [0; 16] {
+            bytes[15] = 1;
+        }
+        OperationId::new(bytes).map_err(|_| "ethereum_operation_id_unavailable")
+    }
+
+    #[cfg(any(target_os = "android", target_os = "linux", test))]
     pub(crate) fn register_prepared_clear_signed_operation(
         &self,
         generation: EthereumProfileGeneration,
@@ -1248,6 +1361,67 @@ impl NativeExactTransferCandidate {
             && review.max_priority_fee_per_gas() == self.max_priority_fee_per_gas_wei
             && review.expires_at_unix() == self.expires_at_unix
             && signing_bytes == self.canonical_signing_payload
+    }
+}
+
+#[cfg(any(target_os = "android", target_os = "linux", test))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct EthereumClearSignedOperationRequest {
+    pub(crate) chain_id: u64,
+    pub(crate) target: String,
+    pub(crate) value_wei: String,
+    pub(crate) calldata_hex: String,
+    pub(crate) nonce: u64,
+    pub(crate) gas_limit: u64,
+    pub(crate) max_fee_per_gas_wei: String,
+    pub(crate) max_priority_fee_per_gas_wei: String,
+}
+
+#[cfg(any(target_os = "android", target_os = "linux", test))]
+impl EthereumClearSignedOperationRequest {
+    fn intent(&self, account: WalletAccount) -> Result<ClearSignedIntent, &'static str> {
+        if ratspeak_eth_verifier::chain_definition(self.chain_id).is_none() {
+            return Err("unsupported_ethereum_chain");
+        }
+        let target = self
+            .target
+            .parse::<Address>()
+            .map_err(|_| "invalid_ethereum_target")?;
+        let value = parse_canonical_u256(&self.value_wei).ok_or("invalid_ethereum_value")?;
+        let max_fee_per_gas =
+            parse_canonical_u128(&self.max_fee_per_gas_wei).ok_or("invalid_ethereum_max_fee")?;
+        let max_priority_fee_per_gas = parse_canonical_u128(
+            &self.max_priority_fee_per_gas_wei,
+        )
+        .ok_or("invalid_ethereum_priority_fee")?;
+        if self.gas_limit == 0 || max_priority_fee_per_gas > max_fee_per_gas {
+            return Err("invalid_ethereum_fee_policy");
+        }
+        let digits = self
+            .calldata_hex
+            .strip_prefix("0x")
+            .ok_or("invalid_ethereum_calldata")?;
+        if digits.len() % 2 != 0
+            || digits.len() > 128 * 1024
+            || digits
+                .bytes()
+                .any(|byte| !byte.is_ascii_digit() && !(b'a'..=b'f').contains(&byte))
+        {
+            return Err("invalid_ethereum_calldata");
+        }
+        let input = alloy_primitives::hex::decode(digits)
+            .map_err(|_| "invalid_ethereum_calldata")?;
+        Ok(ClearSignedIntent {
+            chain_id: self.chain_id,
+            from: account.address(),
+            to: target,
+            value,
+            input: Bytes::from(input),
+            nonce: self.nonce,
+            gas_limit: self.gas_limit,
+            max_fee_per_gas,
+            max_priority_fee_per_gas,
+        })
     }
 }
 
