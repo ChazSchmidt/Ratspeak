@@ -39,10 +39,10 @@ pub use lxmf_service::{
 };
 
 pub use provider::{
-    ExactReceiptProofBackend, GatewayHttpResponse, GatewayHttpTransport, HttpEndpointPolicy,
-    HttpTransportFailure, OperatorAuthorization, ProviderConfigurationError, ProviderHttpPolicy,
-    ReqwestGatewayHttpTransport, SepoliaRpcProvider, SystemUnixClock, UnixClock,
-    UnsupportedReceiptProofBackend, UntrustedReceiptLocation,
+    EvmAnchorRpcProvider, ExactReceiptProofBackend, GatewayHttpResponse, GatewayHttpTransport,
+    HttpEndpointPolicy, HttpTransportFailure, OperatorAuthorization, ProviderConfigurationError,
+    ProviderHttpPolicy, ReqwestGatewayHttpTransport, SepoliaRpcProvider, SystemUnixClock,
+    UnixClock, UnsupportedReceiptProofBackend, UntrustedReceiptLocation,
 };
 pub use receipt_backend::CompleteBlockReceiptProofBackend;
 
