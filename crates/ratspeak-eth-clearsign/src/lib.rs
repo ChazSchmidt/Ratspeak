@@ -646,8 +646,11 @@ mod tests {
     const USDC: &[u8] = include_bytes!("../definitions/base-usdc.json");
     const ALUSDB: &[u8] = include_bytes!("../definitions/base-alusdb.json");
     const RATSPEAK: &[u8] = include_bytes!("../definitions/base-ratspeak.json");
-    const BASE_SEPOLIA_NATIVE: &[u8] = include_bytes!("../definitions/base-sepolia-native-eth.json");
+    const BASE_SEPOLIA_NATIVE: &[u8] =
+        include_bytes!("../definitions/base-sepolia-native-eth.json");
     const BASE_SEPOLIA_USDC: &[u8] = include_bytes!("../definitions/base-sepolia-usdc.json");
+    const BASE_SEPOLIA_USDC_BALANCE: &[u8] =
+        include_bytes!("../definitions/base-sepolia-usdc-balance.json");
 
     fn address(s: &str) -> Address {
         s.parse().unwrap()
@@ -676,10 +679,41 @@ mod tests {
 
     fn registry() -> DefinitionRegistry {
         let mut r = DefinitionRegistry::new();
-        for d in [NATIVE, USDC, ALUSDB, RATSPEAK, BASE_SEPOLIA_NATIVE, BASE_SEPOLIA_USDC] {
+        for d in [
+            NATIVE,
+            USDC,
+            ALUSDB,
+            RATSPEAK,
+            BASE_SEPOLIA_NATIVE,
+            BASE_SEPOLIA_USDC,
+            BASE_SEPOLIA_USDC_BALANCE,
+        ] {
             r.install_bytes(d).unwrap();
         }
         r
+    }
+
+    #[test]
+    fn base_sepolia_usdc_balance_definition_derives_storage_key_and_mask() {
+        let owner = address("2222222222222222222222222222222222222222");
+        let query = registry()
+            .balance_query("base-sepolia-usdc-balance-v1", owner)
+            .unwrap();
+
+        let mut encoded = [0u8; 64];
+        encoded[12..32].copy_from_slice(owner.as_slice());
+        encoded[63] = 9;
+        assert_eq!(query.storage_key, keccak256(encoded));
+        assert_eq!(query.chain_id, BASE_SEPOLIA_CHAIN_ID);
+        assert_eq!(query.contract, address("036CbD53842c5426634e7929541eC2318f3dCF7e"));
+        assert_eq!(query.symbol, "USDC");
+        assert_eq!(query.decimals, 6);
+
+        let high_blacklist_bit = U256::from(1u8) << 255;
+        assert_eq!(
+            query.interpret_storage_value(high_blacklist_bit | U256::from(10_000_000u64)),
+            U256::from(10_000_000u64)
+        );
     }
 
     #[test]
