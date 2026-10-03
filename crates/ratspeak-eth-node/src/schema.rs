@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 
 use crate::{NodeStoreError, Result};
 
-pub(super) const ETHEREUM_STORE_SCHEMA_VERSION: i64 = 17;
+pub(super) const ETHEREUM_STORE_SCHEMA_VERSION: i64 = 18;
 
 pub(super) fn validate_current(connection: &rusqlite::Connection) -> Result<()> {
     let version = connection
@@ -220,6 +220,17 @@ pub(super) fn initialize(connection: &mut rusqlite::Connection) -> Result<()> {
         }
         Some(16) => {
             crate::messaging::migrate_v16_to_v17(&transaction)?;
+            create_current_schema(&transaction)?;
+            transaction
+                .execute(
+                    "UPDATE eth_schema_version SET version = ?1 WHERE singleton = 1",
+                    [ETHEREUM_STORE_SCHEMA_VERSION],
+                )
+                .map_err(NodeStoreError::sqlite)?;
+        }
+        Some(17) => {
+            // v18 adds a stack-neutral verified EVM receipt table. Existing
+            // Ethereum-finalized receipt authority remains unchanged.
             create_current_schema(&transaction)?;
             transaction
                 .execute(
@@ -645,6 +656,28 @@ fn create_current_schema(transaction: &Transaction<'_>) -> Result<()> {
                         chain_id, network, source_kind,
                         source_fingerprint, observed_at_unix
                     )
+                );
+
+             CREATE TABLE IF NOT EXISTS eth_verified_evm_receipts (
+                    chain_id TEXT NOT NULL,
+                    network TEXT NOT NULL,
+                    block_number TEXT NOT NULL,
+                    block_hash BLOB NOT NULL CHECK(length(block_hash) = 32),
+                    tx_hash BLOB NOT NULL CHECK(length(tx_hash) = 32),
+                    tx_index TEXT NOT NULL,
+                    succeeded INTEGER NOT NULL CHECK(succeeded IN (0, 1)),
+                    cumulative_gas_used TEXT NOT NULL,
+                    logs_count TEXT NOT NULL,
+                    verified_at_unix TEXT NOT NULL,
+                    assurance INTEGER NOT NULL CHECK(assurance IN (1, 2, 3)),
+                    anchor_evidence_hash BLOB NOT NULL CHECK(length(anchor_evidence_hash) = 32),
+                    proof_bundle_hash BLOB NOT NULL CHECK(length(proof_bundle_hash) = 32),
+                    canonical_bundle BLOB NOT NULL CHECK(length(canonical_bundle) > 0),
+                    record_digest BLOB NOT NULL CHECK(length(record_digest) = 32),
+                    recorded_at_unix INTEGER NOT NULL DEFAULT (unixepoch()),
+                    PRIMARY KEY(chain_id, network, block_hash, tx_index),
+                    UNIQUE(chain_id, network, tx_hash),
+                    UNIQUE(chain_id, network, proof_bundle_hash)
                 );
 
              CREATE TABLE IF NOT EXISTS eth_verified_finalized_headers (
