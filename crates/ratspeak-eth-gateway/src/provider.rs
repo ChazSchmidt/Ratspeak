@@ -24,7 +24,8 @@ use crate::{
     AcceptedEvidenceRequest, AcceptedSignedRelay, AcceptedTransactionStatusRequest,
     EvmAnchorGatewayBuilder, GatewayBundle, GatewayExecutionProvider, GatewayProviderFailure,
     MessagingEvidenceKind, RelayProviderObservation, RelayProviderStatus, SepoliaGatewayBuilder,
-    TransactionStatusObservation, UntrustedAccountProofRpcInput, UntrustedTxReceiptProofRpcInput,
+    TransactionStatusObservation, UntrustedAccountProofRpcInput, UntrustedStorageProofRpcInput,
+    UntrustedTxReceiptProofRpcInput,
 };
 use ratspeak_eth_verifier::{
     MAX_PROOF_NODE_BYTES, MAX_PROOF_NODES, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, chain_definition,
@@ -344,6 +345,12 @@ impl ExactReceiptProofBackend for UnsupportedReceiptProofBackend {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VerifiedStorageEvidenceBundles {
+    pub account: GatewayBundle,
+    pub storage: GatewayBundle,
+}
+
 /// Execution provider pinned to one already verified EVM anchor.
 ///
 /// One instance is bound to one chain. The app may keep one configured agent
@@ -502,6 +509,88 @@ where
     T: GatewayHttpTransport,
     C: UnixClock,
 {
+    /// Fetches and locally verifies the contract account proof and one storage
+    /// slot proof at the exact authenticated anchor. This is the primitive used
+    /// by balance-proof definitions; the user never configures the RPC call.
+    pub fn fetch_verified_storage_evidence(
+        &mut self,
+        account_address: [u8; 20],
+        storage_key: [u8; 32],
+    ) -> Result<VerifiedStorageEvidenceBundles, GatewayProviderFailure> {
+        let (chain_id, network, block_number, block_hash, state_root) = {
+            let anchor = self.builder.anchor();
+            (
+                anchor.chain_id(),
+                anchor.network().to_owned(),
+                anchor.block_number(),
+                anchor.block_hash(),
+                anchor.state_root(),
+            )
+        };
+
+        let block = self.rpc_call(
+            RpcMethod::GetBlockByHash,
+            json!([canonical_data_hex(&block_hash), false]),
+        )?;
+        let RpcReply::Result(block) = block else {
+            return Err(GatewayProviderFailure::Permanent);
+        };
+        validate_anchor_block(&block, self.builder.anchor())?;
+
+        let selector = json!({
+            "blockHash": canonical_data_hex(&block_hash),
+            "requireCanonical": true
+        });
+        let params = json!([
+            canonical_data_hex(&account_address),
+            [canonical_data_hex(&storage_key)],
+            selector
+        ]);
+        let reply = self.rpc_call(RpcMethod::GetProof, params)?;
+        let proof = match reply {
+            RpcReply::Result(proof) => proof,
+            RpcReply::Rejected { code: -32602 } => match self.rpc_call(
+                RpcMethod::GetProof,
+                json!([
+                    canonical_data_hex(&account_address),
+                    [canonical_data_hex(&storage_key)],
+                    format!("0x{block_number:x}")
+                ]),
+            )? {
+                RpcReply::Result(proof) => proof,
+                RpcReply::Rejected { .. } => return Err(GatewayProviderFailure::Permanent),
+            },
+            RpcReply::Rejected { .. } => return Err(GatewayProviderFailure::Permanent),
+        };
+
+        let (account_input, storage_input) = parse_account_and_storage_proof_result(
+            &proof,
+            chain_id,
+            &network,
+            self.clock.now_unix()?,
+            block_number,
+            block_hash,
+            state_root,
+            account_address,
+            storage_key,
+        )?;
+
+        let verified_account = self
+            .builder
+            .verify_account(&account_input)
+            .map_err(|_| GatewayProviderFailure::Permanent)?;
+        let account = self
+            .builder
+            .build_account_proof(&account_input)
+            .map_err(|_| GatewayProviderFailure::Permanent)?;
+        let storage = self
+            .builder
+            .build_storage_proof(&verified_account, &storage_input)
+            .map_err(|_| GatewayProviderFailure::Permanent)?;
+
+        Ok(VerifiedStorageEvidenceBundles { account, storage })
+    }
+
     fn fetch_account_evidence(
         &mut self,
         subject: [u8; 32],
@@ -1231,6 +1320,150 @@ fn validate_block_anchor(
         return Err(GatewayProviderFailure::Permanent);
     }
     Ok(())
+}
+
+fn parse_account_and_storage_proof_result(
+    value: &Value,
+    chain_id: u64,
+    network: &str,
+    captured_at_unix: u64,
+    block_number: u64,
+    block_hash: [u8; 32],
+    state_root: [u8; 32],
+    expected_address: [u8; 20],
+    expected_key: [u8; 32],
+) -> Result<
+    (UntrustedAccountProofRpcInput, UntrustedStorageProofRpcInput),
+    GatewayProviderFailure,
+> {
+    let object = value.as_object().ok_or(GatewayProviderFailure::Permanent)?;
+    let allowed = [
+        "address",
+        "balance",
+        "codeHash",
+        "nonce",
+        "storageHash",
+        "accountProof",
+        "storageProof",
+    ];
+    if object.keys().any(|key| !allowed.contains(&key.as_str()))
+        || parse_field_fixed_hex::<20>(object, "address")? != expected_address
+    {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+
+    let definition = chain_definition(chain_id).ok_or(GatewayProviderFailure::Permanent)?;
+    if definition.network != network {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+
+    let proof_values = object
+        .get("accountProof")
+        .and_then(Value::as_array)
+        .ok_or(GatewayProviderFailure::Permanent)?;
+    if proof_values.is_empty() || proof_values.len() > MAX_PROOF_NODES {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    let mut account_proof = Vec::with_capacity(proof_values.len());
+    for node in proof_values {
+        let node = parse_data_hex(node, MAX_PROOF_NODE_BYTES)?;
+        if node.is_empty() {
+            return Err(GatewayProviderFailure::Permanent);
+        }
+        account_proof.push(node);
+    }
+
+    let storage_root = parse_field_fixed_hex(object, "storageHash")?;
+    let storage_values = object
+        .get("storageProof")
+        .and_then(Value::as_array)
+        .ok_or(GatewayProviderFailure::Permanent)?;
+    if storage_values.len() != 1 {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    let storage = storage_values[0]
+        .as_object()
+        .ok_or(GatewayProviderFailure::Permanent)?;
+    if storage.keys().any(|key| !["key", "value", "proof"].contains(&key.as_str())) {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    let key = parse_quantity_u256(
+        storage.get("key").ok_or(GatewayProviderFailure::Permanent)?,
+    )?
+    .to_be_bytes::<32>();
+    if key != expected_key {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    let value = parse_quantity_u256(
+        storage.get("value").ok_or(GatewayProviderFailure::Permanent)?,
+    )?;
+    let proof_values = storage
+        .get("proof")
+        .and_then(Value::as_array)
+        .ok_or(GatewayProviderFailure::Permanent)?;
+    if proof_values.is_empty() || proof_values.len() > MAX_PROOF_NODES {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    let mut storage_proof = Vec::with_capacity(proof_values.len());
+    for node in proof_values {
+        let node = parse_data_hex(node, MAX_PROOF_NODE_BYTES)?;
+        if node.is_empty() {
+            return Err(GatewayProviderFailure::Permanent);
+        }
+        storage_proof.push(node);
+    }
+
+    let account = UntrustedAccountProofRpcInput {
+        chain_id,
+        network: network.to_owned(),
+        captured_at_unix,
+        block_number,
+        block_hash,
+        state_root,
+        address: expected_address,
+        balance: parse_field_u256(object, "balance")?,
+        nonce: parse_field_quantity_u64(object, "nonce")?,
+        code_hash: parse_field_fixed_hex(object, "codeHash")?,
+        storage_root,
+        account_proof,
+    };
+    let storage = UntrustedStorageProofRpcInput {
+        chain_id,
+        network: network.to_owned(),
+        captured_at_unix,
+        block_number,
+        block_hash,
+        account_address: expected_address,
+        storage_root,
+        key,
+        value,
+        proof: storage_proof,
+    };
+    Ok((account, storage))
+}
+
+fn parse_quantity_u256(value: &Value) -> Result<U256, GatewayProviderFailure> {
+    let value = value.as_str().ok_or(GatewayProviderFailure::Permanent)?;
+    let digits = value
+        .strip_prefix("0x")
+        .ok_or(GatewayProviderFailure::Permanent)?;
+    if digits.is_empty()
+        || (digits.len() > 1 && digits.starts_with('0'))
+        || digits.len() > 64
+        || digits
+            .bytes()
+            .any(|byte| !byte.is_ascii_digit() && !(b'a'..=b'f').contains(&byte))
+    {
+        return Err(GatewayProviderFailure::Permanent);
+    }
+    let mut padded = String::with_capacity(digits.len() + 1);
+    if digits.len() % 2 != 0 {
+        padded.push('0');
+    }
+    padded.push_str(digits);
+    let bytes =
+        alloy_primitives::hex::decode(padded).map_err(|_| GatewayProviderFailure::Permanent)?;
+    Ok(U256::from_be_slice(&bytes))
 }
 
 fn parse_account_proof_result(
