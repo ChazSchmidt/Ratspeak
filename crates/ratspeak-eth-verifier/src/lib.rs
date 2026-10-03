@@ -30,9 +30,10 @@ mod storage;
 pub use anchor::{AnchorAssurance, VerifiedEvmAnchor};
 pub use chains::{
     ARBITRUM_SEPOLIA, ARBITRUM_SEPOLIA_CHAIN_ID, BASE_SEPOLIA, BASE_SEPOLIA_CHAIN_ID,
-    ChainDefinition, ETHEREUM_SEPOLIA, ETHEREUM_SEPOLIA_CHAIN_ID, NitroConfig, OP_SEPOLIA,
-    OP_SEPOLIA_CHAIN_ID, OpStackConfig, ROBINHOOD_TESTNET, ROBINHOOD_TESTNET_CHAIN_ID,
-    StackConfig, SUPPORTED_CHAINS, VerificationFamily, chain_definition,
+    ChainDefinition, ChainSupportRequirements, ETHEREUM_SEPOLIA, ETHEREUM_SEPOLIA_CHAIN_ID,
+    NitroConfig, OP_SEPOLIA, OP_SEPOLIA_CHAIN_ID, OpStackConfig, ROBINHOOD_TESTNET,
+    ROBINHOOD_TESTNET_CHAIN_ID, StackConfig, SUPPORTED_CHAINS, VerificationFamily,
+    chain_definition, support_requirements,
 };
 pub use composite::{
     AccountStateEvidencePackage, FinalizedReceiptEvidencePackage, VerifiedAccountStateEvidence,
