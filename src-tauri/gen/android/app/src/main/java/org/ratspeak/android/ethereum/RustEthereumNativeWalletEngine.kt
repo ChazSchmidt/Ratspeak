@@ -93,6 +93,33 @@ internal object RustEthereumNativeWalletEngine : EthereumNativeWalletEngine {
         }
     }
 
+    override fun signClearSignedOperation(
+        review: ExactClearSignedReview,
+        secret: SensitiveWalletBytes,
+    ): NativeWalletResult<String> {
+        if (!review.isStillBound()) {
+            secret.close()
+            return NativeWalletResult.Failure(NativeWalletFailure.REVIEW_MISMATCH)
+        }
+        val frame = NativeClearSignReviewFrame.encode(review)
+            ?: run {
+                secret.close()
+                return NativeWalletResult.Failure(NativeWalletFailure.REVIEW_MISMATCH)
+            }
+        return try {
+            secret.consume { bytes ->
+                decodePublicValue(
+                    callFrame { nativeSignClearSignedOperation(frame, bytes) },
+                    TRANSACTION_HASH,
+                )
+            }
+        } catch (_: Throwable) {
+            NativeWalletResult.Failure(NativeWalletFailure.OPERATION_FAILED)
+        } finally {
+            frame.fill(0)
+        }
+    }
+
     /** Cancels one exact Rust-owned preparation when its native ceremony closes. */
     internal fun cancelExactTransfer(
         identityHash: ByteArray,
@@ -322,6 +349,10 @@ internal object RustEthereumNativeWalletEngine : EthereumNativeWalletEngine {
     @JvmStatic private external fun nativeDiscardPendingWallet(handle: Long)
     @JvmStatic private external fun nativeRevealRecoveryPhrase(secret: ByteArray): ByteArray
     @JvmStatic private external fun nativeSignExactTransfer(review: ByteArray, secret: ByteArray): ByteArray
+    @JvmStatic private external fun nativeSignClearSignedOperation(
+        review: ByteArray,
+        secret: ByteArray,
+    ): ByteArray
     @JvmStatic private external fun nativeCancelExactTransfer(
         identityHash: ByteArray,
         identitySessionGeneration: Long,
@@ -394,6 +425,66 @@ private class NativeFrameCursor(private val frame: ByteArray) {
     }
 
     fun finished(): Boolean = offset == frame.size
+}
+
+private object NativeClearSignReviewFrame {
+    fun encode(review: ExactClearSignedReview): ByteArray? = try {
+        val operation = review.copyOperationId()
+        val definitionHash = review.copyDefinitionHash()
+        val operationHash = review.copyOperationHash()
+        val payload = review.copySigningPayload()
+        try {
+            val network = review.network.toByteArray(StandardCharsets.US_ASCII)
+            val symbol = review.assetSymbol.toByteArray(StandardCharsets.US_ASCII)
+            val amount = review.amount.toByteArray(StandardCharsets.US_ASCII)
+            ByteArrayOutputStream(384 + payload.size).apply {
+                write(3)
+                write(operation)
+                writeUnsigned(BigInteger.valueOf(review.chainId), 8)
+                write(review.sender.toByteArray(StandardCharsets.US_ASCII))
+                writeU16(network.size)
+                write(network)
+                write(definitionHash)
+                write(operationHash)
+                writeU16(symbol.size)
+                write(symbol)
+                write(review.assetDecimals)
+                write(review.recipient.toByteArray(StandardCharsets.US_ASCII))
+                writeU16(amount.size)
+                write(amount)
+                writeUnsigned(BigInteger(review.nonce), 8)
+                writeUnsigned(BigInteger.valueOf(review.gasLimit), 8)
+                writeUnsigned(BigInteger(review.maxFeePerGasWei), 16)
+                writeUnsigned(BigInteger(review.maxPriorityFeePerGasWei), 16)
+                writeUnsigned(BigInteger.valueOf(review.expiresAtEpochMillis), 8)
+                writeU16(payload.size)
+                write(payload)
+            }.toByteArray()
+        } finally {
+            operation.fill(0)
+            definitionHash.fill(0)
+            operationHash.fill(0)
+            payload.fill(0)
+        }
+    } catch (_: Throwable) {
+        null
+    }
+
+    private fun ByteArrayOutputStream.writeU16(value: Int) {
+        require(value in 0..UShort.MAX_VALUE.toInt())
+        write((value ushr 8) and 0xff)
+        write(value and 0xff)
+    }
+
+    private fun ByteArrayOutputStream.writeUnsigned(value: BigInteger, width: Int) {
+        require(value.signum() >= 0 && value.bitLength() <= width * 8)
+        val encoded = value.toByteArray()
+        val start = if (encoded.size > width && encoded[0] == 0.toByte()) 1 else 0
+        require(encoded.size - start <= width)
+        repeat(width - (encoded.size - start)) { write(0) }
+        write(encoded, start, encoded.size - start)
+        encoded.fill(0)
+    }
 }
 
 private object NativeReviewFrame {
