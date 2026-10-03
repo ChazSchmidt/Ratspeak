@@ -5747,6 +5747,7 @@ dependencies = [
  "bip39",
  "ratspeak-eth-clearsign",
  "serde",
+ "serde_json",
  "static_assertions",
  "thiserror 2.0.19",
  "zeroize",
