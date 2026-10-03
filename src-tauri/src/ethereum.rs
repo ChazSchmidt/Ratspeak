@@ -1082,6 +1082,30 @@ impl EthereumApplicationState {
     }
 
     #[cfg(any(target_os = "android", target_os = "linux", test))]
+    pub(crate) fn cancel_native_clear_signed_operation(
+        &self,
+        identity_hash: [u8; 16],
+        identity_session_generation: u64,
+        operation_id: [u8; 16],
+    ) -> Result<(), &'static str> {
+        let mut scoped = self
+            .scoped
+            .write()
+            .map_err(|_| "ethereum_state_unavailable")?;
+        let binding = scoped
+            .profile_binding
+            .as_ref()
+            .ok_or("ethereum_profile_unavailable")?;
+        if binding.ratspeak_identity_hash != identity_hash
+            || binding.identity_session_generation != identity_session_generation
+        {
+            return Err("ethereum_profile_changed");
+        }
+        scoped.pending_clear_signed_operations.remove(&operation_id);
+        Ok(())
+    }
+
+    #[cfg(any(target_os = "android", target_os = "linux", test))]
     pub(crate) fn with_native_clear_signed_operation<T>(
         &self,
         identity_hash: [u8; 16],
