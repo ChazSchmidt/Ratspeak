@@ -5717,15 +5717,12 @@ dependencies = [
  "alloy-tx-macros",
  "base64 0.22.1",
  "ethereum_ssz",
- "ethereum_ssz_derive",
  "flate2",
  "helios-consensus-core",
  "serde",
  "serde_json",
  "sha2 0.10.9",
- "ssz_types",
  "thiserror 2.0.19",
- "typenum",
 ]
 
 [[package]]
