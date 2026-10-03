@@ -559,6 +559,67 @@ mod tests {
     }
 
     #[test]
+    fn persists_clear_signed_calls_on_all_five_supported_networks() {
+        let profile = tempfile::tempdir().unwrap();
+        let contract = Address::repeat_byte(0x33);
+        let recipient = Address::repeat_byte(0x44);
+
+        for (index, chain_id) in [
+            ratspeak_eth_verifier::ETHEREUM_SEPOLIA_CHAIN_ID,
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            ratspeak_eth_verifier::OP_SEPOLIA_CHAIN_ID,
+            ratspeak_eth_verifier::ARBITRUM_SEPOLIA_CHAIN_ID,
+            ratspeak_eth_verifier::ROBINHOOD_TESTNET_CHAIN_ID,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut input = Vec::with_capacity(68);
+            input.extend_from_slice(&[0xa9, 0x05, 0x9c, 0xbb]);
+            input.extend_from_slice(&[0u8; 12]);
+            input.extend_from_slice(recipient.as_slice());
+            input.extend_from_slice(
+                &U256::from(5_000_000_000_000_000_000u64).to_be_bytes::<32>(),
+            );
+
+            let transaction = TxEip1559 {
+                chain_id,
+                nonce: index as u64,
+                max_fee_per_gas: 3_000_000_000,
+                max_priority_fee_per_gas: 100_000_000,
+                gas_limit: 70_000,
+                to: contract.into(),
+                value: U256::ZERO,
+                input: input.into(),
+                access_list: AccessList::default(),
+            };
+            let raw = encoded_test_transaction(transaction);
+            let decoded = decode_signed_transaction(&raw).unwrap();
+
+            let mut store = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
+            let (_, stored) = store
+                .record_locally_signed_transaction(
+                    &raw,
+                    decoded.sender,
+                    Sha256::digest(chain_id.to_le_bytes()).into(),
+                    1_000 + index as u64,
+                )
+                .unwrap();
+            let definition = ratspeak_eth_verifier::chain_definition(chain_id).unwrap();
+            assert_eq!(stored.chain_id(), chain_id);
+            assert_eq!(stored.network(), definition.network);
+            assert_eq!(
+                store
+                    .signed_transaction(chain_id, stored.tx_hash())
+                    .unwrap()
+                    .unwrap()
+                    .raw_transaction(),
+                raw
+            );
+        }
+    }
+
+    #[test]
     fn persists_validated_signed_bytes_and_non_authoritative_history() {
         let raw = sepolia_raw_transaction();
         let decoded = decode_signed_transaction(&raw).unwrap();
