@@ -601,8 +601,16 @@ pub(crate) mod test_support {
     }
 
     pub(crate) fn signed_fixture_with_nonce(store: &mut EthereumNodeStore, nonce: u64) -> [u8; 32] {
+        signed_fixture_for_chain_with_nonce(store, SEPOLIA_CHAIN_ID, nonce)
+    }
+
+    pub(crate) fn signed_fixture_for_chain_with_nonce(
+        store: &mut EthereumNodeStore,
+        chain_id: u64,
+        nonce: u64,
+    ) -> [u8; 32] {
         let transaction = TxEip1559 {
-            chain_id: SEPOLIA_CHAIN_ID,
+            chain_id,
             nonce,
             max_fee_per_gas: 30_000_000_000,
             max_priority_fee_per_gas: 1_500_000_000,
@@ -620,7 +628,7 @@ pub(crate) mod test_support {
             .record_locally_signed_transaction(
                 &raw,
                 decoded.sender,
-                Sha256::digest(nonce.to_le_bytes()).into(),
+                Sha256::digest([chain_id.to_le_bytes(), nonce.to_le_bytes()].concat()).into(),
                 100 + nonce,
             )
             .unwrap();
