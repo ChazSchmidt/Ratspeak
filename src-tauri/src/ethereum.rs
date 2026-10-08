@@ -6442,7 +6442,7 @@ mod tests {
         );
         let request = EthereumClearSignedOperationRequest {
             chain_id: ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
-            target: "0x036CbD53842c5426634e7929541eC2318f3dCF7c".to_owned(),
+            target: "0x036CbD53842c5426634e7929541eC2318f3dCF7e".to_owned(),
             value_wei: "0".to_owned(),
             calldata_hex: calldata,
             nonce: 8,

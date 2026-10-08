@@ -407,7 +407,7 @@ fn authorize_clear_signed_and_persist(
     pending: PreparedClearSignedOperation,
     secret: WalletSecret,
 ) -> Result<StoredSignedTransaction, EngineFailure> {
-    let expected_sender = pending.review().from.0;
+    let expected_sender = pending.review().from.into_array();
     let review_digest = pending.review().review_digest.0;
     let mut authorizer = NativeClearSignReviewAlreadyApproved;
     let signed = pending
