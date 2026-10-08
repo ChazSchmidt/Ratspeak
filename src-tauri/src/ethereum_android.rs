@@ -3260,6 +3260,193 @@ mod tests {
         session_generation: 8,
     };
 
+    // Host-side integration of the real Rust engine. Custody uses a public
+    // fixture key; Android UI, biometric hardware and network delivery are not
+    // simulated or claimed by these tests.
+    fn exercise_base_clearsign_engine(usdc: bool, gateway_at_sign: bool) {
+        use ratspeak_eth_node::{OutboundMessageBinding, OutboundMessageKind};
+
+        let core = AndroidWalletEngineCore::new();
+        let profile = tempfile::tempdir().unwrap();
+        let restored = core
+            .restore_wallet(profile.path(), TEST_BINDING, HARDHAT_PHRASE)
+            .unwrap();
+        let state = EthereumApplicationState::new();
+        core.activate_wallet(&state, profile.path(), TEST_BINDING, restored.handle, None)
+            .unwrap();
+        let account = EthereumNodeStore::open_in_profile(profile.path())
+            .unwrap()
+            .wallet_account()
+            .unwrap()
+            .unwrap();
+        let generation = state
+            .install_profile_binding_for_identity(
+                profile.path().to_owned(),
+                account,
+                TEST_BINDING.hash,
+                TEST_BINDING.session_generation,
+            )
+            .unwrap();
+        let gateway = [0x61; 16];
+        if gateway_at_sign {
+            state
+                .configure_gateway_source_hash(generation, gateway)
+                .unwrap();
+        }
+
+        let recipient = "0x2222222222222222222222222222222222222222";
+        let amount = if usdc { "5000000" } else { "1000000000000000" };
+        let request = EthereumClearSignedOperationRequest {
+            chain_id: ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            target: if usdc {
+                "0x036CbD53842c5426634e7929541eC2318f3dCF7e".to_owned()
+            } else {
+                recipient.to_owned()
+            },
+            value_wei: if usdc { "0" } else { amount }.to_owned(),
+            calldata_hex: if usdc {
+                format!("0xa9059cbb{:0>64}{:064x}", &recipient[2..], 5_000_000u64)
+            } else {
+                "0x".to_owned()
+            },
+            nonce: 7,
+            gas_limit: if usdc { 65_000 } else { 21_000 },
+            max_fee_per_gas_wei: "2000000000".to_owned(),
+            max_priority_fee_per_gas_wei: "1000000000".to_owned(),
+        };
+        let now = wall_clock_now_unix();
+        if usdc {
+            assert!(state
+                .prepare_clear_signed_operation_for_native(
+                    generation,
+                    TEST_BINDING.hash,
+                    TEST_BINDING.session_generation,
+                    &request,
+                    now,
+                    now + 300,
+                )
+                .is_err());
+            ratspeak_eth_clearsign::DefinitionRegistry::install_base_sepolia_usdc_bundle_files(
+                &profile
+                    .path()
+                    .join(ratspeak_eth_node::ETHEREUM_STORE_DIRECTORY)
+                    .join("definitions"),
+            )
+            .unwrap();
+        }
+        let candidate = state
+            .prepare_clear_signed_operation_for_native(
+                generation,
+                TEST_BINDING.hash,
+                TEST_BINDING.session_generation,
+                &request,
+                now,
+                now + 300,
+            )
+            .unwrap();
+        assert_eq!(candidate.network, "Base Sepolia");
+        assert_eq!(candidate.asset_symbol, if usdc { "USDC" } else { "ETH" });
+        assert_eq!(candidate.asset_decimals, if usdc { 6 } else { 18 });
+        assert_eq!(candidate.recipient, recipient);
+        assert_eq!(candidate.amount, amount);
+        assert_eq!(candidate.max_fee_per_gas_wei, 2_000_000_000);
+        assert_eq!(candidate.nonce, 7);
+
+        // A changed projection or changed signing bytes cannot become a new
+        // authorization; neither rejection consumes the valid retained one.
+        let mut changed = candidate.clone();
+        changed.amount = "1".to_owned();
+        assert_eq!(
+            core.sign_clear_signed_operation(&state, TEST_BINDING, changed, HARDHAT_PHRASE,)
+                .unwrap_err(),
+            EngineFailure::ReviewMismatch
+        );
+        let mut changed = candidate.clone();
+        changed.canonical_signing_payload[0] ^= 1;
+        assert_eq!(
+            core.sign_clear_signed_operation(&state, TEST_BINDING, changed, HARDHAT_PHRASE,)
+                .unwrap_err(),
+            EngineFailure::ReviewMismatch
+        );
+        assert!(EthereumNodeStore::open_in_profile(profile.path())
+            .unwrap()
+            .latest_signed_transaction_any_chain()
+            .unwrap()
+            .is_none());
+
+        let signed = core
+            .sign_clear_signed_operation(&state, TEST_BINDING, candidate.clone(), HARDHAT_PHRASE)
+            .unwrap();
+        assert_eq!(signed.chain_id(), 84532);
+        assert_eq!(
+            signed.signing_hash(),
+            alloy_primitives::keccak256(&candidate.canonical_signing_payload,).0
+        );
+        assert_eq!(
+            core.sign_clear_signed_operation(&state, TEST_BINDING, candidate, HARDHAT_PHRASE,)
+                .unwrap_err(),
+            EngineFailure::ReviewMismatch
+        );
+
+        // Reopen the store before observing the relay: persistence precedes
+        // transport planning, and a fresh connection reads its exact bytes.
+        let mut reopened = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
+        let persisted = reopened
+            .signed_transaction_by_hash(signed.tx_hash())
+            .unwrap()
+            .unwrap();
+        assert_eq!(persisted.raw_transaction(), signed.raw_transaction());
+        let binding = OutboundMessageBinding::new(
+            gateway,
+            TEST_BINDING.hash,
+            TEST_BINDING.session_generation,
+        )
+        .unwrap();
+        if !gateway_at_sign {
+            assert!(reopened
+                .lease_next_outbound_message(binding, now + 1, 30)
+                .unwrap()
+                .is_none());
+            state
+                .configure_gateway_source_hash(generation, gateway)
+                .unwrap();
+            assert!(state
+                .plan_signed_relay_if_configured(
+                    TEST_BINDING.hash,
+                    TEST_BINDING.session_generation,
+                    &persisted,
+                    now + 1,
+                )
+                .unwrap());
+        }
+        assert!(!state
+            .plan_signed_relay_if_configured(
+                TEST_BINDING.hash,
+                TEST_BINDING.session_generation,
+                &persisted,
+                now + 1,
+            )
+            .unwrap());
+        let relay = reopened
+            .lease_next_outbound_message(binding, now + 1, 30)
+            .unwrap()
+            .unwrap();
+        assert_eq!(relay.kind(), OutboundMessageKind::SignedTransactionRelay);
+        assert_eq!(relay.destination_hash(), gateway);
+        assert_eq!(&relay.attachment()[8..16], &84532u64.to_le_bytes());
+        assert!(relay.attachment().ends_with(persisted.raw_transaction()));
+    }
+
+    #[test]
+    fn base_eth_retained_engine_signs_persists_and_queues_exact_relay() {
+        exercise_base_clearsign_engine(false, true);
+    }
+
+    #[test]
+    fn base_usdc_retained_engine_signs_offline_and_later_queues_exact_relay() {
+        exercise_base_clearsign_engine(true, false);
+    }
+
     #[test]
     fn encode_hex_accepts_fixed_width_public_values() {
         assert_eq!(encode_hex(&[0xab; 16]), "abababababababababababababababab");
