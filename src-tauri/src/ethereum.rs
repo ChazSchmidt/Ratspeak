@@ -32,7 +32,7 @@ use ratspeak_eth_node::{
     EvidenceSyncTrigger, FinalizedReceiptRequestProgress, FinalizedStatusReceiptRequest,
     MessagingEvidenceKind, NodeMessageOutcome, NonAuthoritativeTransactionObservation,
     OutboundMessageBinding, OutboundTransactionStatusRequest, PreparedFieldTransfer,
-    TransactionAssurance, TransactionStatus, TransactionStatusContinuity,
+    StoredSignedTransaction, TransactionAssurance, TransactionStatus, TransactionStatusContinuity,
     TransactionStatusHistoryView,
 };
 #[cfg(any(target_os = "android", target_os = "linux", test))]
@@ -608,6 +608,53 @@ impl EthereumApplicationState {
 
     pub(crate) fn wake_outbound(&self) {
         self.outbound_notify.notify_one();
+    }
+
+    /// Best-effort transport planning after an exact native ClearSign result
+    /// has already been durably persisted. Absence of a configured gateway is
+    /// not a signing failure; a later explicit sync can queue the same relay.
+    #[cfg(any(target_os = "android", test))]
+    pub(crate) fn plan_signed_relay_if_configured(
+        &self,
+        identity_hash: [u8; 16],
+        identity_session_generation: u64,
+        signed: &StoredSignedTransaction,
+        now_unix: u64,
+    ) -> Result<bool, &'static str> {
+        if now_unix == 0 {
+            return Err("clock_unavailable");
+        }
+        let scoped = self
+            .scoped
+            .read()
+            .map_err(|_| "ethereum_state_unavailable")?;
+        let binding = scoped
+            .profile_binding
+            .as_ref()
+            .ok_or("ethereum_profile_unavailable")?;
+        if binding.ratspeak_identity_hash != identity_hash
+            || binding.identity_session_generation != identity_session_generation
+        {
+            return Err("ethereum_profile_changed");
+        }
+        let Some(gateway) = binding.configured_gateway_source_hash else {
+            return Ok(false);
+        };
+        let request_id = secure_trigger_id()?;
+        let expires_at_unix = now_unix
+            .checked_add(EVIDENCE_SYNC_EXPIRY_SECONDS)
+            .ok_or("ethereum_sync_unavailable")?;
+        let mut store = open_profile_store(&binding.profile_dir)?;
+        let outcome = store
+            .plan_signed_transaction_relay(
+                request_id,
+                gateway,
+                signed,
+                now_unix,
+                expires_at_unix,
+            )
+            .map_err(|_| "ethereum_relay_unavailable")?;
+        Ok(outcome == ratspeak_eth_node::RecordOutcome::Inserted)
     }
 
     pub(crate) fn outbound_notify(&self) -> Arc<tokio::sync::Notify> {
