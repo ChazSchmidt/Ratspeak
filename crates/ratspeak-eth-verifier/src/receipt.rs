@@ -423,6 +423,7 @@ fn decode_receipt(bytes: &[u8]) -> Result<ReceiptEnvelope> {
 
 #[cfg(test)]
 mod tests {
+    use crate::SEPOLIA_CHAIN_ID;
     use alloy_consensus::{Receipt, ReceiptWithBloom, SignableTransaction, TxEip1559};
     use alloy_eips::eip2718::Encodable2718;
     use alloy_primitives::{Address, Signature, U256};

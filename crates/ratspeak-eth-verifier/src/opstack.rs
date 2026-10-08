@@ -244,7 +244,7 @@ impl OpStackSequencerAnchor {
             state_root: payload.state_root,
             receipts_root: payload.receipts_root,
             timestamp: payload.timestamp,
-            sequencer_signer: expected_signer.0,
+            sequencer_signer: expected_signer.into_array(),
             signer_storage_proof_hash: verified_signer_storage.proof_bundle_hash(),
             sequencer_commitment_hash: keccak256(decompressed_commitment).0,
         })

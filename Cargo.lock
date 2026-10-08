@@ -5628,6 +5628,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ratspeak-eth-clearsign"
+version = "1.0.31"
+dependencies = [
+ "alloy-primitives",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.19",
+]
+
+[[package]]
 name = "ratspeak-eth-gateway"
 version = "1.0.31"
 dependencies = [
@@ -5694,6 +5704,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-trie",
  "base64 0.22.1",
+ "ratspeak-eth-clearsign",
  "ratspeak-eth-verifier",
  "ratspeak-eth-wallet",
  "rusqlite",
@@ -5722,16 +5733,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
- "thiserror 2.0.19",
-]
-
-[[package]]
-name = "ratspeak-eth-clearsign"
-version = "1.0.31"
-dependencies = [
- "alloy-primitives",
- "serde",
- "serde_json",
  "thiserror 2.0.19",
 ]
 
