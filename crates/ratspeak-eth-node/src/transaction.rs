@@ -944,7 +944,7 @@ mod tests {
             decode_signed_transaction(&mainnet)
                 .unwrap_err()
                 .to_string()
-                .contains("unsupported Ethereum store network 1/sepolia")
+                .contains("unsupported Ethereum chain 1")
         );
 
         let mut sepolia = sepolia_raw_transaction();
@@ -953,7 +953,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_signed_bytes_outside_native_transfer_policy() {
+    fn supported_call_storage_allows_clearsign_shape_but_rejects_unsafe_envelopes() {
         let mut creation = policy_transaction();
         creation.to = TxKind::Create;
         assert!(
@@ -963,31 +963,16 @@ mod tests {
                 .contains("must call an address")
         );
 
-        let mut gas = policy_transaction();
-        gas.gas_limit += 1;
-        assert!(
-            decode_signed_transaction(&encoded_test_transaction(gas))
-                .unwrap_err()
-                .to_string()
-                .contains("21000 gas")
-        );
-
-        let mut zero_value = policy_transaction();
-        zero_value.value = U256::ZERO;
-        assert!(
-            decode_signed_transaction(&encoded_test_transaction(zero_value))
-                .unwrap_err()
-                .to_string()
-                .contains("value must be nonzero")
-        );
-
-        let mut calldata = policy_transaction();
-        calldata.input = Bytes::from_static(&[1]);
-        assert!(
-            decode_signed_transaction(&encoded_test_transaction(calldata))
-                .unwrap_err()
-                .to_string()
-                .contains("empty calldata")
+        let mut clear_signed_call = policy_transaction();
+        clear_signed_call.chain_id = ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID;
+        clear_signed_call.gas_limit = 70_000;
+        clear_signed_call.value = U256::ZERO;
+        clear_signed_call.input = Bytes::from_static(&[0xa9, 0x05, 0x9c, 0xbb]);
+        let decoded = decode_signed_transaction(&encoded_test_transaction(clear_signed_call))
+            .expect("supported-chain calldata must be storable after ClearSign authorization");
+        assert_eq!(
+            decoded.chain_id,
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID
         );
 
         let mut access_list = policy_transaction();
