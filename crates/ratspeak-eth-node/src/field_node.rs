@@ -643,17 +643,16 @@ impl EthereumNodeStore {
     }
 
     pub fn transaction_assurance(&self, tx_hash: [u8; 32]) -> Result<Option<TransactionAssurance>> {
-        if self
-            .signed_transaction(SEPOLIA_CHAIN_ID, tx_hash)?
-            .is_none()
-        {
+        let Some(transaction) = self.signed_transaction_by_hash(tx_hash)? else {
             return Ok(None);
-        }
-        if let Some(receipt) = self.receipt_by_transaction_hash(SEPOLIA_CHAIN_ID, tx_hash)? {
-            return Ok(Some(TransactionAssurance::NeedsReverification(receipt)));
+        };
+        if transaction.chain_id() == SEPOLIA_CHAIN_ID {
+            if let Some(receipt) = self.receipt_by_transaction_hash(SEPOLIA_CHAIN_ID, tx_hash)? {
+                return Ok(Some(TransactionAssurance::NeedsReverification(receipt)));
+            }
         }
         let mut observations: Vec<_> = self
-            .transaction_assurance_history(SEPOLIA_CHAIN_ID, tx_hash)?
+            .transaction_assurance_history(transaction.chain_id(), tx_hash)?
             .into_iter()
             .filter_map(|event| match event.event_kind() {
                 AssuranceEventKind::TransportDelivered => {
@@ -707,9 +706,15 @@ impl EthereumNodeStore {
         tx_hash: [u8; 32],
         now_unix: u64,
     ) -> Result<Option<TransactionAssurance>> {
-        let Some(transaction) = self.signed_transaction(SEPOLIA_CHAIN_ID, tx_hash)? else {
+        let Some(transaction) = self.signed_transaction_by_hash(tx_hash)? else {
             return Ok(None);
         };
+        if transaction.chain_id() != SEPOLIA_CHAIN_ID {
+            // OP/Nitro receipts live in the stack-neutral verified-EVM store.
+            // Until their persisted anchor evidence can be replayed here, do
+            // not promote a durable classification to verified assurance.
+            return self.transaction_assurance(tx_hash);
+        }
         let Some(receipt) = self.receipt_by_transaction_hash(SEPOLIA_CHAIN_ID, tx_hash)? else {
             return self.transaction_assurance(tx_hash);
         };
