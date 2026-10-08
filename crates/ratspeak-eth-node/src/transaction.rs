@@ -130,6 +130,57 @@ impl EthereumNodeStore {
         read_signed_transaction(&self.connection, chain_id, network, tx_hash)
     }
 
+    /// Resolves an exact locally signed transaction by its transaction hash,
+    /// irrespective of which supported PoC chain it targets. The signed hash
+    /// commits the EIP-155 chain id; duplicate rows for one hash are rejected
+    /// rather than guessed between.
+    pub fn signed_transaction_by_hash(
+        &self,
+        tx_hash: [u8; 32],
+    ) -> Result<Option<StoredSignedTransaction>> {
+        read_signed_transaction_by_hash(&self.connection, tx_hash)
+    }
+
+    /// Returns the newest locally signed transaction across all supported PoC
+    /// chains using durable insertion order rather than the device clock.
+    pub fn latest_signed_transaction_any_chain(
+        &self,
+    ) -> Result<Option<StoredSignedTransaction>> {
+        let row = self
+            .connection
+            .query_row(
+                "SELECT chain_id, network, tx_hash
+                 FROM eth_signed_transactions
+                 ORDER BY rowid DESC
+                 LIMIT 1",
+                [],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, Vec<u8>>(2)?,
+                    ))
+                },
+            )
+            .optional()
+            .map_err(NodeStoreError::sqlite)?;
+        let Some((chain_id, network, tx_hash)) = row else {
+            return Ok(None);
+        };
+        let chain_id = parse_stored_u64(&chain_id, "latest transaction chain id")?;
+        if supported_network(chain_id)? != network {
+            return Err(NodeStoreError::new(
+                "latest signed transaction network does not match its chain id",
+            ));
+        }
+        read_signed_transaction(
+            &self.connection,
+            chain_id,
+            &network,
+            stored_array(&tx_hash, "latest transaction hash")?,
+        )
+    }
+
     /// Returns the most recently persisted locally signed transaction.
     ///
     /// SQLite's durable row sequence establishes insertion order without
@@ -395,6 +446,45 @@ fn decode_signed_transaction(raw_transaction: &[u8]) -> Result<DecodedSignedTran
     })
 }
 
+pub(crate) fn read_signed_transaction_by_hash(
+    connection: &rusqlite::Connection,
+    tx_hash: [u8; 32],
+) -> Result<Option<StoredSignedTransaction>> {
+    let mut statement = connection
+        .prepare(
+            "SELECT chain_id, network
+             FROM eth_signed_transactions
+             WHERE tx_hash = ?1
+             ORDER BY rowid
+             LIMIT 2",
+        )
+        .map_err(NodeStoreError::sqlite)?;
+    let mut rows = statement
+        .query([tx_hash.as_slice()])
+        .map_err(NodeStoreError::sqlite)?;
+    let Some(first) = rows.next().map_err(NodeStoreError::sqlite)? else {
+        return Ok(None);
+    };
+    let chain_id = parse_stored_u64(
+        &first.get::<_, String>(0).map_err(NodeStoreError::sqlite)?,
+        "signed transaction chain id",
+    )?;
+    let network = first
+        .get::<_, String>(1)
+        .map_err(NodeStoreError::sqlite)?;
+    if rows.next().map_err(NodeStoreError::sqlite)?.is_some() {
+        return Err(NodeStoreError::new(
+            "transaction hash resolves to multiple supported chains",
+        ));
+    }
+    if supported_network(chain_id)? != network {
+        return Err(NodeStoreError::new(
+            "signed transaction network does not match its chain id",
+        ));
+    }
+    read_signed_transaction(connection, chain_id, &network, tx_hash)
+}
+
 pub(crate) fn read_signed_transaction(
     connection: &rusqlite::Connection,
     chain_id: u64,
@@ -574,6 +664,59 @@ mod tests {
         let mut encoded = Vec::new();
         envelope.encode_2718(&mut encoded);
         encoded
+    }
+
+    #[test]
+    fn latest_and_hash_lookup_work_across_supported_chains() {
+        let profile = tempfile::tempdir().unwrap();
+        let mut store = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
+
+        let mut sepolia = policy_transaction();
+        sepolia.nonce = 1;
+        let sepolia_raw = encoded_test_transaction(sepolia);
+        let sepolia_decoded = decode_signed_transaction(&sepolia_raw).unwrap();
+        let (_, first) = store
+            .record_locally_signed_transaction(
+                &sepolia_raw,
+                sepolia_decoded.sender,
+                [0x31; 32],
+                200,
+            )
+            .unwrap();
+
+        let mut base = policy_transaction();
+        base.chain_id = ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID;
+        base.nonce = 2;
+        let base_raw = encoded_test_transaction(base);
+        let base_decoded = decode_signed_transaction(&base_raw).unwrap();
+        let (_, second) = store
+            .record_locally_signed_transaction(
+                &base_raw,
+                base_decoded.sender,
+                [0x32; 32],
+                100,
+            )
+            .unwrap();
+
+        assert_eq!(
+            store
+                .signed_transaction_by_hash(first.tx_hash())
+                .unwrap()
+                .unwrap()
+                .chain_id(),
+            SEPOLIA_CHAIN_ID
+        );
+        assert_eq!(
+            store
+                .signed_transaction_by_hash(second.tx_hash())
+                .unwrap()
+                .unwrap()
+                .chain_id(),
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID
+        );
+        let latest = store.latest_signed_transaction_any_chain().unwrap().unwrap();
+        assert_eq!(latest.tx_hash(), second.tx_hash());
+        assert_eq!(latest.chain_id(), ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID);
     }
 
     #[test]
