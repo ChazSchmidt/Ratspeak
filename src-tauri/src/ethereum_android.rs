@@ -302,6 +302,19 @@ impl AndroidWalletEngineCore {
                 },
             )
             .map_err(|_| EngineFailure::ReviewMismatch)??;
+        let now_unix = wall_clock_now_unix();
+        if let Err(error) = state.plan_signed_relay_if_configured(
+            identity.hash,
+            identity.session_generation,
+            &stored,
+            now_unix,
+        ) {
+            tracing::warn!(
+                reason = error,
+                chain_id = stored.chain_id(),
+                "ClearSign transaction persisted but relay planning was deferred"
+            );
+        }
         state.wake_outbound();
         Ok(stored)
     }
