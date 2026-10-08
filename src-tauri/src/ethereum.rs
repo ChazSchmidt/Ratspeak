@@ -1389,7 +1389,8 @@ impl NativeExactTransferCandidate {
 }
 
 #[cfg(any(target_os = "android", target_os = "linux", test))]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct EthereumClearSignedOperationRequest {
     pub(crate) chain_id: u64,
     pub(crate) target: String,
@@ -1450,14 +1451,16 @@ impl EthereumClearSignedOperationRequest {
 }
 
 /// The only mutating WebView request admitted by the experimental Ethereum
-/// surface. It selects a native ceremony or supplies plain public transfer
-/// intent; Rust still owns nonce, checkpoint context, expiry, signing bytes,
-/// authorization, signing, and persistence.
+/// surface. It selects a native ceremony or supplies public operation facts.
+/// Rust still loads trusted definitions, constructs and retains the exact
+/// canonical signing bytes, revalidates the native review, signs, and persists.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum EthereumNativeWalletLaunchRequest {
     ManageWallet,
     Transfer(EthereumNativeTransferIntent),
+    #[cfg(any(target_os = "android", test))]
+    ClearSigned(EthereumClearSignedOperationRequest),
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
@@ -3343,18 +3346,35 @@ pub(crate) fn ethereum_launch_native_wallet(
     state: tauri::State<'_, EthereumApplicationState>,
     request: EthereumNativeWalletLaunchRequest,
 ) -> Result<EthereumNativeWalletLaunchView, &'static str> {
-    #[cfg(target_os = "android")]
-    {
-        crate::ethereum_android::launch_native_wallet(&state, request)
-    }
-    #[cfg(target_os = "linux")]
-    {
-        crate::ethereum_linux::launch_native_wallet(&state, request)
-    }
-    #[cfg(not(any(target_os = "android", target_os = "linux")))]
-    {
-        let _ = (state, request);
-        Err("native_ethereum_wallet_unavailable")
+    match request {
+        #[cfg(any(target_os = "android", test))]
+        EthereumNativeWalletLaunchRequest::ClearSigned(request) => {
+            #[cfg(target_os = "android")]
+            {
+                return crate::ethereum_android::launch_native_clear_signed_operation(&state, request)
+                    .map(EthereumNativeWalletLaunchView::transfer_launched);
+            }
+            #[cfg(not(target_os = "android"))]
+            {
+                let _ = request;
+                return Err("native_ethereum_wallet_unavailable");
+            }
+        }
+        request => {
+            #[cfg(target_os = "android")]
+            {
+                crate::ethereum_android::launch_native_wallet(&state, request)
+            }
+            #[cfg(target_os = "linux")]
+            {
+                crate::ethereum_linux::launch_native_wallet(&state, request)
+            }
+            #[cfg(not(any(target_os = "android", target_os = "linux")))]
+            {
+                let _ = (state, request);
+                Err("native_ethereum_wallet_unavailable")
+            }
+        }
     }
 }
 
@@ -6329,7 +6349,7 @@ mod tests {
     }
 
     #[test]
-    fn native_launch_request_accepts_only_public_transfer_intent() {
+    fn native_launch_request_accepts_only_bounded_public_operation_facts() {
         let request: EthereumNativeWalletLaunchRequest =
             serde_json::from_value(serde_json::json!({
                 "kind": "transfer",
@@ -6348,11 +6368,35 @@ mod tests {
             ..intent.clone()
         };
         assert!(noncanonical.field_request().is_err());
+
+        let request: EthereumNativeWalletLaunchRequest =
+            serde_json::from_value(serde_json::json!({
+                "kind": "clear_signed",
+                "chain_id": 84532,
+                "target": "0x2222222222222222222222222222222222222222",
+                "value_wei": "1000000000000000",
+                "calldata_hex": "0x",
+                "nonce": 7,
+                "gas_limit": 21000,
+                "max_fee_per_gas_wei": "2000000000",
+                "max_priority_fee_per_gas_wei": "1000000000"
+            }))
+            .unwrap();
+        let EthereumNativeWalletLaunchRequest::ClearSigned(request) = request else {
+            panic!("clear-signed request expected");
+        };
+        assert_eq!(request.chain_id, ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID);
+        assert!(request.intent(test_account()).is_ok());
+
         assert!(
             serde_json::from_value::<EthereumNativeWalletLaunchRequest>(serde_json::json!({
-                "kind": "transfer",
-                "recipient": "0x2222222222222222222222222222222222222222",
+                "kind": "clear_signed",
+                "chain_id": 84532,
+                "target": "0x2222222222222222222222222222222222222222",
                 "value_wei": "1",
+                "calldata_hex": "0x",
+                "nonce": 7,
+                "gas_limit": 21000,
                 "max_fee_per_gas_wei": "2",
                 "max_priority_fee_per_gas_wei": "1",
                 "signing_hash": "11"
