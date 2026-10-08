@@ -6372,6 +6372,126 @@ mod tests {
     }
 
     #[test]
+    fn base_sepolia_native_operation_reaches_retained_clearsign_preparation() {
+        let profile = tempfile::tempdir().unwrap();
+        let state = EthereumApplicationState::new();
+        let identity = [0x71; 16];
+        let generation = state
+            .install_profile_binding_for_identity(
+                profile.path().to_owned(),
+                test_account(),
+                identity,
+                17,
+            )
+            .unwrap();
+        let request = EthereumClearSignedOperationRequest {
+            chain_id: ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            target: "0x2222222222222222222222222222222222222222".to_owned(),
+            value_wei: "1000000000000000".to_owned(),
+            calldata_hex: "0x".to_owned(),
+            nonce: 7,
+            gas_limit: 21_000,
+            max_fee_per_gas_wei: "2000000000".to_owned(),
+            max_priority_fee_per_gas_wei: "1000000000".to_owned(),
+        };
+
+        let candidate = state
+            .prepare_clear_signed_operation_for_native(
+                generation,
+                identity,
+                17,
+                &request,
+                1_000,
+                1_300,
+            )
+            .unwrap();
+        assert_eq!(candidate.chain_id, ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID);
+        assert_eq!(candidate.network, "Base Sepolia");
+        assert_eq!(candidate.asset_symbol, "ETH");
+        assert_eq!(candidate.asset_decimals, 18);
+        assert_eq!(candidate.amount, "1000000000000000");
+        assert_eq!(
+            state
+                .scoped
+                .read()
+                .unwrap()
+                .pending_clear_signed_operations
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn base_sepolia_usdc_requires_atomic_asset_install_before_preparation() {
+        let profile = tempfile::tempdir().unwrap();
+        let state = EthereumApplicationState::new();
+        let identity = [0x72; 16];
+        let generation = state
+            .install_profile_binding_for_identity(
+                profile.path().to_owned(),
+                test_account(),
+                identity,
+                18,
+            )
+            .unwrap();
+        let recipient = "2222222222222222222222222222222222222222";
+        let amount = 5_000_000u64;
+        let calldata = format!(
+            "0xa9059cbb{}{}",
+            format!("{:0>64}", recipient),
+            format!("{amount:064x}")
+        );
+        let request = EthereumClearSignedOperationRequest {
+            chain_id: ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            target: "0x036CbD53842c5426634e7929541eC2318f3dCF7c".to_owned(),
+            value_wei: "0".to_owned(),
+            calldata_hex: calldata,
+            nonce: 8,
+            gas_limit: 65_000,
+            max_fee_per_gas_wei: "2000000000".to_owned(),
+            max_priority_fee_per_gas_wei: "1000000000".to_owned(),
+        };
+
+        assert_eq!(
+            state
+                .prepare_clear_signed_operation_for_native(
+                    generation,
+                    identity,
+                    18,
+                    &request,
+                    1_000,
+                    1_300,
+                )
+                .unwrap_err(),
+            "ethereum_clear_sign_rejected"
+        );
+
+        let definitions_path = profile
+            .path()
+            .join(ratspeak_eth_node::ETHEREUM_STORE_DIRECTORY)
+            .join("definitions");
+        let installed =
+            DefinitionRegistry::install_base_sepolia_usdc_bundle_files(&definitions_path).unwrap();
+        assert_eq!(installed.symbol, "USDC");
+
+        let candidate = state
+            .prepare_clear_signed_operation_for_native(
+                generation,
+                identity,
+                18,
+                &request,
+                1_001,
+                1_301,
+            )
+            .unwrap();
+        assert_eq!(candidate.network, "Base Sepolia");
+        assert_eq!(candidate.asset_symbol, "USDC");
+        assert_eq!(candidate.asset_decimals, 6);
+        assert_eq!(candidate.amount, amount.to_string());
+        assert_eq!(candidate.recipient, format!("0x{recipient}"));
+    }
+
+    #[test]
     fn builtin_asset_selector_cannot_supply_definition_material() {
         let asset: EthereumBuiltinAsset =
             serde_json::from_str("\"base_sepolia_usdc\"").unwrap();
