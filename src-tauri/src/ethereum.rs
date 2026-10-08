@@ -71,9 +71,10 @@ const MAX_EVIDENCE_SYNC_RESPONSE_BYTES: u32 = 2 * 1024 * 1024;
 const MAX_PERSISTED_GATEWAY_MESSAGE_BYTES: usize = 2 * 1024 * 1024 + 128;
 
 #[cfg(test)]
-pub(crate) const WEBVIEW_COMMAND_ALLOWLIST: [&str; 16] = [
+pub(crate) const WEBVIEW_COMMAND_ALLOWLIST: [&str; 17] = [
     "ethereum_feature_status",
     "ethereum_setup_status",
+    "ethereum_install_builtin_asset",
     "ethereum_launch_native_wallet",
     "ethereum_review_pending_bulk_evidence",
     "ethereum_review_pending_checkpoint",
@@ -2980,6 +2981,45 @@ pub(crate) struct EthereumCheckpointDetailsView {
 ///
 /// Native adapters expose only whether a current review exists, never its
 /// destination, key, bytes, or approval capability.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum EthereumBuiltinAsset {
+    BaseSepoliaUsdc,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum EthereumOfflineReadinessView {
+    Ready,
+    MissingChainSupport,
+    MissingEthereumBootstrap,
+    MissingAssetDefinitions,
+}
+
+impl From<ratspeak_eth_node::OfflineReadiness> for EthereumOfflineReadinessView {
+    fn from(value: ratspeak_eth_node::OfflineReadiness) -> Self {
+        match value {
+            ratspeak_eth_node::OfflineReadiness::Ready => Self::Ready,
+            ratspeak_eth_node::OfflineReadiness::MissingChainSupport => Self::MissingChainSupport,
+            ratspeak_eth_node::OfflineReadiness::MissingEthereumBootstrap => {
+                Self::MissingEthereumBootstrap
+            }
+            ratspeak_eth_node::OfflineReadiness::MissingAssetDefinitions => {
+                Self::MissingAssetDefinitions
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub(crate) struct EthereumAssetInstallView {
+    chain_id: u64,
+    network: String,
+    symbol: String,
+    decimals: u8,
+    readiness: EthereumOfflineReadinessView,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub(crate) struct EthereumSetupStatus {
     identity_ready: bool,
@@ -3252,6 +3292,63 @@ pub(crate) async fn ethereum_setup_status(
         state.wake_outbound();
     }
     Ok(status)
+}
+
+/// Installs one built-in PoC asset as an atomic pair of trusted local
+/// definitions. The WebView selects only a compiled-in asset identifier; it
+/// cannot supply descriptor bytes, storage layout, contract address, chain
+/// configuration, or publisher metadata.
+#[tauri::command]
+pub(crate) async fn ethereum_install_builtin_asset(
+    state: tauri::State<'_, EthereumApplicationState>,
+    runtime: tauri::State<'_, Arc<ratspeak_tauri::state::AppState>>,
+    asset: EthereumBuiltinAsset,
+) -> Result<EthereumAssetInstallView, &'static str> {
+    let runtime = runtime.inner();
+    let _identity_lifecycle = runtime.identity_switch_lock.lock().await;
+    let identity = decode_fixed_hex::<16>(&ratspeak_tauri::helpers::active_identity_id(runtime))
+        .ok_or("ethereum_identity_unavailable")?;
+    let binding = state
+        .profile_binding()?
+        .ok_or("ethereum_profile_unavailable")?;
+    if binding.ratspeak_identity_hash != identity
+        || binding.identity_session_generation != runtime.current_identity_session_generation()
+    {
+        return Err("ethereum_profile_changed");
+    }
+
+    let definitions_path = binding
+        .profile_dir
+        .join(ratspeak_eth_node::ETHEREUM_STORE_DIRECTORY)
+        .join("definitions");
+    let installed = match asset {
+        EthereumBuiltinAsset::BaseSepoliaUsdc => {
+            DefinitionRegistry::install_base_sepolia_usdc_bundle_files(&definitions_path)
+                .map_err(|_| "ethereum_asset_install_failed")?
+        }
+    };
+
+    let definitions = DefinitionRegistry::load_dir(&definitions_path)
+        .map_err(|_| "ethereum_definition_store_unavailable")?;
+    let store = open_profile_store(&binding.profile_dir)?;
+    let report = store
+        .offline_readiness(
+            installed.chain_id,
+            trusted_now_unix()?,
+            &definitions,
+            Some(&installed.clear_sign_definition_id),
+            Some(&installed.balance_definition_id),
+        )
+        .map_err(|_| "ethereum_state_unavailable")?;
+    state.ensure_current_generation(binding.generation)?;
+
+    Ok(EthereumAssetInstallView {
+        chain_id: installed.chain_id,
+        network: installed.network,
+        symbol: installed.symbol,
+        decimals: installed.decimals,
+        readiness: report.readiness.into(),
+    })
 }
 
 fn setup_status_for_identity(
@@ -6272,6 +6369,34 @@ mod tests {
             review,
             prepared.canonical_signing_bytes()
         ));
+    }
+
+    #[test]
+    fn builtin_asset_selector_cannot_supply_definition_material() {
+        let asset: EthereumBuiltinAsset =
+            serde_json::from_str(""base_sepolia_usdc"").unwrap();
+        assert_eq!(asset, EthereumBuiltinAsset::BaseSepoliaUsdc);
+        assert!(
+            serde_json::from_value::<EthereumBuiltinAsset>(serde_json::json!({
+                "asset": "base_sepolia_usdc",
+                "contract": "0x1111111111111111111111111111111111111111"
+            }))
+            .is_err()
+        );
+
+        let source = include_str!("ethereum.rs");
+        let start = source
+            .find("pub(crate) async fn ethereum_install_builtin_asset(")
+            .unwrap();
+        let end = source[start..]
+            .find("fn setup_status_for_identity(")
+            .map(|offset| start + offset)
+            .unwrap();
+        let command = &source[start..end];
+        assert!(command.contains("install_base_sepolia_usdc_bundle_files"));
+        for forbidden in ["clear_sign_bytes", "balance_bytes", "mappingSlot", "rpc_hint"] {
+            assert!(!command.contains(forbidden));
+        }
     }
 
     #[test]
