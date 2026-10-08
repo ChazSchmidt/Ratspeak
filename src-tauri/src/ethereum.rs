@@ -23,7 +23,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use alloy_primitives::{Address, Bytes, U256, keccak256};
 #[cfg(any(target_os = "android", test))]
 use base64::Engine;
-#[cfg(any(target_os = "android", target_os = "linux", test))]
 use ratspeak_eth_clearsign::DefinitionRegistry;
 #[cfg(any(target_os = "android", target_os = "linux", test))]
 use ratspeak_eth_node::FieldTransferRequest;
