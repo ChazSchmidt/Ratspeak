@@ -223,7 +223,7 @@ impl EthereumNodeStore {
             &transaction,
             AssuranceEventInput {
                 chain_id,
-                network: SEPOLIA_NETWORK,
+                network,
                 subject_kind: AssuranceSubjectKind::Transaction,
                 subject_key: tx_hash,
                 event_kind: observation.into(),
