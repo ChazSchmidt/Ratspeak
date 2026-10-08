@@ -407,7 +407,7 @@ mod tests {
         let receipt = Verifier::sepolia()
             .parse_tx_receipt_proof(&receipt_bytes)
             .unwrap();
-        let builder = SepoliaGatewayBuilder::from_untrusted_rpc(
+        let builder = SepoliaGatewayBuilder::from_untrusted_rpc_at_unix(
             &BeaconCheckpointRoot::sepolia(CHECKPOINT_ROOT),
             &UntrustedConsensusRpcInput {
                 chain_id: SEPOLIA_CHAIN_ID,
@@ -425,6 +425,7 @@ mod tests {
                 captured_at_unix: execution.created_at_unix,
                 rlp_header: execution.rlp_header,
             },
+            crate::FIXTURE_NOW_UNIX,
         )
         .unwrap();
         (

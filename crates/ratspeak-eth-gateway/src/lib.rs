@@ -910,6 +910,11 @@ fn finish(out: Vec<u8>) -> Result<Vec<u8>> {
     Ok(out)
 }
 
+// Trusted fixture-era clock for captured Sepolia proofs. Keep historical tests
+// independent of wall time without relaxing production checkpoint freshness.
+#[cfg(test)]
+pub(crate) const FIXTURE_NOW_UNIX: u64 = 1_788_034_160;
+
 #[cfg(test)]
 mod tests {
     use alloy_primitives::{B256, keccak256};
@@ -990,10 +995,11 @@ mod tests {
     }
 
     fn builder() -> SepoliaGatewayBuilder {
-        SepoliaGatewayBuilder::from_untrusted_rpc(
+        SepoliaGatewayBuilder::from_untrusted_rpc_at_unix(
             &BeaconCheckpointRoot::sepolia(CHECKPOINT_ROOT),
             &consensus_input(),
             &execution_input(),
+            FIXTURE_NOW_UNIX,
         )
         .unwrap()
     }
@@ -1241,10 +1247,11 @@ mod tests {
         let mut execution = execution_input();
         execution.rlp_header[0] ^= 1;
         assert!(matches!(
-            SepoliaGatewayBuilder::from_untrusted_rpc(
+            SepoliaGatewayBuilder::from_untrusted_rpc_at_unix(
                 &BeaconCheckpointRoot::sepolia(CHECKPOINT_ROOT),
                 &consensus_input(),
                 &execution,
+                FIXTURE_NOW_UNIX,
             ),
             Err(GatewayBuildError::LocalVerificationFailed)
         ));
@@ -1266,8 +1273,11 @@ mod tests {
             .unwrap();
         assert_eq!(parsed.bootstrap_ssz, consensus_input().bootstrap_ssz);
         assert!(matches!(
-            Verifier::sepolia()
-                .verify_consensus_bootstrap(&bytes, &BeaconCheckpointRoot::sepolia([0; 32]),),
+            Verifier::sepolia().verify_consensus_bootstrap_at_unix(
+                &bytes,
+                &BeaconCheckpointRoot::sepolia([0; 32]),
+                FIXTURE_NOW_UNIX,
+            ),
             Err(VerifyError::ConsensusVerification(_))
         ));
     }

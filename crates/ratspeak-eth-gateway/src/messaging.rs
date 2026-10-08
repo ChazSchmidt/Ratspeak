@@ -3,7 +3,9 @@ use alloy_consensus::{Header, Transaction as _, TxEnvelope};
 use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::TxKind;
 use alloy_rlp::Decodable;
-use ratspeak_eth_verifier::{BeaconCheckpointRoot, MAX_BUNDLE_BYTES, SEPOLIA_CHAIN_ID, Verifier};
+use ratspeak_eth_verifier::{
+    BeaconCheckpointRoot, MAX_BUNDLE_BYTES, SEPOLIA_CHAIN_ID, Verifier, chain_definition,
+};
 use sha2::{Digest, Sha256};
 
 use crate::{GatewayBundle, GatewayBundleKind};
@@ -1594,10 +1596,10 @@ mod tests {
         );
         evidence[8..16]
             .copy_from_slice(&ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID.to_le_bytes());
-        assert_eq!(
-            decode(&evidence).unwrap_err(),
-            GatewayMessageError::InvalidMessage
-        );
+        assert!(matches!(
+            decode(&evidence),
+            Err(GatewayMessageError::InvalidMessage)
+        ));
     }
 
     #[test]
