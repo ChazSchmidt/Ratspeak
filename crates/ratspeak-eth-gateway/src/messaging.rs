@@ -794,10 +794,15 @@ fn decode(bytes: &[u8]) -> Result<Message, GatewayMessageError> {
         return Err(GatewayMessageError::InvalidMessage);
     }
     let mut cursor = Cursor::new(bytes);
-    if cursor.take(7)? != MAGIC || cursor.u8()? != VERSION || cursor.u64()? != SEPOLIA_CHAIN_ID {
+    if cursor.take(7)? != MAGIC || cursor.u8()? != VERSION {
         return Err(GatewayMessageError::InvalidMessage);
     }
-    match cursor.u8()? {
+    let wire_chain_id = cursor.u64()?;
+    let kind = cursor.u8()?;
+    if kind != KIND_SIGNED_RELAY && wire_chain_id != SEPOLIA_CHAIN_ID {
+        return Err(GatewayMessageError::InvalidMessage);
+    }
+    match kind {
         KIND_EVIDENCE_REQUEST => {
             let request_id = cursor.array()?;
             let expires_at_unix = cursor.u64()?;
@@ -843,6 +848,9 @@ fn decode(bytes: &[u8]) -> Result<Message, GatewayMessageError> {
             let raw_transaction = cursor.take(size)?.to_vec();
             cursor.finish()?;
             let (chain_id, tx_hash, sender) = validate_signed_transaction(&raw_transaction)?;
+            if chain_id != wire_chain_id {
+                return Err(GatewayMessageError::InvalidSignedRelay);
+            }
             Ok(Message::SignedRelay(AcceptedSignedRelay {
                 request_id,
                 chain_id,
@@ -1013,10 +1021,14 @@ fn encode_checkpoint_context(
 }
 
 fn prelude(kind: u8) -> Vec<u8> {
+    prelude_for_chain(SEPOLIA_CHAIN_ID, kind)
+}
+
+fn prelude_for_chain(chain_id: u64, kind: u8) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(MAGIC);
     out.push(VERSION);
-    out.extend_from_slice(&SEPOLIA_CHAIN_ID.to_le_bytes());
+    out.extend_from_slice(&chain_id.to_le_bytes());
     out.push(kind);
     out
 }
@@ -1111,7 +1123,17 @@ pub(crate) fn encode_test_contextual_evidence_request(
 
 #[cfg(test)]
 pub(crate) fn encode_test_signed_relay(request_id: [u8; 16], expires: u64, raw: &[u8]) -> Vec<u8> {
-    let mut out = prelude(KIND_SIGNED_RELAY);
+    encode_test_signed_relay_for_chain(SEPOLIA_CHAIN_ID, request_id, expires, raw)
+}
+
+#[cfg(test)]
+fn encode_test_signed_relay_for_chain(
+    chain_id: u64,
+    request_id: [u8; 16],
+    expires: u64,
+    raw: &[u8],
+) -> Vec<u8> {
+    let mut out = prelude_for_chain(chain_id, KIND_SIGNED_RELAY);
     out.extend_from_slice(&request_id);
     out.extend_from_slice(&expires.to_le_bytes());
     out.extend_from_slice(&(raw.len() as u32).to_le_bytes());
@@ -1135,6 +1157,11 @@ pub(crate) fn encode_test_transaction_status_request(
 
 #[cfg(test)]
 mod tests {
+    use alloy_consensus::{SignableTransaction, TxEip1559};
+    use alloy_eips::eip2718::Encodable2718;
+    use alloy_eips::eip2930::AccessList;
+    use alloy_primitives::{Address, Signature, U256};
+
     use super::*;
 
     fn signed_relay(request_id: [u8; 16], expires: u64, raw: &[u8]) -> Vec<u8> {
@@ -1502,6 +1529,76 @@ mod tests {
                 )
                 .unwrap_err(),
             GatewayMessageError::UnsupportedKind
+        );
+    }
+
+    #[test]
+    fn signed_relay_prelude_is_bound_to_supported_transaction_chain() {
+        let transaction = TxEip1559 {
+            chain_id: ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            nonce: 1,
+            max_fee_per_gas: 3_000_000_000,
+            max_priority_fee_per_gas: 100_000_000,
+            gas_limit: 21_000,
+            to: Address::repeat_byte(0x22).into(),
+            value: U256::from(1_u64),
+            input: Default::default(),
+            access_list: AccessList::default(),
+        };
+        let envelope = TxEnvelope::Eip1559(transaction.into_signed(Signature::test_signature()));
+        let mut raw = Vec::new();
+        envelope.encode_2718(&mut raw);
+
+        let expected = [0x81; 16];
+        let message = encode_test_signed_relay_for_chain(
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            [0x82; 16],
+            200,
+            &raw,
+        );
+        let mut guard = GatewayRelayGuard::new(expected, GatewayRateLimit::conservative()).unwrap();
+        let GatewayMessageOutcome::SignedRelay(relay) = guard
+            .handle_persisted_attachment(
+                AuthenticatedGatewayEnvelope::from_verified_lxmf(expected, &message),
+                100,
+            )
+            .unwrap()
+        else {
+            panic!("expected Base signed relay");
+        };
+        assert_eq!(relay.chain_id(), ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID);
+
+        let wrong_prelude = encode_test_signed_relay_for_chain(
+            SEPOLIA_CHAIN_ID,
+            [0x83; 16],
+            200,
+            &raw,
+        );
+        let mut fresh = GatewayRelayGuard::new(expected, GatewayRateLimit::conservative()).unwrap();
+        assert_eq!(
+            fresh
+                .handle_persisted_attachment(
+                    AuthenticatedGatewayEnvelope::from_verified_lxmf(expected, &wrong_prelude),
+                    100,
+                )
+                .unwrap_err(),
+            GatewayMessageError::InvalidSignedRelay
+        );
+
+        let mut evidence = encode_test_evidence_request(
+            [0x84; 16],
+            MessagingEvidenceKind::ReceiptProof,
+            [0x85; 32],
+            100,
+            false,
+            200,
+        );
+        evidence[8..16].copy_from_slice(
+            &ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID.to_le_bytes(),
+        );
+        assert_eq!(
+            decode(&evidence).unwrap_err(),
+            GatewayMessageError::InvalidMessage
         );
     }
 
