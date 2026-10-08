@@ -5265,7 +5265,9 @@ mod tests {
 
     use super::*;
     use crate::TransactionAssurance;
-    use crate::transaction::test_support::signed_fixture;
+    use crate::transaction::test_support::{
+        signed_fixture, signed_fixture_for_chain_with_nonce,
+    };
 
     const REAL_CHECKPOINT_ROOT: [u8; 32] = [
         0x63, 0x6e, 0x48, 0x99, 0x72, 0x3f, 0xe9, 0x23, 0x7f, 0xbe, 0xe7, 0x09, 0x83, 0x92, 0xb7,
@@ -7868,6 +7870,52 @@ mod tests {
             )
             .unwrap();
         assert!(status_table);
+    }
+
+    #[test]
+    fn base_signed_relay_preserves_chain_in_wire_and_outbox_reconstruction() {
+        let profile = tempfile::tempdir().unwrap();
+        let gateway = [0x6a; 16];
+        let source = [0x6b; 16];
+        let binding = OutboundMessageBinding::new(gateway, source, 7).unwrap();
+        let mut store = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
+        let tx_hash = signed_fixture_for_chain_with_nonce(
+            &mut store,
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            22,
+        );
+        let signed = store
+            .signed_transaction(ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID, tx_hash)
+            .unwrap()
+            .unwrap();
+        let request_id = [0x6c; 16];
+        let relay = store
+            .create_signed_transaction_relay(request_id, gateway, &signed, 100, 300)
+            .unwrap();
+
+        assert_eq!(
+            &relay[8..16],
+            &ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID.to_le_bytes(),
+        );
+        assert_eq!(relay[16], KIND_SIGNED_RELAY);
+
+        let lease = store
+            .lease_next_outbound_message(binding, 101, 10)
+            .unwrap()
+            .unwrap();
+        assert_eq!(lease.kind(), OutboundMessageKind::SignedTransactionRelay);
+        assert_eq!(lease.attachment(), relay);
+        store
+            .release_outbound_message(binding, &lease, 102)
+            .unwrap();
+
+        drop(store);
+        let mut reopened = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
+        let replayed = reopened
+            .lease_next_outbound_message(binding, 103, 10)
+            .unwrap()
+            .unwrap();
+        assert_eq!(replayed.attachment(), relay);
     }
 
     #[test]
