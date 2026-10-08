@@ -2407,6 +2407,13 @@ impl EthereumNodeStore {
                 } else if record.status != MessageRequestStatus::Pending {
                     return Err(NodeStoreError::new("relay request is not pending"));
                 } else {
+                    let signed = crate::transaction::read_signed_transaction_by_hash(
+                        &transaction,
+                        tx_hash,
+                    )?
+                    .ok_or_else(|| {
+                        NodeStoreError::new("relay observation has no exact local transaction")
+                    })?;
                     record.status = MessageRequestStatus::Completed;
                     record.relay_observation = Some(observation);
                     update_request(&transaction, &record)?;
@@ -2421,8 +2428,8 @@ impl EthereumNodeStore {
                         record_assurance(
                             &transaction,
                             AssuranceEventInput {
-                                chain_id: SEPOLIA_CHAIN_ID,
-                                network: SEPOLIA_NETWORK,
+                                chain_id: signed.chain_id(),
+                                network: signed.network(),
                                 subject_kind: AssuranceSubjectKind::Transaction,
                                 subject_key: tx_hash,
                                 event_kind,
