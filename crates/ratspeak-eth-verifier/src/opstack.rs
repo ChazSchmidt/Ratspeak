@@ -1,8 +1,8 @@
 use alloy_primitives::{Address, B256, Signature, keccak256};
 
 use super::{
-    AnchorAssurance, ETHEREUM_SEPOLIA_CHAIN_ID, ETHEREUM_SEPOLIA, Result, StackConfig,
-    VerifiedEvmAnchor, VerifiedStorageValue, VerifyError, chain_definition,
+    AnchorAssurance, ETHEREUM_SEPOLIA_CHAIN_ID, ETHEREUM_SEPOLIA, MemoryAccountStore, Result,
+    StackConfig, VerifiedEvmAnchor, VerifiedStorageValue, VerifyError, Verifier, chain_definition,
 };
 use crate::execution::decode_header;
 
@@ -139,6 +139,51 @@ impl OpStackSequencerAnchor {
         })
     }
 
+    /// Verifies the complete compact OP Stack anchor path from an already
+    /// authenticated Ethereum Sepolia execution anchor.
+    ///
+    /// All four byte inputs may come from an untrusted gateway. The account
+    /// and storage proofs are first bound to the L1 state root, the storage
+    /// subject must be this chain's SystemConfig unsafe-signer slot, the
+    /// commitment signature must recover that proven signer, and the supplied
+    /// L2 header must hash to the signed execution payload.
+    pub fn verify_from_l1_evidence(
+        chain_id: u64,
+        l1_anchor: &VerifiedEvmAnchor,
+        system_config_account_proof: &[u8],
+        signer_storage_proof: &[u8],
+        decompressed_commitment: &[u8],
+        l2_header_rlp: &[u8],
+    ) -> Result<VerifiedEvmAnchor> {
+        let query = Self::signer_proof_query(chain_id)?;
+        if query.parent_chain_id != ETHEREUM_SEPOLIA_CHAIN_ID
+            || l1_anchor.chain_id() != ETHEREUM_SEPOLIA_CHAIN_ID
+            || l1_anchor.network() != ETHEREUM_SEPOLIA.network
+            || l1_anchor.assurance() != AnchorAssurance::EthereumFinalized
+        {
+            return Err(VerifyError::CheckpointMismatch);
+        }
+
+        let verifier = Verifier::sepolia();
+        let mut accounts = MemoryAccountStore::default();
+        let account = verifier.verify_account_from_anchor(
+            system_config_account_proof,
+            l1_anchor,
+            &mut accounts,
+        )?;
+        if account.address() != query.system_config.0 {
+            return Err(VerifyError::UnexpectedAccount);
+        }
+        let signer_storage =
+            verifier.verify_storage_proof(signer_storage_proof, &account)?;
+        if signer_storage.key() != query.storage_key.0 {
+            return Err(VerifyError::CheckpointMismatch);
+        }
+
+        Self::verify(chain_id, decompressed_commitment, &signer_storage)?
+            .verify_rlp_header(l2_header_rlp)
+    }
+
     /// Verifies a decompressed Helios-compatible OP Stack commitment:
     /// 65-byte ECDSA signature followed by signed data. The signed data begins
     /// with a 32-byte commitment prefix followed by the SSZ execution payload.
@@ -263,6 +308,62 @@ mod tests {
             assert!(matches!(definition.stack, StackConfig::OpStack(_)));
             assert_eq!(definition.parent_chain_id, Some(ETHEREUM_SEPOLIA_CHAIN_ID));
         }
+    }
+
+    #[test]
+    fn full_op_anchor_path_rejects_non_ethereum_parent_before_proof_parsing() {
+        let wrong_parent = VerifiedEvmAnchor::new(
+            BASE_SEPOLIA_CHAIN_ID,
+            "base-sepolia",
+            1,
+            [1; 32],
+            [2; 32],
+            [3; 32],
+            [4; 32],
+            [5; 32],
+            6,
+            AnchorAssurance::SequencerAuthenticated,
+            [7; 32],
+        );
+        assert!(matches!(
+            OpStackSequencerAnchor::verify_from_l1_evidence(
+                BASE_SEPOLIA_CHAIN_ID,
+                &wrong_parent,
+                b"untrusted",
+                b"untrusted",
+                b"untrusted",
+                b"untrusted",
+            ),
+            Err(VerifyError::CheckpointMismatch)
+        ));
+    }
+
+    #[test]
+    fn full_op_anchor_path_rejects_non_op_chain_before_proof_parsing() {
+        let l1 = VerifiedEvmAnchor::new(
+            ETHEREUM_SEPOLIA_CHAIN_ID,
+            ETHEREUM_SEPOLIA.network,
+            1,
+            [1; 32],
+            [2; 32],
+            [3; 32],
+            [4; 32],
+            [5; 32],
+            6,
+            AnchorAssurance::EthereumFinalized,
+            [7; 32],
+        );
+        assert!(matches!(
+            OpStackSequencerAnchor::verify_from_l1_evidence(
+                crate::ARBITRUM_SEPOLIA_CHAIN_ID,
+                &l1,
+                b"untrusted",
+                b"untrusted",
+                b"untrusted",
+                b"untrusted",
+            ),
+            Err(VerifyError::UnsupportedNetwork { .. })
+        ));
     }
 
     #[test]
