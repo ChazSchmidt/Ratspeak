@@ -939,6 +939,7 @@ fn verify_clear_signed_transaction(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_consensus::Transaction;
     use static_assertions::{assert_impl_all, assert_not_impl_any};
 
     const HARDHAT_PHRASE: &str = "test test test test test test test test test test test junk";

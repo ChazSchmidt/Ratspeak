@@ -1137,6 +1137,12 @@ mod tests {
         0x4d, 0x51,
     ];
 
+    // Frozen bootstrap fixture was captured at Sepolia slot 11,004,416.
+    // Test at that slot rather than aging fixed evidence against wall time.
+    fn fixture_now_unix() -> u64 {
+        ratspeak_eth_verifier::sepolia_slot_start_unix(11_004_416).unwrap()
+    }
+
     fn receipt_bundle() -> (Vec<u8>, ratspeak_eth_verifier::TxReceiptProofBundle) {
         let canonical = base64::engine::general_purpose::STANDARD
             .decode(
@@ -1304,7 +1310,7 @@ mod tests {
         let profile = tempfile::tempdir().unwrap();
         {
             let mut store = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
-            let now = crate::bootstrap::trusted_now_unix().unwrap();
+            let now = fixture_now_unix();
             crate::bootstrap::install_test_active_checkpoint(&mut store, REAL_CHECKPOINT_ROOT, now);
             let verifier = Verifier::sepolia();
             let consensus_bytes = real_consensus_bundle();
@@ -1427,7 +1433,7 @@ mod tests {
         let profile = tempfile::tempdir().unwrap();
         {
             let mut store = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
-            let now = crate::bootstrap::trusted_now_unix().unwrap();
+            let now = fixture_now_unix();
             crate::bootstrap::install_test_active_checkpoint(&mut store, REAL_CHECKPOINT_ROOT, now);
             let verifier = Verifier::sepolia();
             let consensus_bytes = real_consensus_bundle();
@@ -1493,7 +1499,7 @@ mod tests {
         )
         .unwrap()
         .unwrap();
-        let now = crate::bootstrap::trusted_now_unix().unwrap();
+        let now = fixture_now_unix();
         let verified_consensus =
             crate::messaging::reverify_historical_consensus(&reopened, &verifier, &consensus, now)
                 .unwrap();
@@ -1621,7 +1627,7 @@ mod tests {
         let profile = tempfile::tempdir().unwrap();
         let database_path = {
             let mut store = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
-            let now = crate::bootstrap::trusted_now_unix().unwrap();
+            let now = fixture_now_unix();
             crate::bootstrap::install_test_active_checkpoint(&mut store, REAL_CHECKPOINT_ROOT, now);
             let verifier = Verifier::sepolia();
             let consensus_bytes = real_consensus_bundle();

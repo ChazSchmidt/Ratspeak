@@ -176,7 +176,7 @@ impl EthereumNodeStore {
             &transaction,
             AssuranceEventInput {
                 chain_id,
-                network,
+                network: SEPOLIA_NETWORK,
                 subject_kind: AssuranceSubjectKind::Checkpoint,
                 subject_key: checkpoint_root,
                 event_kind: AssuranceEventKind::CheckpointRevoked,
