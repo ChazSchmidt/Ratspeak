@@ -82,15 +82,14 @@ pub fn assess_offline_readiness(
         .map(|id| definitions.contains(id))
         .unwrap_or(true);
 
-    let readiness = if requirements.requires_ethereum_sepolia_bootstrap
-        && !ethereum_bootstrap_available
-    {
-        OfflineReadiness::MissingEthereumBootstrap
-    } else if !clear_sign_definition_present || !balance_definition_present {
-        OfflineReadiness::MissingAssetDefinitions
-    } else {
-        OfflineReadiness::Ready
-    };
+    let readiness =
+        if requirements.requires_ethereum_sepolia_bootstrap && !ethereum_bootstrap_available {
+            OfflineReadiness::MissingEthereumBootstrap
+        } else if !clear_sign_definition_present || !balance_definition_present {
+            OfflineReadiness::MissingAssetDefinitions
+        } else {
+            OfflineReadiness::Ready
+        };
 
     OfflineReadinessReport {
         chain_id,
@@ -113,13 +112,7 @@ mod tests {
         definitions.install_poc_native_definitions().unwrap();
 
         for chain_id in [11_155_111u64, 84_532, 11_155_420, 421_614, 46_630] {
-            let report = assess_offline_readiness(
-                chain_id,
-                true,
-                &definitions,
-                None,
-                None,
-            );
+            let report = assess_offline_readiness(chain_id, true, &definitions, None, None);
             assert!(report.is_ready());
         }
     }
@@ -127,13 +120,7 @@ mod tests {
     #[test]
     fn missing_bootstrap_blocks_offline_readiness() {
         let definitions = DefinitionRegistry::new();
-        let report = assess_offline_readiness(
-            84_532,
-            false,
-            &definitions,
-            None,
-            None,
-        );
+        let report = assess_offline_readiness(84_532, false, &definitions, None, None);
         assert_eq!(report.readiness, OfflineReadiness::MissingEthereumBootstrap);
     }
 

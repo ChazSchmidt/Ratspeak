@@ -61,8 +61,8 @@ use ratspeak_eth_verifier::{
     BeaconCheckpointRoot, KIND_EXECUTION_HEADER_PROOF, KIND_FINALIZED_TX_RECEIPT_PROOF,
     KIND_PINNED_CONSENSUS_BOOTSTRAP, KIND_STORAGE_PROOF, KIND_TX_RECEIPT_PROOF, MAGIC,
     MAX_ANCESTRY_HEADER_BYTES, MAX_ANCESTRY_HEADERS, MAX_BUNDLE_BYTES, MAX_PROOF_NODE_BYTES,
-    MAX_PROOF_NODES, MemoryAccountStore, OpStackSequencerAnchor, SEPOLIA_CHAIN_ID,
-    SEPOLIA_NETWORK, U256, VERSION, VerifiedAccount, VerifiedEvmAnchor, VerifiedExecutionBlock,
+    MAX_PROOF_NODES, MemoryAccountStore, OpStackSequencerAnchor, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK,
+    U256, VERSION, VerifiedAccount, VerifiedEvmAnchor, VerifiedExecutionBlock,
     VerifiedExecutionHeader, Verifier, chain_definition,
 };
 
@@ -588,11 +588,21 @@ pub struct OpStackAnchorEvidence {
 }
 
 impl OpStackAnchorEvidence {
-    pub fn chain_id(&self) -> u64 { self.chain_id }
-    pub fn system_config_account_proof(&self) -> &[u8] { self.system_config_account_proof.bytes() }
-    pub fn signer_storage_proof(&self) -> &[u8] { self.signer_storage_proof.bytes() }
-    pub fn decompressed_commitment(&self) -> &[u8] { &self.decompressed_commitment }
-    pub fn l2_header_rlp(&self) -> &[u8] { &self.l2_header_rlp }
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
+    pub fn system_config_account_proof(&self) -> &[u8] {
+        self.system_config_account_proof.bytes()
+    }
+    pub fn signer_storage_proof(&self) -> &[u8] {
+        self.signer_storage_proof.bytes()
+    }
+    pub fn decompressed_commitment(&self) -> &[u8] {
+        &self.decompressed_commitment
+    }
+    pub fn l2_header_rlp(&self) -> &[u8] {
+        &self.l2_header_rlp
+    }
 
     pub fn verify(&self, l1_anchor: &VerifiedEvmAnchor) -> Result<VerifiedEvmAnchor> {
         OpStackSequencerAnchor::verify_from_l1_evidence(
@@ -625,18 +635,11 @@ impl EvmAnchorGatewayBuilder {
         &self.anchor
     }
 
-    pub fn verify_account(
-        &self,
-        input: &UntrustedAccountProofRpcInput,
-    ) -> Result<VerifiedAccount> {
+    pub fn verify_account(&self, input: &UntrustedAccountProofRpcInput) -> Result<VerifiedAccount> {
         let bytes = encode_account_proof(input)?;
         Verifier::for_chain(self.anchor.chain_id())
             .map_err(|_| GatewayBuildError::UnsupportedNetwork)?
-            .verify_account_from_anchor(
-                &bytes,
-                &self.anchor,
-                &mut MemoryAccountStore::default(),
-            )
+            .verify_account_from_anchor(&bytes, &self.anchor, &mut MemoryAccountStore::default())
             .map_err(|_| GatewayBuildError::LocalVerificationFailed)
     }
 
@@ -850,8 +853,7 @@ fn total_bytes(values: &[Vec<u8>]) -> usize {
 }
 
 fn prelude(kind: u8) -> Vec<u8> {
-    prelude_for(SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, kind)
-        .expect("Sepolia is a built-in network")
+    prelude_for(SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, kind).expect("Sepolia is a built-in network")
 }
 
 fn prelude_for(chain_id: u64, network: &str, kind: u8) -> Result<Vec<u8>> {

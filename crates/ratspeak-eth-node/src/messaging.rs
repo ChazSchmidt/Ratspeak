@@ -2506,13 +2506,13 @@ impl EthereumNodeStore {
                 } else if record.status != MessageRequestStatus::Pending {
                     return Err(NodeStoreError::new("relay request is not pending"));
                 } else {
-                    let signed = crate::transaction::read_signed_transaction_by_hash(
-                        &transaction,
-                        tx_hash,
-                    )?
-                    .ok_or_else(|| {
-                        NodeStoreError::new("relay observation has no exact local transaction")
-                    })?;
+                    let signed =
+                        crate::transaction::read_signed_transaction_by_hash(&transaction, tx_hash)?
+                            .ok_or_else(|| {
+                                NodeStoreError::new(
+                                    "relay observation has no exact local transaction",
+                                )
+                            })?;
                     record.status = MessageRequestStatus::Completed;
                     record.relay_observation = Some(observation);
                     update_request(&transaction, &record)?;
@@ -4104,11 +4104,9 @@ fn reconstruct_outbound_attachment_exact(
             Ok(encode_bulk_approval(record, digest, size))
         }
         OutboundMessageKind::SignedTransactionRelay if record.operation == OperationKind::Relay => {
-            let transaction = crate::transaction::read_signed_transaction_by_hash(
-                connection,
-                record.subject,
-            )?
-            .ok_or_else(|| NodeStoreError::new("relay lost its signed transaction"))?;
+            let transaction =
+                crate::transaction::read_signed_transaction_by_hash(connection, record.subject)?
+                    .ok_or_else(|| NodeStoreError::new("relay lost its signed transaction"))?;
             Ok(encode_signed_relay(record, &transaction))
         }
         OutboundMessageKind::TransactionStatusRequest
@@ -4348,10 +4346,7 @@ fn transition_outbound_lease(
     transaction.commit().map_err(NodeStoreError::sqlite)
 }
 
-fn encode_signed_relay(
-    record: &RequestRecord,
-    transaction: &StoredSignedTransaction,
-) -> Vec<u8> {
+fn encode_signed_relay(record: &RequestRecord, transaction: &StoredSignedTransaction) -> Vec<u8> {
     let mut out = prelude_for_chain(transaction.chain_id(), KIND_SIGNED_RELAY);
     out.extend_from_slice(&record.request_id);
     out.extend_from_slice(&record.expires_at_unix.to_le_bytes());
@@ -5371,9 +5366,7 @@ mod tests {
 
     use super::*;
     use crate::TransactionAssurance;
-    use crate::transaction::test_support::{
-        signed_fixture, signed_fixture_for_chain_with_nonce,
-    };
+    use crate::transaction::test_support::{signed_fixture, signed_fixture_for_chain_with_nonce};
 
     const REAL_CHECKPOINT_ROOT: [u8; 32] = [
         0x63, 0x6e, 0x48, 0x99, 0x72, 0x3f, 0xe9, 0x23, 0x7f, 0xbe, 0xe7, 0x09, 0x83, 0x92, 0xb7,

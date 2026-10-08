@@ -126,18 +126,42 @@ pub struct VerifiedEvmTxReceipt {
 }
 
 impl VerifiedEvmTxReceipt {
-    pub fn chain_id(&self) -> u64 { self.chain_id }
-    pub fn network(&self) -> &str { &self.network }
-    pub fn block_number(&self) -> u64 { self.block_number }
-    pub fn block_hash(&self) -> [u8; 32] { self.block_hash }
-    pub fn tx_hash(&self) -> [u8; 32] { self.tx_hash }
-    pub fn tx_index(&self) -> u64 { self.tx_index }
-    pub fn succeeded(&self) -> bool { self.succeeded }
-    pub fn cumulative_gas_used(&self) -> u64 { self.cumulative_gas_used }
-    pub fn logs_count(&self) -> u64 { self.logs_count }
-    pub fn assurance(&self) -> AnchorAssurance { self.assurance }
-    pub fn anchor_evidence_hash(&self) -> [u8; 32] { self.anchor_evidence_hash }
-    pub fn proof_bundle_hash(&self) -> [u8; 32] { self.proof_bundle_hash }
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
+    pub fn network(&self) -> &str {
+        &self.network
+    }
+    pub fn block_number(&self) -> u64 {
+        self.block_number
+    }
+    pub fn block_hash(&self) -> [u8; 32] {
+        self.block_hash
+    }
+    pub fn tx_hash(&self) -> [u8; 32] {
+        self.tx_hash
+    }
+    pub fn tx_index(&self) -> u64 {
+        self.tx_index
+    }
+    pub fn succeeded(&self) -> bool {
+        self.succeeded
+    }
+    pub fn cumulative_gas_used(&self) -> u64 {
+        self.cumulative_gas_used
+    }
+    pub fn logs_count(&self) -> u64 {
+        self.logs_count
+    }
+    pub fn assurance(&self) -> AnchorAssurance {
+        self.assurance
+    }
+    pub fn anchor_evidence_hash(&self) -> [u8; 32] {
+        self.anchor_evidence_hash
+    }
+    pub fn proof_bundle_hash(&self) -> [u8; 32] {
+        self.proof_bundle_hash
+    }
 }
 
 impl Verifier {

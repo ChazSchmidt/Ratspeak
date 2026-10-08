@@ -2390,10 +2390,7 @@ mod tests {
         };
         assert_eq!(non_authoritative_observations.len(), 1);
         let history = store
-            .transaction_assurance_history(
-                ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
-                tx_hash,
-            )
+            .transaction_assurance_history(ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID, tx_hash)
             .unwrap();
         assert!(history.iter().any(|event| {
             event.chain_id() == ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID

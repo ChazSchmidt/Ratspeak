@@ -52,17 +52,39 @@ impl VerifiedEvmAnchor {
         }
     }
 
-    pub fn chain_id(&self) -> u64 { self.chain_id }
-    pub fn network(&self) -> &str { &self.network }
-    pub fn block_number(&self) -> u64 { self.block_number }
-    pub fn block_hash(&self) -> [u8; 32] { self.block_hash }
-    pub fn parent_hash(&self) -> [u8; 32] { self.parent_hash }
-    pub fn state_root(&self) -> [u8; 32] { self.state_root }
-    pub fn transactions_root(&self) -> [u8; 32] { self.transactions_root }
-    pub fn receipts_root(&self) -> [u8; 32] { self.receipts_root }
-    pub fn timestamp(&self) -> u64 { self.timestamp }
-    pub fn assurance(&self) -> AnchorAssurance { self.assurance }
-    pub fn evidence_hash(&self) -> [u8; 32] { self.evidence_hash }
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
+    pub fn network(&self) -> &str {
+        &self.network
+    }
+    pub fn block_number(&self) -> u64 {
+        self.block_number
+    }
+    pub fn block_hash(&self) -> [u8; 32] {
+        self.block_hash
+    }
+    pub fn parent_hash(&self) -> [u8; 32] {
+        self.parent_hash
+    }
+    pub fn state_root(&self) -> [u8; 32] {
+        self.state_root
+    }
+    pub fn transactions_root(&self) -> [u8; 32] {
+        self.transactions_root
+    }
+    pub fn receipts_root(&self) -> [u8; 32] {
+        self.receipts_root
+    }
+    pub fn timestamp(&self) -> u64 {
+        self.timestamp
+    }
+    pub fn assurance(&self) -> AnchorAssurance {
+        self.assurance
+    }
+    pub fn evidence_hash(&self) -> [u8; 32] {
+        self.evidence_hash
+    }
 
     pub fn pinned_checkpoint(&self) -> PinnedCheckpoint {
         PinnedCheckpoint::for_network(
@@ -93,5 +115,3 @@ impl From<&VerifiedExecutionBlock> for VerifiedEvmAnchor {
         )
     }
 }
-
-

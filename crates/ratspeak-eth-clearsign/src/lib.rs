@@ -662,11 +662,7 @@ impl DefinitionRegistry {
         Err(Error::NoMatchingDefinition)
     }
 
-    pub fn balance_query(
-        &self,
-        definition_id: &str,
-        owner: Address,
-    ) -> Result<BalanceProofQuery> {
+    pub fn balance_query(&self, definition_id: &str, owner: Address) -> Result<BalanceProofQuery> {
         let definition = self
             .definitions
             .iter()
@@ -716,9 +712,7 @@ impl DefinitionRegistry {
     /// Installs the built-in Base Sepolia USDC PoC asset as one atomic
     /// user-facing bundle. The caller selects the asset; descriptor bytes and
     /// storage interpretation never come from the WebView or gateway.
-    pub fn install_base_sepolia_usdc_bundle_files(
-        store: &Path,
-    ) -> Result<InstalledAssetBundle> {
+    pub fn install_base_sepolia_usdc_bundle_files(store: &Path) -> Result<InstalledAssetBundle> {
         Self::install_asset_bundle_files(
             store,
             include_bytes!("../definitions/base-sepolia-usdc.json"),
@@ -938,11 +932,13 @@ mod tests {
             "ratspeak-base-sepolia-usdc-{}-{unique}",
             std::process::id()
         ));
-        let installed =
-            DefinitionRegistry::install_base_sepolia_usdc_bundle_files(&store).unwrap();
+        let installed = DefinitionRegistry::install_base_sepolia_usdc_bundle_files(&store).unwrap();
         assert_eq!(installed.chain_id, BASE_SEPOLIA_CHAIN_ID);
         assert_eq!(installed.symbol, "USDC");
-        assert_eq!(installed.balance_definition_id, "base-sepolia-usdc-balance-v1");
+        assert_eq!(
+            installed.balance_definition_id,
+            "base-sepolia-usdc-balance-v1"
+        );
         let loaded = DefinitionRegistry::load_dir(&store).unwrap();
         assert!(loaded.contains(&installed.clear_sign_definition_id));
         assert!(loaded.contains(&installed.balance_definition_id));
@@ -1000,7 +996,10 @@ mod tests {
         encoded[63] = 9;
         assert_eq!(query.storage_key, keccak256(encoded));
         assert_eq!(query.chain_id, BASE_SEPOLIA_CHAIN_ID);
-        assert_eq!(query.contract, address("036CbD53842c5426634e7929541eC2318f3dCF7e"));
+        assert_eq!(
+            query.contract,
+            address("036CbD53842c5426634e7929541eC2318f3dCF7e")
+        );
         assert_eq!(query.symbol, "USDC");
         assert_eq!(query.decimals, 6);
 

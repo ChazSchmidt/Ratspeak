@@ -146,7 +146,9 @@ pub fn support_requirements(chain_id: u64) -> Option<ChainSupportRequirements> {
 }
 
 pub fn chain_definition(chain_id: u64) -> Option<&'static ChainDefinition> {
-    SUPPORTED_CHAINS.iter().find(|chain| chain.chain_id == chain_id)
+    SUPPORTED_CHAINS
+        .iter()
+        .find(|chain| chain.chain_id == chain_id)
 }
 
 #[cfg(test)]

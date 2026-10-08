@@ -143,9 +143,7 @@ impl EthereumNodeStore {
 
     /// Returns the newest locally signed transaction across all supported PoC
     /// chains using durable insertion order rather than the device clock.
-    pub fn latest_signed_transaction_any_chain(
-        &self,
-    ) -> Result<Option<StoredSignedTransaction>> {
+    pub fn latest_signed_transaction_any_chain(&self) -> Result<Option<StoredSignedTransaction>> {
         let row = self
             .connection
             .query_row(
@@ -469,9 +467,7 @@ pub(crate) fn read_signed_transaction_by_hash(
         &first.get::<_, String>(0).map_err(NodeStoreError::sqlite)?,
         "signed transaction chain id",
     )?;
-    let network = first
-        .get::<_, String>(1)
-        .map_err(NodeStoreError::sqlite)?;
+    let network = first.get::<_, String>(1).map_err(NodeStoreError::sqlite)?;
     if rows.next().map_err(NodeStoreError::sqlite)?.is_some() {
         return Err(NodeStoreError::new(
             "transaction hash resolves to multiple supported chains",
@@ -698,12 +694,7 @@ mod tests {
         let base_raw = encoded_test_transaction(base);
         let base_decoded = decode_signed_transaction(&base_raw).unwrap();
         let (_, second) = store
-            .record_locally_signed_transaction(
-                &base_raw,
-                base_decoded.sender,
-                [0x32; 32],
-                100,
-            )
+            .record_locally_signed_transaction(&base_raw, base_decoded.sender, [0x32; 32], 100)
             .unwrap();
 
         assert_eq!(
@@ -722,9 +713,15 @@ mod tests {
                 .chain_id(),
             ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID
         );
-        let latest = store.latest_signed_transaction_any_chain().unwrap().unwrap();
+        let latest = store
+            .latest_signed_transaction_any_chain()
+            .unwrap()
+            .unwrap();
         assert_eq!(latest.tx_hash(), second.tx_hash());
-        assert_eq!(latest.chain_id(), ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID);
+        assert_eq!(
+            latest.chain_id(),
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID
+        );
     }
 
     #[test]
@@ -747,9 +744,7 @@ mod tests {
             input.extend_from_slice(&[0xa9, 0x05, 0x9c, 0xbb]);
             input.extend_from_slice(&[0u8; 12]);
             input.extend_from_slice(recipient.as_slice());
-            input.extend_from_slice(
-                &U256::from(5_000_000_000_000_000_000u64).to_be_bytes::<32>(),
-            );
+            input.extend_from_slice(&U256::from(5_000_000_000_000_000_000u64).to_be_bytes::<32>());
 
             let transaction = TxEip1559 {
                 chain_id,

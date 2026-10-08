@@ -3,8 +3,8 @@ use alloy_eips::eip2718::Decodable2718;
 use alloy_primitives::{B256, keccak256};
 
 use super::{
-    AnchorAssurance, ETHEREUM_SEPOLIA_CHAIN_ID, Result, StackConfig, VerifiedEvmAnchor,
-    VerifyError, Verifier, chain_definition,
+    AnchorAssurance, ETHEREUM_SEPOLIA_CHAIN_ID, Result, StackConfig, VerifiedEvmAnchor, Verifier,
+    VerifyError, chain_definition,
 };
 use crate::execution::decode_header;
 
@@ -28,10 +28,11 @@ impl NitroConfirmedEndpoint {
         l1_receipt_proof: &[u8],
         l1_anchor: &VerifiedEvmAnchor,
     ) -> Result<Self> {
-        let definition = chain_definition(l2_chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
-            chain_id: l2_chain_id,
-            network: "unknown".to_owned(),
-        })?;
+        let definition =
+            chain_definition(l2_chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
+                chain_id: l2_chain_id,
+                network: "unknown".to_owned(),
+            })?;
         let StackConfig::Nitro(config) = definition.stack else {
             return Err(VerifyError::UnsupportedNetwork {
                 chain_id: l2_chain_id,
@@ -89,12 +90,24 @@ impl NitroConfirmedEndpoint {
         ))
     }
 
-    pub fn chain_id(&self) -> u64 { self.chain_id }
-    pub fn network(&self) -> &'static str { self.network }
-    pub fn assertion_hash(&self) -> [u8; 32] { self.assertion_hash }
-    pub fn block_hash(&self) -> [u8; 32] { self.block_hash }
-    pub fn send_root(&self) -> [u8; 32] { self.send_root }
-    pub fn l1_receipt_proof_hash(&self) -> [u8; 32] { self.l1_receipt_proof_hash }
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
+    pub fn network(&self) -> &'static str {
+        self.network
+    }
+    pub fn assertion_hash(&self) -> [u8; 32] {
+        self.assertion_hash
+    }
+    pub fn block_hash(&self) -> [u8; 32] {
+        self.block_hash
+    }
+    pub fn send_root(&self) -> [u8; 32] {
+        self.send_root
+    }
+    pub fn l1_receipt_proof_hash(&self) -> [u8; 32] {
+        self.l1_receipt_proof_hash
+    }
 
     /// Authenticates the confirmed endpoint header and, optionally, walks
     /// contiguous parent headers down to an earlier target block.

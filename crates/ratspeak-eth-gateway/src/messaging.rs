@@ -1566,14 +1566,13 @@ mod tests {
         else {
             panic!("expected Base signed relay");
         };
-        assert_eq!(relay.chain_id(), ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID);
-
-        let wrong_prelude = encode_test_signed_relay_for_chain(
-            SEPOLIA_CHAIN_ID,
-            [0x83; 16],
-            200,
-            &raw,
+        assert_eq!(
+            relay.chain_id(),
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID
         );
+
+        let wrong_prelude =
+            encode_test_signed_relay_for_chain(SEPOLIA_CHAIN_ID, [0x83; 16], 200, &raw);
         let mut fresh = GatewayRelayGuard::new(expected, GatewayRateLimit::conservative()).unwrap();
         assert_eq!(
             fresh
@@ -1593,9 +1592,8 @@ mod tests {
             false,
             200,
         );
-        evidence[8..16].copy_from_slice(
-            &ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID.to_le_bytes(),
-        );
+        evidence[8..16]
+            .copy_from_slice(&ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID.to_le_bytes());
         assert_eq!(
             decode(&evidence).unwrap_err(),
             GatewayMessageError::InvalidMessage

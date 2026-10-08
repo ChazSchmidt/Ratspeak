@@ -62,9 +62,7 @@ pub use messaging::{
     PendingMessageEvidence, RelayObservation, StoredTransactionStatusObservation,
     TransactionStatus, TransactionStatusContinuity, TransactionStatusHistoryView,
 };
-pub use readiness::{
-    OfflineReadiness, OfflineReadinessReport, assess_offline_readiness,
-};
+pub use readiness::{OfflineReadiness, OfflineReadinessReport, assess_offline_readiness};
 pub use receipt::StoredReceiptRecord;
 pub use transaction::StoredSignedTransaction;
 pub use workflow::{

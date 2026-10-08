@@ -32,7 +32,7 @@ pub use chains::{
     ARBITRUM_SEPOLIA, ARBITRUM_SEPOLIA_CHAIN_ID, BASE_SEPOLIA, BASE_SEPOLIA_CHAIN_ID,
     ChainDefinition, ChainSupportRequirements, ETHEREUM_SEPOLIA, ETHEREUM_SEPOLIA_CHAIN_ID,
     NitroConfig, OP_SEPOLIA, OP_SEPOLIA_CHAIN_ID, OpStackConfig, ROBINHOOD_TESTNET,
-    ROBINHOOD_TESTNET_CHAIN_ID, StackConfig, SUPPORTED_CHAINS, VerificationFamily,
+    ROBINHOOD_TESTNET_CHAIN_ID, SUPPORTED_CHAINS, StackConfig, VerificationFamily,
     chain_definition, support_requirements,
 };
 pub use composite::{
@@ -212,10 +212,11 @@ impl PinnedCheckpoint {
         execution_block_hash: [u8; 32],
         state_root: [u8; 32],
     ) -> Result<Self> {
-        let definition = chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
-            chain_id,
-            network: network.to_owned(),
-        })?;
+        let definition =
+            chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
+                chain_id,
+                network: network.to_owned(),
+            })?;
         if definition.network != network {
             return Err(VerifyError::UnsupportedNetwork {
                 chain_id,
@@ -409,10 +410,11 @@ impl Default for Verifier {
 
 impl Verifier {
     pub fn for_chain(chain_id: u64) -> Result<Self> {
-        let definition = chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
-            chain_id,
-            network: "unknown".to_owned(),
-        })?;
+        let definition =
+            chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
+                chain_id,
+                network: "unknown".to_owned(),
+            })?;
         Ok(Self {
             chain_id,
             network: definition.network,

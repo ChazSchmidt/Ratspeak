@@ -395,10 +395,7 @@ impl<T, C> EvmAnchorRpcProvider<T, C, UnsupportedReceiptProofBackend> {
 }
 
 impl<T, C, R> EvmAnchorRpcProvider<T, C, R> {
-    pub fn with_receipt_backend<R2>(
-        self,
-        receipt_backend: R2,
-    ) -> EvmAnchorRpcProvider<T, C, R2> {
+    pub fn with_receipt_backend<R2>(self, receipt_backend: R2) -> EvmAnchorRpcProvider<T, C, R2> {
         EvmAnchorRpcProvider {
             builder: self.builder,
             transport: self.transport,
@@ -456,9 +453,7 @@ where
         request: &AcceptedEvidenceRequest,
     ) -> Result<GatewayBundle, GatewayProviderFailure> {
         match request.evidence_kind() {
-            MessagingEvidenceKind::AccountProof => {
-                self.fetch_account_evidence(request.subject())
-            }
+            MessagingEvidenceKind::AccountProof => self.fetch_account_evidence(request.subject()),
             MessagingEvidenceKind::ReceiptProof => {
                 let captured_at_unix = self.clock.now_unix()?;
                 let anchor = self.builder.anchor();
@@ -1295,8 +1290,7 @@ fn validate_anchor_block(
     if parse_field_fixed_hex::<32>(object, "hash")? != anchor.block_hash()
         || parse_field_quantity_u64(object, "number")? != anchor.block_number()
         || parse_field_fixed_hex::<32>(object, "stateRoot")? != anchor.state_root()
-        || parse_field_fixed_hex::<32>(object, "transactionsRoot")?
-            != anchor.transactions_root()
+        || parse_field_fixed_hex::<32>(object, "transactionsRoot")? != anchor.transactions_root()
         || parse_field_fixed_hex::<32>(object, "receiptsRoot")? != anchor.receipts_root()
     {
         return Err(GatewayProviderFailure::Permanent);
@@ -1331,10 +1325,8 @@ fn parse_account_and_storage_proof_result(
     state_root: [u8; 32],
     expected_address: [u8; 20],
     expected_key: [u8; 32],
-) -> Result<
-    (UntrustedAccountProofRpcInput, UntrustedStorageProofRpcInput),
-    GatewayProviderFailure,
-> {
+) -> Result<(UntrustedAccountProofRpcInput, UntrustedStorageProofRpcInput), GatewayProviderFailure>
+{
     let object = value.as_object().ok_or(GatewayProviderFailure::Permanent)?;
     let allowed = [
         "address",
@@ -1383,17 +1375,24 @@ fn parse_account_and_storage_proof_result(
     let storage = storage_values[0]
         .as_object()
         .ok_or(GatewayProviderFailure::Permanent)?;
-    if storage.keys().any(|key| !["key", "value", "proof"].contains(&key.as_str())) {
+    if storage
+        .keys()
+        .any(|key| !["key", "value", "proof"].contains(&key.as_str()))
+    {
         return Err(GatewayProviderFailure::Permanent);
     }
     let key = parse_storage_key(
-        storage.get("key").ok_or(GatewayProviderFailure::Permanent)?,
+        storage
+            .get("key")
+            .ok_or(GatewayProviderFailure::Permanent)?,
     )?;
     if key != expected_key {
         return Err(GatewayProviderFailure::Permanent);
     }
     let value = parse_quantity_u256(
-        storage.get("value").ok_or(GatewayProviderFailure::Permanent)?,
+        storage
+            .get("value")
+            .ok_or(GatewayProviderFailure::Permanent)?,
     )?;
     let proof_values = storage
         .get("proof")
@@ -2036,17 +2035,17 @@ mod tests {
             "accountProof": nodes.iter().map(|node| canonical_data_hex(node)).collect::<Vec<_>>(),
             "storageProof": [],
         });
-        let input =
-            parse_account_proof_result(
-                &result,
-                SEPOLIA_CHAIN_ID,
-                SEPOLIA_NETWORK,
-                77,
-                42,
-                [0x22; 32],
-                state_root,
-                address,
-            ).unwrap();
+        let input = parse_account_proof_result(
+            &result,
+            SEPOLIA_CHAIN_ID,
+            SEPOLIA_NETWORK,
+            77,
+            42,
+            [0x22; 32],
+            state_root,
+            address,
+        )
+        .unwrap();
         let bytes = crate::encode_account_proof(&input).unwrap();
         Verifier::sepolia()
             .verify_and_import(

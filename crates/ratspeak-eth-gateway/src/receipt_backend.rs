@@ -56,12 +56,7 @@ impl<T> CompleteBlockReceiptProofBackend<T> {
         transport: T,
         policy: ProviderHttpPolicy,
     ) -> Result<Self, crate::ProviderConfigurationError> {
-        Self::new_for_chain(
-            transport,
-            policy,
-            SEPOLIA_CHAIN_ID,
-            SEPOLIA_NETWORK,
-        )
+        Self::new_for_chain(transport, policy, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK)
     }
 
     pub fn new_for_chain(
@@ -70,8 +65,8 @@ impl<T> CompleteBlockReceiptProofBackend<T> {
         chain_id: u64,
         network: &str,
     ) -> Result<Self, crate::ProviderConfigurationError> {
-        let definition = chain_definition(chain_id)
-            .ok_or(crate::ProviderConfigurationError::InvalidPolicy)?;
+        let definition =
+            chain_definition(chain_id).ok_or(crate::ProviderConfigurationError::InvalidPolicy)?;
         if definition.network != network {
             return Err(crate::ProviderConfigurationError::InvalidPolicy);
         }

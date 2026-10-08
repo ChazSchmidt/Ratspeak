@@ -207,13 +207,8 @@ impl EthereumNodeStore {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(NodeStoreError::sqlite)?;
-        if crate::transaction::read_signed_transaction(
-            &transaction,
-            chain_id,
-            network,
-            tx_hash,
-        )?
-        .is_none()
+        if crate::transaction::read_signed_transaction(&transaction, chain_id, network, tx_hash)?
+            .is_none()
         {
             return Err(NodeStoreError::new(
                 "transaction observation has no locally signed transaction",

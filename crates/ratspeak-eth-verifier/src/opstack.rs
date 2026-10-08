@@ -1,16 +1,14 @@
 use alloy_primitives::{Address, B256, Signature, keccak256};
 
 use super::{
-    AnchorAssurance, ETHEREUM_SEPOLIA_CHAIN_ID, ETHEREUM_SEPOLIA, MemoryAccountStore, Result,
-    StackConfig, VerifiedEvmAnchor, VerifiedStorageValue, VerifyError, Verifier, chain_definition,
+    AnchorAssurance, ETHEREUM_SEPOLIA, ETHEREUM_SEPOLIA_CHAIN_ID, MemoryAccountStore, Result,
+    StackConfig, VerifiedEvmAnchor, VerifiedStorageValue, Verifier, VerifyError, chain_definition,
 };
 use crate::execution::decode_header;
 
 const UNSAFE_SIGNER_SLOT: B256 = B256::new([
-    0x65, 0xa7, 0xed, 0x54, 0x2f, 0xb3, 0x7f, 0xe2,
-    0x37, 0xfd, 0xfb, 0xdd, 0x70, 0xb3, 0x15, 0x98,
-    0x52, 0x3f, 0xe5, 0xb3, 0x28, 0x79, 0xe3, 0x07,
-    0xba, 0xe2, 0x7a, 0x0b, 0xd9, 0x58, 0x1c, 0x08,
+    0x65, 0xa7, 0xed, 0x54, 0x2f, 0xb3, 0x7f, 0xe2, 0x37, 0xfd, 0xfb, 0xdd, 0x70, 0xb3, 0x15, 0x98,
+    0x52, 0x3f, 0xe5, 0xb3, 0x28, 0x79, 0xe3, 0x07, 0xba, 0xe2, 0x7a, 0x0b, 0xd9, 0x58, 0x1c, 0x08,
 ]);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,7 +24,9 @@ const OP_EXECUTION_PAYLOAD_FIXED_BYTES: usize = 560;
 
 fn parse_execution_payload_commitments(bytes: &[u8]) -> Result<OpExecutionPayloadCommitments> {
     if bytes.len() < OP_EXECUTION_PAYLOAD_FIXED_BYTES {
-        return Err(VerifyError::Malformed("OP-Stack execution payload is truncated"));
+        return Err(VerifyError::Malformed(
+            "OP-Stack execution payload is truncated",
+        ));
     }
 
     // Pinned Helios OP payload SSZ fixed section:
@@ -119,10 +119,11 @@ pub struct OpStackSequencerAnchor {
 
 impl OpStackSequencerAnchor {
     pub fn signer_proof_query(chain_id: u64) -> Result<OpStackSignerProofQuery> {
-        let definition = chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
-            chain_id,
-            network: "unknown".to_owned(),
-        })?;
+        let definition =
+            chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
+                chain_id,
+                network: "unknown".to_owned(),
+            })?;
         let StackConfig::OpStack(config) = definition.stack else {
             return Err(VerifyError::UnsupportedNetwork {
                 chain_id,
@@ -174,8 +175,7 @@ impl OpStackSequencerAnchor {
         if account.address() != query.system_config.0 {
             return Err(VerifyError::UnexpectedAccount);
         }
-        let signer_storage =
-            verifier.verify_storage_proof(signer_storage_proof, &account)?;
+        let signer_storage = verifier.verify_storage_proof(signer_storage_proof, &account)?;
         if signer_storage.key() != query.storage_key.0 {
             return Err(VerifyError::CheckpointMismatch);
         }
@@ -192,10 +192,11 @@ impl OpStackSequencerAnchor {
         decompressed_commitment: &[u8],
         verified_signer_storage: &VerifiedStorageValue,
     ) -> Result<Self> {
-        let definition = chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
-            chain_id,
-            network: "unknown".to_owned(),
-        })?;
+        let definition =
+            chain_definition(chain_id).ok_or_else(|| VerifyError::UnsupportedNetwork {
+                chain_id,
+                network: "unknown".to_owned(),
+            })?;
         let StackConfig::OpStack(config) = definition.stack else {
             return Err(VerifyError::UnsupportedNetwork {
                 chain_id,
@@ -211,7 +212,9 @@ impl OpStackSequencerAnchor {
             return Err(VerifyError::CheckpointMismatch);
         }
         if decompressed_commitment.len() <= 65 + 32 {
-            return Err(VerifyError::Malformed("OP-Stack sequencer commitment is too short"));
+            return Err(VerifyError::Malformed(
+                "OP-Stack sequencer commitment is too short",
+            ));
         }
 
         let signer_bytes = verified_signer_storage.value().to_be_bytes::<32>();
@@ -247,16 +250,36 @@ impl OpStackSequencerAnchor {
         })
     }
 
-    pub fn chain_id(&self) -> u64 { self.chain_id }
-    pub fn network(&self) -> &'static str { self.network }
-    pub fn block_number(&self) -> u64 { self.block_number }
-    pub fn block_hash(&self) -> [u8; 32] { self.block_hash }
-    pub fn state_root(&self) -> [u8; 32] { self.state_root }
-    pub fn receipts_root(&self) -> [u8; 32] { self.receipts_root }
-    pub fn timestamp(&self) -> u64 { self.timestamp }
-    pub fn sequencer_signer(&self) -> [u8; 20] { self.sequencer_signer }
-    pub fn signer_storage_proof_hash(&self) -> [u8; 32] { self.signer_storage_proof_hash }
-    pub fn sequencer_commitment_hash(&self) -> [u8; 32] { self.sequencer_commitment_hash }
+    pub fn chain_id(&self) -> u64 {
+        self.chain_id
+    }
+    pub fn network(&self) -> &'static str {
+        self.network
+    }
+    pub fn block_number(&self) -> u64 {
+        self.block_number
+    }
+    pub fn block_hash(&self) -> [u8; 32] {
+        self.block_hash
+    }
+    pub fn state_root(&self) -> [u8; 32] {
+        self.state_root
+    }
+    pub fn receipts_root(&self) -> [u8; 32] {
+        self.receipts_root
+    }
+    pub fn timestamp(&self) -> u64 {
+        self.timestamp
+    }
+    pub fn sequencer_signer(&self) -> [u8; 20] {
+        self.sequencer_signer
+    }
+    pub fn signer_storage_proof_hash(&self) -> [u8; 32] {
+        self.signer_storage_proof_hash
+    }
+    pub fn sequencer_commitment_hash(&self) -> [u8; 32] {
+        self.sequencer_commitment_hash
+    }
 
     pub fn verify_rlp_header(&self, rlp_header: &[u8]) -> Result<VerifiedEvmAnchor> {
         let header = decode_header(rlp_header)?;

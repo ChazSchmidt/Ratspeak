@@ -1520,7 +1520,6 @@ mod tests {
         registry
     }
 
-
     fn erc20_transfer_calldata(recipient: Address, amount: U256) -> Bytes {
         let mut calldata = Vec::with_capacity(68);
         calldata.extend_from_slice(&[0xa9, 0x05, 0x9c, 0xbb]);
@@ -1607,15 +1606,9 @@ mod tests {
         let recipient = address("2222222222222222222222222222222222222222");
         let registry = poc_native_registry();
 
-        for (index, chain_id) in [
-            11_155_111u64,
-            84_532,
-            11_155_420,
-            421_614,
-            46_630,
-        ]
-        .into_iter()
-        .enumerate()
+        for (index, chain_id) in [11_155_111u64, 84_532, 11_155_420, 421_614, 46_630]
+            .into_iter()
+            .enumerate()
         {
             let prepared = account
                 .prepare_clear_signed_operation(
@@ -1658,15 +1651,9 @@ mod tests {
         let recipient = address("2222222222222222222222222222222222222222");
         let contract = address("3333333333333333333333333333333333333333");
 
-        for (index, chain_id) in [
-            11_155_111u64,
-            84_532,
-            11_155_420,
-            421_614,
-            46_630,
-        ]
-        .into_iter()
-        .enumerate()
+        for (index, chain_id) in [11_155_111u64, 84_532, 11_155_420, 421_614, 46_630]
+            .into_iter()
+            .enumerate()
         {
             let mut registry = DefinitionRegistry::new();
             registry
