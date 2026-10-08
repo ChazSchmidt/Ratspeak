@@ -126,6 +126,52 @@ class EthereumNativeWalletControllerTest {
     }
 
     @Test
+    fun clearSignedBaseReviewSignsOnlyAfterBiometricCustodyReturns() {
+        val fixture = Fixture()
+        fixture.activateExisting()
+        val review = checkedClearSignedReview(expiresAt = 2_000)
+
+        fixture.controller.beginClearSignedReview(review)
+        assertTrue(
+            fixture.lastState is EthereumNativeWalletController.State.ClearSigningReviewing,
+        )
+        fixture.controller.approveClearSignedOperation()
+        assertEquals(0, fixture.engine.signCalls)
+
+        fixture.custody.completeLoad(secretResult())
+
+        assertEquals(1, fixture.engine.signCalls)
+        assertEquals("7", fixture.engine.signedNonce)
+        assertEquals(
+            TX_HASH,
+            (fixture.lastState as EthereumNativeWalletController.State.Signed).transactionHash,
+        )
+        assertEquals(1, fixture.custody.loadCalls)
+        assertEquals(ADDRESS, fixture.custody.loadedAccount)
+    }
+
+    @Test
+    fun clearSignedReviewRejectsWrongNetworkAndExpiresFailClosed() {
+        val wrongNetwork = clearSignedReviewOrNull(network = "OP Sepolia")
+        assertNull(wrongNetwork)
+
+        var now = 1_000L
+        val fixture = Fixture(clock = { now })
+        fixture.activateExisting()
+        val review = checkedClearSignedReview(expiresAt = 1_500)
+        fixture.controller.beginClearSignedReview(review)
+        fixture.controller.approveClearSignedOperation()
+        now = 1_500
+        val secret = SensitiveWalletBytes.takeOwnership(byteArrayOf(7, 8, 9))!!
+
+        fixture.custody.completeLoad(EthereumCustodyResult.Success(secret))
+
+        assertEquals(0, fixture.engine.signCalls)
+        assertThrows(IllegalStateException::class.java) { secret.consume { } }
+        assertTrue(fixture.lastState is EthereumNativeWalletController.State.Active)
+    }
+
+    @Test
     fun expirationWhileBiometricPromptIsOpenNeverSigns() {
         var now = 1_000L
         val fixture = Fixture(clock = { now })
@@ -468,6 +514,40 @@ class EthereumNativeWalletControllerTest {
             expiresAt,
             ByteArray(16) { 7 },
             payload,
+        )
+
+        private fun checkedClearSignedReview(
+            expiresAt: Long,
+        ): ExactClearSignedReview = clearSignedReviewOrNull(expiresAt = expiresAt)!!
+
+        private fun clearSignedReviewOrNull(
+            chainId: Long = 84_532L,
+            sender: String = ADDRESS,
+            network: String = "Base Sepolia",
+            recipient: String = OTHER_ADDRESS,
+            amount: String = "1000000000000000",
+            nonce: String = "7",
+            gas: Long = 21_000L,
+            maxFee: String = "2000000000",
+            priorityFee: String = "1000000000",
+            expiresAt: Long = 2_000,
+        ): ExactClearSignedReview? = ExactClearSignedReview.checked(
+            chainId,
+            sender,
+            network,
+            ByteArray(32) { 0x11 },
+            ByteArray(32) { 0x22 },
+            "ETH",
+            18,
+            recipient,
+            amount,
+            nonce,
+            gas,
+            maxFee,
+            priorityFee,
+            expiresAt,
+            ByteArray(16) { 7 },
+            byteArrayOf(2, 1, 0, 0),
         )
     }
 }
