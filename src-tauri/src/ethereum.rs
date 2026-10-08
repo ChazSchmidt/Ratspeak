@@ -6374,7 +6374,7 @@ mod tests {
     #[test]
     fn builtin_asset_selector_cannot_supply_definition_material() {
         let asset: EthereumBuiltinAsset =
-            serde_json::from_str(""base_sepolia_usdc"").unwrap();
+            serde_json::from_str("\"base_sepolia_usdc\"").unwrap();
         assert_eq!(asset, EthereumBuiltinAsset::BaseSepoliaUsdc);
         assert!(
             serde_json::from_value::<EthereumBuiltinAsset>(serde_json::json!({
