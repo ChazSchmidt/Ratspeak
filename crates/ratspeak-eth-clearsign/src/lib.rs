@@ -713,6 +713,19 @@ impl DefinitionRegistry {
     /// definition files. Both definitions are parsed and cross-checked before
     /// touching the store. Runtime failures roll back any first rename so the
     /// profile never intentionally leaves a half-installed asset.
+    /// Installs the built-in Base Sepolia USDC PoC asset as one atomic
+    /// user-facing bundle. The caller selects the asset; descriptor bytes and
+    /// storage interpretation never come from the WebView or gateway.
+    pub fn install_base_sepolia_usdc_bundle_files(
+        store: &Path,
+    ) -> Result<InstalledAssetBundle> {
+        Self::install_asset_bundle_files(
+            store,
+            include_bytes!("../definitions/base-sepolia-usdc.json"),
+            include_bytes!("../definitions/base-sepolia-usdc-balance.json"),
+        )
+    }
+
     pub fn install_asset_bundle_files(
         store: &Path,
         clear_sign_bytes: &[u8],
@@ -913,6 +926,27 @@ mod tests {
             assert_eq!(review.asset_symbol, "ETH");
             assert_eq!(review.kind, ReviewKind::NativeTransfer);
         }
+    }
+
+    #[test]
+    fn built_in_base_sepolia_usdc_install_is_one_atomic_asset() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let store = std::env::temp_dir().join(format!(
+            "ratspeak-base-sepolia-usdc-{}-{unique}",
+            std::process::id()
+        ));
+        let installed =
+            DefinitionRegistry::install_base_sepolia_usdc_bundle_files(&store).unwrap();
+        assert_eq!(installed.chain_id, BASE_SEPOLIA_CHAIN_ID);
+        assert_eq!(installed.symbol, "USDC");
+        assert_eq!(installed.balance_definition_id, "base-sepolia-usdc-balance-v1");
+        let loaded = DefinitionRegistry::load_dir(&store).unwrap();
+        assert!(loaded.contains(&installed.clear_sign_definition_id));
+        assert!(loaded.contains(&installed.balance_definition_id));
+        let _ = fs::remove_dir_all(store);
     }
 
     #[test]
