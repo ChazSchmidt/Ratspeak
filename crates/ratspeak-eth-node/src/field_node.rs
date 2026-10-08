@@ -1293,6 +1293,7 @@ mod tests {
 
     use super::*;
     use crate::consensus::install_test_active_execution_evidence;
+    use crate::transaction::test_support::signed_fixture_for_chain_with_nonce;
 
     const PHRASE: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     const EVIDENCE_TIME: u64 = 1_800_000_000;
@@ -2360,6 +2361,50 @@ mod tests {
             rusqlite::params![operation_digest(&stored).as_slice(), operation_id.as_bytes().as_slice()],
         ).unwrap();
         assert!(setup.store.operation_status(operation_id).is_err());
+    }
+
+    #[test]
+    fn base_relay_observation_remains_base_scoped_and_unconfirmed() {
+        let profile = tempfile::tempdir().unwrap();
+        let mut store = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
+        let tx_hash = signed_fixture_for_chain_with_nonce(
+            &mut store,
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            41,
+        );
+        store
+            .record_non_authoritative_transaction_observation(
+                ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+                tx_hash,
+                NonAuthoritativeTransactionObservation::RpcAccepted,
+                [0x91; 32],
+                EVIDENCE_TIME + 20,
+            )
+            .unwrap();
+
+        let Some(TransactionAssurance::Signed {
+            non_authoritative_observations,
+        }) = store.transaction_assurance_reverified(tx_hash).unwrap()
+        else {
+            panic!("Base relay observation changed transaction assurance");
+        };
+        assert_eq!(non_authoritative_observations.len(), 1);
+        let history = store
+            .transaction_assurance_history(
+                ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+                tx_hash,
+            )
+            .unwrap();
+        assert!(history.iter().any(|event| {
+            event.chain_id() == ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID
+                && event.network() == ratspeak_eth_verifier::BASE_SEPOLIA.network
+        }));
+        assert!(
+            store
+                .transaction_assurance_history(SEPOLIA_CHAIN_ID, tx_hash)
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]
