@@ -1237,16 +1237,15 @@ impl EthereumNodeStore {
             created_at_unix,
             expires_at_unix,
         )?;
-        if transaction.chain_id() != SEPOLIA_CHAIN_ID
-            || transaction.raw_transaction().is_empty()
+        if transaction.raw_transaction().is_empty()
             || transaction.raw_transaction().len() > MAX_SIGNED_TRANSACTION_BYTES
             || self
-                .signed_transaction(SEPOLIA_CHAIN_ID, transaction.tx_hash())?
+                .signed_transaction(transaction.chain_id(), transaction.tx_hash())?
                 .as_ref()
                 != Some(transaction)
         {
             return Err(NodeStoreError::new(
-                "relay requires the exact locally persisted Sepolia transaction",
+                "relay requires an exact locally persisted supported-chain transaction",
             ));
         }
         let record = RequestRecord {
@@ -1266,7 +1265,7 @@ impl EthereumNodeStore {
             relay_observation: None,
         };
         insert_request(&self.connection, &record)?;
-        Ok(encode_signed_relay(&record, transaction.raw_transaction()))
+        Ok(encode_signed_relay(&record, transaction))
     }
 
     /// Creates a fixed-size transaction progress request for an exact local
@@ -3232,20 +3231,19 @@ pub(crate) fn insert_planned_signed_relay(
         created_at_unix,
         expires_at_unix,
     )?;
-    if signed.chain_id() != SEPOLIA_CHAIN_ID
-        || signed.raw_transaction().is_empty()
+    if signed.raw_transaction().is_empty()
         || signed.raw_transaction().len() > MAX_SIGNED_TRANSACTION_BYTES
         || crate::transaction::read_signed_transaction(
             transaction,
-            SEPOLIA_CHAIN_ID,
-            SEPOLIA_NETWORK,
+            signed.chain_id(),
+            signed.network(),
             signed.tx_hash(),
         )?
         .as_ref()
             != Some(signed)
     {
         return Err(NodeStoreError::new(
-            "relay requires the exact locally persisted Sepolia transaction",
+            "relay requires an exact locally persisted supported-chain transaction",
         ));
     }
     let record = RequestRecord {
@@ -3265,7 +3263,7 @@ pub(crate) fn insert_planned_signed_relay(
         relay_observation: None,
     };
     insert_request(transaction, &record)?;
-    Ok(encode_signed_relay(&record, signed.raw_transaction()))
+    Ok(encode_signed_relay(&record, signed))
 }
 
 pub(crate) fn validate_planned_signed_relay(
@@ -3286,10 +3284,18 @@ pub(crate) fn validate_planned_signed_relay(
         || record.maximum_response_bytes != signed.raw_transaction().len() as u64
         || record.created_at_unix != created_at_unix
         || record.expires_at_unix != expires_at_unix
+        || crate::transaction::read_signed_transaction(
+            connection,
+            signed.chain_id(),
+            signed.network(),
+            signed.tx_hash(),
+        )?
+        .as_ref()
+            != Some(signed)
     {
         return Err(NodeStoreError::new("planned relay request changed"));
     }
-    Ok(encode_signed_relay(&record, signed.raw_transaction()))
+    Ok(encode_signed_relay(&record, signed))
 }
 
 fn retry_to_fixed_point<T: Copy, E>(
@@ -3992,14 +3998,12 @@ fn reconstruct_outbound_attachment_exact(
             Ok(encode_bulk_approval(record, digest, size))
         }
         OutboundMessageKind::SignedTransactionRelay if record.operation == OperationKind::Relay => {
-            let transaction = crate::transaction::read_signed_transaction(
+            let transaction = crate::transaction::read_signed_transaction_by_hash(
                 connection,
-                SEPOLIA_CHAIN_ID,
-                ratspeak_eth_verifier::SEPOLIA_NETWORK,
                 record.subject,
             )?
             .ok_or_else(|| NodeStoreError::new("relay lost its signed transaction"))?;
-            Ok(encode_signed_relay(record, transaction.raw_transaction()))
+            Ok(encode_signed_relay(record, &transaction))
         }
         OutboundMessageKind::TransactionStatusRequest
             if record.operation == OperationKind::TransactionStatus =>
@@ -4238,12 +4242,15 @@ fn transition_outbound_lease(
     transaction.commit().map_err(NodeStoreError::sqlite)
 }
 
-fn encode_signed_relay(record: &RequestRecord, raw_transaction: &[u8]) -> Vec<u8> {
-    let mut out = prelude(KIND_SIGNED_RELAY);
+fn encode_signed_relay(
+    record: &RequestRecord,
+    transaction: &StoredSignedTransaction,
+) -> Vec<u8> {
+    let mut out = prelude_for_chain(transaction.chain_id(), KIND_SIGNED_RELAY);
     out.extend_from_slice(&record.request_id);
     out.extend_from_slice(&record.expires_at_unix.to_le_bytes());
-    out.extend_from_slice(&(raw_transaction.len() as u32).to_le_bytes());
-    out.extend_from_slice(raw_transaction);
+    out.extend_from_slice(&(transaction.raw_transaction().len() as u32).to_le_bytes());
+    out.extend_from_slice(transaction.raw_transaction());
     out
 }
 
@@ -4275,10 +4282,14 @@ fn encode_bulk_approval(
 }
 
 fn prelude(kind: u8) -> Vec<u8> {
+    prelude_for_chain(SEPOLIA_CHAIN_ID, kind)
+}
+
+fn prelude_for_chain(chain_id: u64, kind: u8) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(MAGIC);
     out.push(VERSION);
-    out.extend_from_slice(&SEPOLIA_CHAIN_ID.to_le_bytes());
+    out.extend_from_slice(&chain_id.to_le_bytes());
     out.push(kind);
     out
 }
