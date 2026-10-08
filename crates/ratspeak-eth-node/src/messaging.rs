@@ -1268,6 +1268,105 @@ impl EthereumNodeStore {
         Ok(encode_signed_relay(&record, transaction))
     }
 
+    /// Returns whether an exact transaction already has relay work that should
+    /// suppress another send to the same configured service. Pending work and
+    /// completed gateway/RPC acceptance coalesce; an explicit RPC rejection
+    /// remains retryable.
+    pub fn has_satisfied_signed_transaction_relay(
+        &self,
+        tx_hash: [u8; 32],
+        expected_gateway_source_hash: [u8; 16],
+        now_unix: u64,
+    ) -> Result<bool> {
+        if tx_hash == [0; 32] || expected_gateway_source_hash == [0; 16] || now_unix == 0 {
+            return Err(NodeStoreError::new("invalid signed relay query"));
+        }
+        if self.signed_transaction_by_hash(tx_hash)?.is_none() {
+            return Ok(false);
+        }
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT request_id FROM eth_message_requests
+                 WHERE operation_kind = ?1 AND subject = ?2
+                   AND expected_gateway_source_hash = ?3
+                   AND ((status = ?4 AND CAST(expires_at_unix AS INTEGER) > ?5)
+                     OR (status = ?6 AND relay_observation IN (?7, ?8)))
+                 ORDER BY rowid DESC LIMIT 1",
+            )
+            .map_err(NodeStoreError::sqlite)?;
+        let identifier = statement
+            .query_row(
+                rusqlite::params![
+                    OperationKind::Relay.as_i64(),
+                    tx_hash.as_slice(),
+                    expected_gateway_source_hash.as_slice(),
+                    MessageRequestStatus::Pending.as_i64(),
+                    now_unix.to_string(),
+                    MessageRequestStatus::Completed.as_i64(),
+                    RelayObservation::GatewayAccepted.wire(),
+                    RelayObservation::RpcAccepted.wire(),
+                ],
+                |row| row.get::<_, Vec<u8>>(0),
+            )
+            .optional()
+            .map_err(NodeStoreError::sqlite)?;
+        drop(statement);
+        let Some(identifier) = identifier else {
+            return Ok(false);
+        };
+        let record = read_request(
+            &self.connection,
+            stored_array(&identifier, "signed relay request identifier")?,
+        )?
+        .ok_or_else(|| NodeStoreError::new("signed relay request disappeared"))?;
+        let pending = record.status == MessageRequestStatus::Pending
+            && record.expires_at_unix > now_unix
+            && record.relay_observation.is_none();
+        let accepted = record.status == MessageRequestStatus::Completed
+            && matches!(
+                record.relay_observation,
+                Some(RelayObservation::GatewayAccepted | RelayObservation::RpcAccepted)
+            );
+        if record.operation != OperationKind::Relay
+            || record.subject != tx_hash
+            || record.expected_gateway_source_hash != expected_gateway_source_hash
+            || (!pending && !accepted)
+        {
+            return Err(NodeStoreError::new(
+                "signed relay changed during coalescing query",
+            ));
+        }
+        Ok(true)
+    }
+
+    /// Durably plans one exact supported-chain relay unless equivalent live or
+    /// accepted work already exists for the same service.
+    pub fn plan_signed_transaction_relay(
+        &mut self,
+        request_id: [u8; 16],
+        expected_gateway_source_hash: [u8; 16],
+        transaction: &StoredSignedTransaction,
+        created_at_unix: u64,
+        expires_at_unix: u64,
+    ) -> Result<RecordOutcome> {
+        if self.has_satisfied_signed_transaction_relay(
+            transaction.tx_hash(),
+            expected_gateway_source_hash,
+            created_at_unix,
+        )? {
+            return Ok(RecordOutcome::Replay);
+        }
+        self.create_signed_transaction_relay(
+            request_id,
+            expected_gateway_source_hash,
+            transaction,
+            created_at_unix,
+            expires_at_unix,
+        )?;
+        Ok(RecordOutcome::Inserted)
+    }
+
     /// Creates a fixed-size transaction progress request for an exact local
     /// signed transaction. A returned report remains non-authoritative until
     /// the separate receipt-proof verifier records final assurance.
@@ -7877,6 +7976,65 @@ mod tests {
             )
             .unwrap();
         assert!(status_table);
+    }
+
+    #[test]
+    fn relay_planner_coalesces_acceptance_but_retries_rpc_rejection() {
+        let profile = tempfile::tempdir().unwrap();
+        let mut store = EthereumNodeStore::open_in_profile(profile.path()).unwrap();
+        let gateway = [0x61; 16];
+        let tx_hash = signed_fixture_for_chain_with_nonce(
+            &mut store,
+            ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID,
+            21,
+        );
+        let signed = store
+            .signed_transaction(ratspeak_eth_verifier::BASE_SEPOLIA_CHAIN_ID, tx_hash)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            store
+                .plan_signed_transaction_relay([0x62; 16], gateway, &signed, 100, 200)
+                .unwrap(),
+            RecordOutcome::Inserted
+        );
+        assert_eq!(
+            store
+                .plan_signed_transaction_relay([0x63; 16], gateway, &signed, 101, 201)
+                .unwrap(),
+            RecordOutcome::Replay
+        );
+
+        let rejected = observation([0x62; 16], tx_hash, RelayObservation::RpcRejected);
+        store
+            .handle_gateway_attachment(
+                gateway,
+                AuthenticatedNodeEnvelope::new(true, gateway, &rejected),
+                102,
+            )
+            .unwrap();
+        assert_eq!(
+            store
+                .plan_signed_transaction_relay([0x64; 16], gateway, &signed, 103, 203)
+                .unwrap(),
+            RecordOutcome::Inserted
+        );
+
+        let accepted = observation([0x64; 16], tx_hash, RelayObservation::RpcAccepted);
+        store
+            .handle_gateway_attachment(
+                gateway,
+                AuthenticatedNodeEnvelope::new(true, gateway, &accepted),
+                104,
+            )
+            .unwrap();
+        assert_eq!(
+            store
+                .plan_signed_transaction_relay([0x65; 16], gateway, &signed, 105, 205)
+                .unwrap(),
+            RecordOutcome::Replay
+        );
     }
 
     #[test]
