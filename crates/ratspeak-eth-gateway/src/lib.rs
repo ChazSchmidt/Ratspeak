@@ -997,6 +997,18 @@ mod tests {
     }
 
     #[test]
+    fn sepolia_builder_exports_ethereum_finalized_shared_anchor() {
+        let anchor = builder().evm_anchor();
+        assert_eq!(anchor.chain_id(), SEPOLIA_CHAIN_ID);
+        assert_eq!(anchor.network(), SEPOLIA_NETWORK);
+        assert_eq!(
+            anchor.assurance(),
+            ratspeak_eth_verifier::AnchorAssurance::EthereumFinalized
+        );
+        assert_ne!(anchor.state_root(), [0; 32]);
+    }
+
+    #[test]
     fn anchor_and_receipt_are_byte_stable_and_verifier_accepted() {
         let builder = builder();
         let expected_execution = decode(include_str!(
