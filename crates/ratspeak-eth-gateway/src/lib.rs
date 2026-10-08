@@ -61,9 +61,9 @@ use ratspeak_eth_verifier::{
     BeaconCheckpointRoot, KIND_EXECUTION_HEADER_PROOF, KIND_FINALIZED_TX_RECEIPT_PROOF,
     KIND_PINNED_CONSENSUS_BOOTSTRAP, KIND_STORAGE_PROOF, KIND_TX_RECEIPT_PROOF, MAGIC,
     MAX_ANCESTRY_HEADER_BYTES, MAX_ANCESTRY_HEADERS, MAX_BUNDLE_BYTES, MAX_PROOF_NODE_BYTES,
-    MAX_PROOF_NODES, MemoryAccountStore, SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK, U256, VERSION,
-    VerifiedAccount, VerifiedEvmAnchor, VerifiedExecutionBlock, VerifiedExecutionHeader, Verifier,
-    chain_definition,
+    MAX_PROOF_NODES, MemoryAccountStore, OpStackSequencerAnchor, SEPOLIA_CHAIN_ID,
+    SEPOLIA_NETWORK, U256, VERSION, VerifiedAccount, VerifiedEvmAnchor, VerifiedExecutionBlock,
+    VerifiedExecutionHeader, Verifier, chain_definition,
 };
 
 const KIND_ACCOUNT_PROOF: u8 = 3;
@@ -71,6 +71,8 @@ const MAX_BOOTSTRAP_BYTES: usize = 1024 * 1024;
 const MAX_CONSENSUS_UPDATE_BYTES: usize = 512 * 1024;
 const MAX_CONSENSUS_UPDATES: usize = 128;
 const MAX_EXECUTION_HEADER_BYTES: usize = 1024 * 1024;
+const MAX_OP_STACK_COMMITMENT_BYTES: usize = 1024 * 1024;
+const MAX_OP_STACK_L2_HEADER_BYTES: usize = 64 * 1024;
 const MAX_TRANSACTION_BYTES: usize = 512 * 1024;
 const MAX_RECEIPT_BYTES: usize = 512 * 1024;
 
@@ -420,6 +422,12 @@ impl SepoliaGatewayBuilder {
         self.verified_execution.receipts_root()
     }
 
+    /// Converts the locally Helios-verified Sepolia execution block into the
+    /// stack-neutral anchor consumed by OP/Nitro proof collection.
+    pub fn evm_anchor(&self) -> VerifiedEvmAnchor {
+        VerifiedEvmAnchor::from(&self.verified_execution)
+    }
+
     /// Encodes account evidence and verifies it against the consensus-derived
     /// state root before exposing the bytes.
     pub fn build_account_proof(
@@ -567,6 +575,38 @@ impl SepoliaGatewayBuilder {
     }
 }
 
+/// Compact gateway-side material for authenticating one OP Stack execution
+/// anchor from Ethereum Sepolia. All fields remain untrusted on transport; the
+/// phone repeats the complete verification before accepting the L2 state root.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OpStackAnchorEvidence {
+    chain_id: u64,
+    system_config_account_proof: GatewayBundle,
+    signer_storage_proof: GatewayBundle,
+    decompressed_commitment: Vec<u8>,
+    l2_header_rlp: Vec<u8>,
+}
+
+impl OpStackAnchorEvidence {
+    pub fn chain_id(&self) -> u64 { self.chain_id }
+    pub fn system_config_account_proof(&self) -> &[u8] { self.system_config_account_proof.bytes() }
+    pub fn signer_storage_proof(&self) -> &[u8] { self.signer_storage_proof.bytes() }
+    pub fn decompressed_commitment(&self) -> &[u8] { &self.decompressed_commitment }
+    pub fn l2_header_rlp(&self) -> &[u8] { &self.l2_header_rlp }
+
+    pub fn verify(&self, l1_anchor: &VerifiedEvmAnchor) -> Result<VerifiedEvmAnchor> {
+        OpStackSequencerAnchor::verify_from_l1_evidence(
+            self.chain_id,
+            l1_anchor,
+            self.system_config_account_proof(),
+            self.signer_storage_proof(),
+            self.decompressed_commitment(),
+            self.l2_header_rlp(),
+        )
+        .map_err(|_| GatewayBuildError::LocalVerificationFailed)
+    }
+}
+
 /// Stack-neutral proof packager for an execution block already authenticated by
 /// Ethereum, OP Stack, or Nitro verification.
 ///
@@ -625,6 +665,41 @@ impl EvmAnchorGatewayBuilder {
             kind: GatewayBundleKind::StorageProof,
             bytes,
         })
+    }
+
+    /// Packages the L1 SystemConfig account/storage proofs with one signed OP
+    /// execution commitment and matching L2 header, then locally verifies the
+    /// exact package before returning it.
+    pub fn build_op_stack_anchor_evidence(
+        &self,
+        l2_chain_id: u64,
+        account_input: &UntrustedAccountProofRpcInput,
+        storage_input: &UntrustedStorageProofRpcInput,
+        decompressed_commitment: &[u8],
+        l2_header_rlp: &[u8],
+    ) -> Result<OpStackAnchorEvidence> {
+        if self.anchor.chain_id() != SEPOLIA_CHAIN_ID {
+            return Err(GatewayBuildError::UnsupportedNetwork);
+        }
+        if decompressed_commitment.is_empty()
+            || decompressed_commitment.len() > MAX_OP_STACK_COMMITMENT_BYTES
+            || l2_header_rlp.is_empty()
+            || l2_header_rlp.len() > MAX_OP_STACK_L2_HEADER_BYTES
+        {
+            return Err(GatewayBuildError::SizeLimit);
+        }
+        let account = self.verify_account(account_input)?;
+        let account_bundle = self.build_account_proof(account_input)?;
+        let storage_bundle = self.build_storage_proof(&account, storage_input)?;
+        let evidence = OpStackAnchorEvidence {
+            chain_id: l2_chain_id,
+            system_config_account_proof: account_bundle,
+            signer_storage_proof: storage_bundle,
+            decompressed_commitment: decompressed_commitment.to_vec(),
+            l2_header_rlp: l2_header_rlp.to_vec(),
+        };
+        evidence.verify(&self.anchor)?;
+        Ok(evidence)
     }
 
     pub fn build_tx_receipt_proof(
