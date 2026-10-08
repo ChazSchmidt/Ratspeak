@@ -4081,7 +4081,7 @@ fn latest_transaction_view_with(
     };
     let store = open_store(&binding.profile_dir)?;
     let view = if let Some(transaction) = store
-        .latest_signed_transaction(SEPOLIA_CHAIN_ID)
+        .latest_signed_transaction_any_chain()
         .map_err(|_| "ethereum_state_unavailable")?
     {
         let assurance = store
