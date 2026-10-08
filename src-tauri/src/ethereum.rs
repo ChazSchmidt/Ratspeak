@@ -63,6 +63,7 @@ const GATEWAY_CARD_PREFIX: &str = "RSEG1";
 const EVIDENCE_SYNC_EXPIRY_SECONDS: u64 = 2 * 60 * 60;
 const TRANSACTION_STATUS_REQUEST_EXPIRY_SECONDS: u64 = 30 * 60;
 const EVIDENCE_SYNC_COMMAND_COOLDOWN_SECONDS: u64 = 5;
+const MAX_MULTICHAIN_RELAYS_PER_SYNC: usize = 16;
 const GATEWAY_ROUTE_DISCOVERY_SECONDS: u64 = 15;
 // The node and verifier reject anything larger than this per-response bound.
 const MAX_EVIDENCE_SYNC_RESPONSE_BYTES: u32 = 2 * 1024 * 1024;
@@ -3852,10 +3853,46 @@ pub(crate) async fn ethereum_synchronize(
                     }
                 }
             };
-            // Transaction-location reports are deliberately supplementary to
-            // the evidence plan. A random-source or status-store failure must
-            // not roll back relay or exact receipt verification work that was
-            // already planned successfully.
+            // The legacy evidence plan is intentionally Sepolia-specific.
+            // Relay transport is not: pick up signed transactions from every
+            // other supported PoC chain without assigning Sepolia checkpoint
+            // semantics to their state or receipt verification.
+            let mut transaction_relays = plan.relay_requests().len();
+            let mut multichain_candidates = 0usize;
+            'chains: for chain in ratspeak_eth_verifier::SUPPORTED_CHAINS {
+                if chain.chain_id == SEPOLIA_CHAIN_ID {
+                    continue;
+                }
+                let pending = store
+                    .unconfirmed_signed_transactions(chain.chain_id)
+                    .map_err(|_| "ethereum_sync_unavailable")?;
+                for signed in pending {
+                    if multichain_candidates >= MAX_MULTICHAIN_RELAYS_PER_SYNC {
+                        break 'chains;
+                    }
+                    multichain_candidates = multichain_candidates.saturating_add(1);
+                    let request_id = secure_trigger_id()?;
+                    match store
+                        .plan_signed_transaction_relay(
+                            request_id,
+                            binding.gateway_destination_hash,
+                            &signed,
+                            now_unix,
+                            expires_at_unix,
+                        )
+                        .map_err(|_| "ethereum_sync_unavailable")?
+                    {
+                        ratspeak_eth_node::RecordOutcome::Inserted => {
+                            transaction_relays = transaction_relays.saturating_add(1);
+                        }
+                        ratspeak_eth_node::RecordOutcome::Replay => {}
+                    }
+                }
+            }
+
+            // Transaction-location reports remain Sepolia-only until OP/Nitro
+            // status and receipt scheduling can be anchored to their actual L2
+            // verification families. Do not reuse L1 finalized-head semantics.
             let mut transaction_status_requests = 0usize;
             for receipt_request in plan.receipt_requests() {
                 let Ok(request_id) = secure_trigger_id() else {
@@ -3884,7 +3921,7 @@ pub(crate) async fn ethereum_synchronize(
             Ok(EthereumSyncStartView {
                 state: start_state,
                 evidence_requests: 1usize.saturating_add(plan.receipt_requests().len()),
-                transaction_relays: plan.relay_requests().len(),
+                transaction_relays,
                 transaction_status_requests,
             })
         })?;
