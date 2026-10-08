@@ -990,6 +990,8 @@ pub fn run() {
             #[cfg(feature = "experimental-ethereum")]
             ethereum::ethereum_setup_status,
             #[cfg(feature = "experimental-ethereum")]
+            ethereum::ethereum_install_builtin_asset,
+            #[cfg(feature = "experimental-ethereum")]
             ethereum::ethereum_latest_transaction,
             #[cfg(feature = "experimental-ethereum")]
             ethereum::ethereum_public_account,
