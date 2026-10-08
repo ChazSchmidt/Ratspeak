@@ -1120,6 +1120,10 @@ pub(crate) fn launch_native_wallet(
             account,
             &mut generations,
         ),
+        #[cfg(test)]
+        EthereumNativeWalletLaunchRequest::ClearSigned(_) => {
+            Err("native_ethereum_wallet_unavailable")
+        }
         EthereumNativeWalletLaunchRequest::Transfer(intent) => {
             let account = account.ok_or("ethereum_wallet_unavailable")?;
             let generation = generation.ok_or("ethereum_profile_unavailable")?;
