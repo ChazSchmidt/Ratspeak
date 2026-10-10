@@ -7397,7 +7397,6 @@ fn message_actions_stage_touch_selection_and_preserve_accessible_actions() {
     assert!(runtime.contains("RATSPEAK_CHAT_CUSTOM_TYPE"));
     assert!(runtime.contains("ratspeak.chat.v1"));
     assert!(runtime.contains("decode_ratspeak_chat_extension"));
-    assert!(runtime.contains("reaction_fallback_text"));
     assert!(inbound.contains("apply_inbound_ratspeak_reaction"));
     assert!(inbound.contains("\"reply_to_id\": reply_to_id"));
     assert!(inbound.contains("\"reaction_update\""));

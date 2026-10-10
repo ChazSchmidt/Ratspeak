@@ -453,14 +453,6 @@ pub fn ratspeak_chat_custom_fields(ext: &RatspeakChatExtension) -> Option<Vec<(u
     }
 }
 
-pub fn reaction_fallback_text(emoji: &str, action: &str) -> String {
-    if action == "remove" {
-        "Removed a reaction from your message.".to_string()
-    } else {
-        format!("Reacted to your message with {emoji}.")
-    }
-}
-
 // Accept the spec'd bin(32) hash plus the 64-char-ASCII-hex variant some
 // clients put on the wire; normalizes to the lowercase hex id space the rest
 // of the codebase (and the DB) keys on.
@@ -3022,7 +3014,7 @@ impl LxmfManager {
 
         let mut msg = match self.create_message_with_custom_fields(
             request.dest_hash_hex,
-            &reaction_fallback_text(request.emoji, action),
+            "",
             "",
             self.pick_delivery_method(
                 request.db_pool,
@@ -6669,7 +6661,7 @@ mod tests {
         let reaction_msg = mgr
             .create_message_with_custom_fields(
                 &dest_hex,
-                &reaction_fallback_text("👍", "add"),
+                "",
                 "",
                 DeliveryMethod::Direct,
                 &reaction_fields,
@@ -9657,6 +9649,45 @@ mod tests {
             db::get_message_delivery_method(&pool, &queued.message_id, &identity_id).as_deref(),
             Some("direct")
         );
+    }
+
+    #[test]
+    fn reaction_sends_have_only_structured_fields_and_update_local_state() {
+        let mut mgr = test_manager();
+        let pool = test_pool();
+        let dest = "cf".repeat(16);
+        let target = "02".repeat(32);
+        for (index, action) in ["add", "remove"].into_iter().enumerate() {
+            assert!(mgr.send_reaction_with_preference(ReactionSendRequest {
+                dest_hash_hex: &dest,
+                message_id: &target,
+                emoji: "🐀",
+                action,
+                db_pool: &pool,
+                identity_id: "me",
+                preference: DeliveryPreference::Auto,
+            }));
+            let msg = &mgr.router.pending_outbound[index];
+            assert!(msg.content.is_empty());
+            assert!(msg.title.is_empty());
+            assert_eq!(
+                decode_ratspeak_chat_extension(msg),
+                Some(RatspeakChatExtension::Reaction {
+                    target: target.clone(),
+                    emoji: "🐀".into(),
+                    action: action.into(),
+                })
+            );
+            assert_eq!(mgr.auto_live_fallback.len(), index + 1);
+            let reactions = db::get_reactions_for_message(&pool, &target, "me");
+            if action == "add" {
+                assert_eq!(reactions.len(), 1);
+                assert_eq!(reactions[0]["emoji"], "🐀");
+            } else {
+                assert!(reactions.is_empty());
+            }
+            assert!(db::get_conversation(&pool, &dest, "me", 10).is_empty());
+        }
     }
 
     #[test]
