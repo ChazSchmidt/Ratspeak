@@ -1703,7 +1703,6 @@ pub fn ratspeak_runtime::lxmf::lxmf_compression_support_db_value_from_app_data(&
 pub fn ratspeak_runtime::lxmf::ratspeak_capability_services_from_app_data(&[u8]) -> alloc::vec::Vec<&'static str>
 pub fn ratspeak_runtime::lxmf::ratspeak_chat_custom_fields(&ratspeak_runtime::lxmf::RatspeakChatExtension) -> core::option::Option<alloc::vec::Vec<(u8, alloc::vec::Vec<u8>)>>
 pub fn ratspeak_runtime::lxmf::ratspeak_status_from_app_data(&[u8]) -> core::option::Option<alloc::string::String>
-pub fn ratspeak_runtime::lxmf::reaction_fallback_text(&str, &str) -> alloc::string::String
 pub fn ratspeak_runtime::lxmf::sanitize_stored_file_name(&str) -> core::option::Option<alloc::string::String>
 pub type ratspeak_runtime::lxmf::PropagationHealth = (alloc::vec::Vec<[u8; 16]>, alloc::vec::Vec<([u8; 16], alloc::string::String)>, alloc::vec::Vec<[u8; 16]>, alloc::vec::Vec<([u8; 16], alloc::string::String)>)
 pub mod ratspeak_runtime::lxmf_persistence

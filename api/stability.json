@@ -19,8 +19,8 @@
     "sourceCommit": "fc78e4926c696a921f308d238ef1b620e0db0078"
   },
   "snapshotSource": {
-    "commit": "3647fc677fa5f4b00a3c0541160de1f58bb21575",
-    "capturedOn": "2026-10-08",
+    "commit": "e690b3d2afee1e1ca29aba7f7bda0061da88a4e2",
+    "capturedOn": "2026-10-10",
     "review": {
       "areas": [
         "application domain and configuration",
@@ -35,7 +35,8 @@
         "Direct delivery readiness and content-free BLE/Resource aggregate diagnostics (September 24)",
         "Native Codec2 live audio, exact-Link PTT input leases and constrained profile ceiling",
         "Standard native 700C voice messages with explicit identity/destination format preference",
-        "Automatic voice format selection, identity-fenced queue publication and definite pre-admission retry"
+        "Automatic voice format selection, identity-fenced queue publication and definite pre-admission retry",
+        "Field-only outgoing reactions without legacy human-readable fallback"
       ],
       "canonicalDependencies": [
         "lxmf_core::message_api",
@@ -45,11 +46,11 @@
       "classification": "application-internal lifecycle, persistence, mobile integration and explicit network ownership",
       "publicApiDiff": {
         "added": 224,
-        "removed": 13
+        "removed": 14
       },
       "semver": "no public-library consequence; application integration only",
       "deprecations": "none",
-      "wirePersistenceRuntimeImpact": "No wire-format change. Adds versioned profile ownership/selectors and opaque credential references, native protected secret storage, five Developer-gated Tauri commands, and the R8-kept Android credential JNI bridge. Mode changes serialize with identity/interface lifecycle, commit after readiness, retain unlocked identity only for same-profile rebuild, and verify rollback. External clients authenticate without fallback and reject local interface changes. New managed profiles are standalone; existing private sharing and operator selectors are preserved. AutoInterface UDP remains unchanged. Retains the previously reviewed announce/readiness boundaries and BLE firmware startup policy. Failed Link/packet recovery now uses the transport's bounded exact-attempt owner, with no ordinary receive-interface quarantine. Atomic packet receipts retain validated proofs across retry queues; canonical first-hop timing drives packet and Link deadlines, while bounded protocol clocks take precedence over orphan watchdogs. Packet RTT still reaches DB, UI events and Activity. No new UI setting, wire format, native dependency or Auto delivery policy change. Adds voice_set_talk with exact established Link and monotonic edge serials. Constrained Codec2 calls require renewed local input and retain their profile ceiling. Existing LXMF Ogg/Opus memos and wire IDs are unchanged. Adds standard LXMF audio mode 0x03 compact clips (15-second capture / 30-second receive), typed decode/record APIs and a defaulted audio_mode in existing IPC results. Runtime AudioMessageRequest now explicitly carries audio_mode. Schema 44 stores per-identity/destination format preferences; no capability guessing or new wire IDs. Stored playback resolves the mode from the identity-bound message row. Existing Opus recording, calls and ownership barriers are retained. October 8: recording selects native 700C only for explicit no-compression peer metadata from live/cache discovery, otherwise Opus; this is an application heuristic, not a new codec advertisement. Schema 44 preference rows remain readable but no longer control new recordings or send validation; the existing format IPC is read-only and rejects override arguments. The selected recording mode remains frozen. Retryable staged owners preserve cancellation authority and may restore only after definite pre-admission failure. Durable admission, lease transfer, canonical finalization and queue notification retain the originating identity lifecycle lock even if the IPC future is dropped. Asynchronous conversation broadcasts reject stale identity generations. Ambiguous queue completion never restores a sendable token. No dependency pin, manifest, wire mode, mobile bridge, runtime ceiling or MSRV change.",
+      "wirePersistenceRuntimeImpact": "No wire-format change. Adds versioned profile ownership/selectors and opaque credential references, native protected secret storage, five Developer-gated Tauri commands, and the R8-kept Android credential JNI bridge. Mode changes serialize with identity/interface lifecycle, commit after readiness, retain unlocked identity only for same-profile rebuild, and verify rollback. External clients authenticate without fallback and reject local interface changes. New managed profiles are standalone; existing private sharing and operator selectors are preserved. AutoInterface UDP remains unchanged. Retains the previously reviewed announce/readiness boundaries and BLE firmware startup policy. Failed Link/packet recovery now uses the transport's bounded exact-attempt owner, with no ordinary receive-interface quarantine. Atomic packet receipts retain validated proofs across retry queues; canonical first-hop timing drives packet and Link deadlines, while bounded protocol clocks take precedence over orphan watchdogs. Packet RTT still reaches DB, UI events and Activity. No new UI setting, wire format, native dependency or Auto delivery policy change. Adds voice_set_talk with exact established Link and monotonic edge serials. Constrained Codec2 calls require renewed local input and retain their profile ceiling. Existing LXMF Ogg/Opus memos and wire IDs are unchanged. Adds standard LXMF audio mode 0x03 compact clips (15-second capture / 30-second receive), typed decode/record APIs and a defaulted audio_mode in existing IPC results. Runtime AudioMessageRequest now explicitly carries audio_mode. Schema 44 stores per-identity/destination format preferences; no capability guessing or new wire IDs. Stored playback resolves the mode from the identity-bound message row. Existing Opus recording, calls and ownership barriers are retained. October 8: recording selects native 700C only for explicit no-compression peer metadata from live/cache discovery, otherwise Opus; this is an application heuristic, not a new codec advertisement. Schema 44 preference rows remain readable but no longer control new recordings or send validation; the existing format IPC is read-only and rejects override arguments. The selected recording mode remains frozen. Retryable staged owners preserve cancellation authority and may restore only after definite pre-admission failure. Durable admission, lease transfer, canonical finalization and queue notification retain the originating identity lifecycle lock even if the IPC future is dropped. Asynchronous conversation broadcasts reject stale identity generations. Ambiguous queue completion never restores a sendable token. No dependency pin, manifest, wire mode, mobile bridge, runtime ceiling or MSRV change. October 10: remove the internal reaction fallback text helper and send empty reaction content/title while preserving standard/custom reaction fields, routing and incoming legacy compatibility.",
       "platformEvidence": [
         "Ratspeak workspace: 1007 tests passed, including 625 runtime, 128 Tauri unit and 132 source contracts; dashboard behavior tests passed",
         "Rust 1.87 all-feature runtime/Tauri check; all-feature strict Clippy; full standalone Tauri shell compile",
@@ -125,8 +126,8 @@
       "tier": "application-internal",
       "compatibility": "reviewed-snapshot",
       "snapshot": "api/snapshots/ratspeak-runtime.txt",
-      "itemCount": 2539,
-      "sha256": "45c4c00fe03268f8d4c029bbea54525a04a3b4eed07a37a864d02b92840ce9cd"
+      "itemCount": 2538,
+      "sha256": "0abf32897df65cc4f5c7c085ba3e73c326cec96103a1fc83b2adb5b856b2a266"
     },
     {
       "name": "ratspeak-tauri",
@@ -182,5 +183,12 @@
     "scope": "Untagged Ratspeak 1.0.34, mobile build 1000064. Application package and internal requirement versions advance together; the exact LXST source selects the implemented native 700C codec and shared immutable FFT coefficients.",
     "compatibility": "No additional Rust API, wire, persistence, IPC, JNI, or registry dependency change. Existing manifest and API reviews remain authoritative.",
     "qualification": "Exact-source CI, platform artifacts, and physical acceptance remain required. No release or integration tags created."
+  },
+  "reactionFallbackReview": {
+    "sourceCommit": "e690b3d2afee1e1ca29aba7f7bda0061da88a4e2",
+    "reviewedOn": "2026-10-10",
+    "rustApi": "Remove the application-internal reaction_fallback_text helper. No IPC, JNI, database, dependency or version changes.",
+    "behavior": "Outgoing add/remove reactions contain only their structured LXMF fields and empty content/title. Standard add reaction and Ratspeak removal envelope remain intact. Inbound legacy reactions remain accepted; existing stored messages are not rewritten.",
+    "qualification": "Scoped outgoing/inbound reaction and route-admission tests; source contracts and live NomadNet field-only transport regression. Physical acceptance and replacement release artifacts remain separate gates."
   }
 }
