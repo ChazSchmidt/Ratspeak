@@ -5814,13 +5814,16 @@ fn release_workflows_build_once_and_publish_only_after_complete_aggregation() {
         .as_array()
         .expect("component array");
     let release_note_fragments = [
-        "Added compact voice messages for compatible handhelds using Codec2 700C",
-        "other recipients use the existing Opus format",
-        "Added native Codec2 support",
-        "Preserved recorded clips for retry",
-        "prevented duplicate sends after an uncertain result",
-        "Prevented voice messages from crossing identities",
-        "Displayed the recording duration limit immediately",
+        "voice messages for compatible handhelds",
+        "recording format selected automatically",
+        "Codec2 support for compatible low-bandwidth voice calls",
+        "Windows Bluetooth discovery and reconnection",
+        "Android Bluetooth cleanup when permissions are revoked",
+        "Kept recorded clips available for retry",
+        "prevented duplicate voice messages after an uncertain send result",
+        "leaving a chat or changing identities",
+        "Removed legacy text fallbacks for message reactions",
+        "Source builds require Rust 1.89 or later",
         "Compact recordings are limited to 15 seconds",
         "Some attachments sent to NomadNet may appear delivered",
     ];
