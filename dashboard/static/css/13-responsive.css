@@ -1140,6 +1140,18 @@
         border-color: var(--border-surface);
         color: var(--text-primary);
     }
+    .settings-nav-link {
+        margin-top: 0;
+    }
+    .settings-nav-link::after {
+        content: none;
+    }
+    .settings-nav-external-icon {
+        position: absolute;
+        right: var(--space-6);
+        top: 50%;
+        transform: translateY(-50%);
+    }
     .settings-nav-label {
         display: block;
         max-width: 100%;

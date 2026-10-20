@@ -5,6 +5,10 @@ changes that materially affect how an artifact is reproduced.
 
 ## [Unreleased]
 
+### Added
+
+- Added a Help Docs entry to Settings that opens docs.ratspeak.org.
+
 ## [1.0.34] - 2026-10-10
 
 ### Added
