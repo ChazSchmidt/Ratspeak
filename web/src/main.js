@@ -6,7 +6,7 @@ const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = 'ratspeak-web-experiment-contacts-v1';
 let identity = null;
 let address = '';
-const normalizeFid = (value) => /^\\d{1,12}$/.test(value.trim()) ? value.trim() : null;
+const normalizeFid = (value) => /^\d{1,12}$/.test(value.trim()) ? value.trim() : null;
 function updateContacts() {
   let contacts = [];
   try { contacts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch {}
@@ -57,7 +57,7 @@ $('share').addEventListener('click', async () => {
     return;
   }
   const card = { type: 'ratspeak-web-contact-v1', fid, handle, address };
-  const payload = btoa(JSON.stringify(card)).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
+  const payload = btoa(JSON.stringify(card)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const link = new URL(window.location.href);
   link.search = '';
   link.hash = '';
