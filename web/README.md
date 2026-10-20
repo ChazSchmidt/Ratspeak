@@ -1,34 +1,35 @@
 # Ratspeak Web experiment
 
-An isolated browser-first experiment in `ChazSchmidt/Ratspeak`. It does not modify the native Android, iOS or desktop applications.
+Standalone browser client experiment in `ChazSchmidt/Ratspeak`, branch `experiment/ratspeak-web`. No changes to Android, iOS or desktop. Core messaging is the priority; Farcaster migration lives in an optional dialog, not in the identity or messaging flow.
 
-## Run locally
+## Local development
 
 ```sh
 cd web
 npm install
 npm run dev
+npm run build
 ```
 
-`npm run build` creates a static `dist/` directory that can be served on HTTPS hosting. **This is a prototype, not yet ready for public identity onboarding.**
+A HTTPS static host can serve the resulting `dist/`. **This is not ready for public identity onboarding.**
 
-## What works in this initial slice
+## Implemented first slice
 
-- Real Reticulum identity generation with `@reticulum/core` and an LXMF destination with `@reticulum/lxmf`, all within the browser tab.
-- Opt-in, self-declared Farcaster FID + public LXMF destination cards, embedded in copyable links.
-- Import cards and list contacts in browser localStorage; **no account, directory, database or backend required**.
-- Links to an existing third-party browser Reticulum messenger for exploration.
+- Browser-generated Reticulum identity and LXMF delivery destination using `@reticulum/core` + `@reticulum/lxmf`.
+- Non-blocking "Coming from Farcaster?" dialog.
+- Opt-in, **unverified** Farcaster FID + public destination invitations, import and local contact list.
+- No hosted directory, backend, Farcaster API credentials, analytics, or server-side private keys.
 
-## Not implemented / important caveats
+## Missing before a public test
 
-- **No actual LXMF send/receive or transport connection**. Real messaging will need a browser WebSocket interface and accessible TLS WebSocket bridge, or direct browser-supported radio.
-- **Private identity keys are currently ephemeral**. Refreshing the page loses them. Do not onboard real users until encrypted export/import and/or durable secure storage is implemented and tested.
-- **No Farcaster login or proof of FID ownership**. Contact card labels are self-declared and can be impersonated. Never present these as verified credentials.
-- **No automatic follower matching**. The zero-backend approach relies on sharing links through existing channels. Matching Farcaster social graphs will require a data source and an opt-in searchable directory or privacy-preserving discovery protocol.
-- Imported contacts are public FIDs and LXMF addresses saved in localStorage, not encrypted.
-- The upstream Reticulum/LXMF JavaScript implementation and native Rust Ratspeak stack require interoperability tests.
-- Before deployment, check the `@reticulum/core` and `@reticulum/lxmf` package compatibility and carry out a local build and browser smoke test.
+- Real browser-to-Reticulum connection and verified LXMF sending/receiving.
+- Encrypted durable key storage and export/import. Keys currently vanish on refresh.
+- Farcaster proof of account ownership and opt-in discovery against a social graph; currently self-declared invitations only.
+- Security review and network interoperability tests with Ratspeak's Rust stack.
+- Working local npm build and browser smoke test (not yet completed).
 
-## Intent
+## Privacy model
 
-Keep experimental browser onboarding and Farcaster diaspora functionality outside DeFi Dude's maintained native app code. Reuse upstream protocol implementations where feasible, and avoid treating a web-based contact directory as a secure messenger.
+Identity generation is local. The client must never upload private keys. Farcaster invitations contain *public* FIDs, handles and LXMF delivery addresses; link holders can read and forward them. Contacts are saved unencrypted in this browser's localStorage. A future relay may observe connection metadata, even if LXMF payloads are encrypted.
+
+Third-party JavaScript dependencies and the hosting origin remain part of the browser trust boundary. Use secure HTTPS hosting and audit dependencies before inviting users.
