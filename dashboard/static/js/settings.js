@@ -610,6 +610,8 @@ function handleSystemSubsectionKey(e) {
 
 var SETTINGS_DEFAULT_PANEL_ID = 'panel-settings-general';
 var _settingsSectionNavBound = false;
+var SETTINGS_HELP_DOCS_URL = 'https://docs.ratspeak.org/';
+var _settingsHelpDocsBound = false;
 var _settingsSectionResizeBound = false;
 var _settingsMobileBackBound = false;
 var _settingsMobileDetailActive = false;
@@ -694,6 +696,19 @@ function selectSettingsSection(panelId, opts) {
     syncSettingsMobileLayout();
 }
 
+function openSettingsHelpDocs() {
+    var failed = function() {
+        if (typeof showToast === 'function') {
+            showToast('Could not open docs.ratspeak.org.', 'toast-error', 5000);
+        }
+        return false;
+    };
+    if (!window.RS || typeof RS.openExternalUrl !== 'function') return Promise.resolve(failed());
+    return Promise.resolve(RS.openExternalUrl(SETTINGS_HELP_DOCS_URL)).then(function(opened) {
+        return opened === false ? failed() : true;
+    }).catch(failed);
+}
+
 function initSettingsSectionNav() {
     var nav = document.getElementById('settings-section-nav');
     if (!nav) return;
@@ -705,6 +720,14 @@ function initSettingsSectionNav() {
             });
         });
         _settingsSectionNavBound = true;
+    }
+
+    if (!_settingsHelpDocsBound) {
+        var helpDocs = document.getElementById('settings-help-docs');
+        if (helpDocs) {
+            helpDocs.addEventListener('click', openSettingsHelpDocs);
+            _settingsHelpDocsBound = true;
+        }
     }
 
     if (!_settingsMobileBackBound) {
