@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Ratspeak identity vault browser test</title>
+<h1>Identity vault browser test</h1>
+<p>Local test identities only. Use a fresh origin/profile; this writes a test encrypted vault.</p>
+<button id="create">Create and save test identity</button>
+<button id="reload">Reload this page</button>
+<button id="verify">Verify persisted identity</button>
+<pre id="result">Not run</pre>
+<script type="module">
+import { Identity, Reticulum, toHex } from '@reticulum/core';
+import { LXMRouter } from '@reticulum/lxmf';
+import * as vault from '../src/identity-vault.js';
+const password = 'a browser-only test identity password';
+const result = document.querySelector('#result');
+const check = (condition, text) => { if (!condition) throw new Error(text); };
+async function address(identity) {
+  const router = new LXMRouter(identity, new Reticulum());
+  await router.init();
+  return toHex(router.deliveryDest.destinationHash);
+}
+document.querySelector('#create').onclick = async () => {
+  result.textContent = 'Running creation…';
+  try {
+    check(!await vault.hasSavedIdentity(), 'Use a fresh origin: a saved vault already exists.');
+    const identity = await Identity.generate();
+    const expected = { hash: toHex(identity.identityHash), address: await address(identity) };
+    await vault.saveIdentity(identity, password);
+    sessionStorage.setItem('vault-test-expected', JSON.stringify(expected));
+    check(await vault.hasSavedIdentity(), 'No persisted record found');
+    result.textContent = 'PASS creation and encrypted IndexedDB write. Reload, then verify.';
+  } catch (error) { result.textContent = 'FAIL: ' + error.message; }
+};
+document.querySelector('#reload').onclick = () => location.reload();
+document.querySelector('#verify').onclick = async () => {
+  result.textContent = 'Running restoration…';
+  try {
+    const expected = JSON.parse(sessionStorage.getItem('vault-test-expected'));
+    check(expected, 'Run creation first.');
+    check(await vault.hasSavedIdentity(), 'Saved record disappeared after reload.');
+    let failed = false;
+    try { await vault.unlockIdentity('wrong password'); } catch { failed = true; }
+    check(failed, 'Wrong passphrase was accepted');
+    failed = false;
+    try { await vault.importIdentity('{"malformed":true}', password); } catch { failed = true; }
+    check(failed, 'Malformed import was accepted');
+    const identity = await vault.unlockIdentity(password);
+    check(toHex(identity.identityHash) === expected.hash, 'Identity hash changed');
+    check(await address(identity) === expected.address, 'LXMF destination changed');
+    const backup = await vault.exportIdentity(identity, password);
+    const imported = await vault.importIdentity(backup, password);
+    check(toHex(imported.identityHash) === expected.hash, 'Backup identity changed');
+    const envelope = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('ratspeak-web-identity-v1', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('vault', 'readonly');
+        const read = tx.objectStore('vault').get('identity');
+        read.onsuccess = () => resolve(JSON.parse(read.result));
+        read.onerror = () => reject(read.error);
+        tx.oncomplete = () => db.close();
+      };
+    });
+    check(envelope.type === 'ratspeak-encrypted-identity' &&
+      envelope.cipher === 'AES-256-GCM' && typeof envelope.ciphertext === 'string' &&
+      Object.keys(envelope).length === 9, 'Unexpected persisted data');
+    result.textContent = 'PASS real-browser refresh, identity/LXMF-address continuity, encrypted-only IndexedDB envelope, wrong-password rejection, failed-import preservation, encrypted backup import/export.';
+  } catch (error) { result.textContent = 'FAIL: ' + error.message; }
+};
+</script>

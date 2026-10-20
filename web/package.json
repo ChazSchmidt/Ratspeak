@@ -6,13 +6,19 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.mjs",
+    "test:interop": "node tests/transport-interop.mjs",
+    "test:browser": "node tests/app-browser.mjs",
+    "bridge": "node scripts/reticulum-bridge.mjs"
   },
   "dependencies": {
     "@reticulum/core": "^0.9.13",
     "@reticulum/lxmf": "^0.9.13"
   },
   "devDependencies": {
-    "vite": "^7.1.0"
+    "@playwright/test": "1.64.1",
+    "vite": "^7.1.0",
+    "ws": "8.22.0"
   }
 }
