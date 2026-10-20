@@ -83,3 +83,10 @@ if (incoming) {
   $('feedback').textContent = 'Incoming public contact card. Review before adding.';
 }
 updateContacts();
+
+const farcasterDialog = $('farcaster-dialog');
+$('open-farcaster').addEventListener('click', () => farcasterDialog.showModal());
+$('close-farcaster').addEventListener('click', () => farcasterDialog.close());
+farcasterDialog.addEventListener('click', (event) => {
+  if (event.target === farcasterDialog) farcasterDialog.close();
+});
