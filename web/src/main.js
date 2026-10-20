@@ -2,12 +2,13 @@ import { Identity } from '@reticulum/core';
 import { MessagingClient, validateAddress } from './messaging-client.js';
 import { hasSavedIdentity, saveIdentity, unlockIdentity, exportIdentity, importIdentity } from './identity-vault.js';
 import './style.css';
+import { identityAvatar } from './native/identity-avatar.js';
 
 const $ = id => document.getElementById(id);
 const CONTACTS_KEY = 'ratspeak-web-contacts-v2';
 let client = null, selected = '', busy = false, sending = false, saved = false;
 let farcasterOnboarding = null, farcasterLoading = null;
-const messages = new Map(), peers = new Map();
+const messages = new Map(), peers = new Map(), drafts = new Map();
 const normalizeFid = value => /^\d{1,12}$/.test(value.trim()) ? value.trim() : null;
 function status(id, text, error = false) {
   $(id).textContent = text; $(id).classList.toggle('error', error);
@@ -27,6 +28,14 @@ if (!contacts.length) contacts = readContacts('ratspeak-web-experiment-contacts-
 
 function updateControls() {
   const unlocked = Boolean(client);
+  $('msg-profile-name').textContent = unlocked ? $('display-name').value : 'Identity locked';
+  $('profile-address').textContent = client?.address || 'Open Identity to get started';
+  $('sidebar-identity-name').textContent = unlocked ? $('display-name').value : 'Identity';
+  $('sidebar-identity-hash').textContent = client?.address?.slice(0, 12) || 'Locked';
+  $('msg-profile-avatar').replaceChildren(avatar(client?.address || '', 36));
+  $('sidebar-identity-icon').replaceChildren(avatar(client?.address || '', 28));
+  $('header-mobile-name').textContent = unlocked ? $('display-name').value : 'Identity locked';
+  $('header-mobile-avatar').replaceChildren(avatar(client?.address || '', 28));
   $('create').hidden = saved || unlocked;
   $('unlock').hidden = !saved || unlocked;
   $('create').disabled = busy; $('unlock').disabled = busy;
@@ -41,17 +50,45 @@ function updateControls() {
   $('send').disabled = !unlocked || client.state !== 'connected' || !selected || sending;
   $('message-text').disabled = !unlocked || !selected;
 }
+function node(tag, className, text) {
+  const el = document.createElement(tag); el.className = className;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+function avatar(address, size) {
+  const el = node('span', '');
+  // The native helper receives only a validated public hexadecimal address, never HTML input.
+  el.innerHTML = identityAvatar(/^[0-9a-f]{32}$/i.test(address) ? address : '', size);
+  return el;
+}
 function renderContacts() {
-  $('conversation-list').replaceChildren(); $('contacts').replaceChildren();
-  for (const contact of contacts) {
-    const li = document.createElement('li'), button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = contact.name || contact.handle || contact.address.slice(0, 12);
-    button.setAttribute('aria-current', String(selected === contact.address));
-    const small = document.createElement('small'); small.textContent = contact.address;
-    button.append(small);
-    button.addEventListener('click', () => selectContact(contact.address));
-    li.append(button); $('conversation-list').append(li);
+  $('conversation-list').replaceChildren(); $('contacts').replaceChildren(); $('contacts-list').replaceChildren();
+  const query = $('msg-search-input').value.toLowerCase();
+  const ordered = [...contacts].sort((a, b) => (messages.get(b.address)?.at(-1)?.timestamp || 0) - (messages.get(a.address)?.at(-1)?.timestamp || 0));
+  for (const contact of ordered) {
+    const name = contact.name || contact.handle || contact.address.slice(0, 12);
+    const last = messages.get(contact.address)?.at(-1);
+    if ((last || selected === contact.address) && `${name} ${contact.address} ${last?.content || ''}`.toLowerCase().includes(query)) {
+      const row = node('div', 'conv-row' + (selected === contact.address ? ' active' : ''));
+      row.setAttribute('role', 'button'); row.tabIndex = 0;
+      row.setAttribute('aria-current', String(selected === contact.address));
+      const icon = node('div', 'conv-avatar-wrap'); icon.append(avatar(contact.address, 40));
+      const content = node('div', 'conv-row-content'), top = node('div', 'conv-row-top'), bottom = node('div', 'conv-row-bottom');
+      top.append(node('span', 'conv-name', name), node('span', 'conv-time', last ? new Date(last.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''));
+      bottom.append(node('span', 'conv-preview', last ? `${last.outbound ? 'You: ' : ''}${last.content}` : 'New conversation'));
+      content.append(top, bottom); row.append(icon, content);
+      row.addEventListener('click', () => selectContact(contact.address));
+      row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectContact(contact.address); } });
+      $('conversation-list').append(row);
+    }
+    const row = node('div', 'contacts-row'); row.tabIndex = 0; row.setAttribute('role', 'button');
+    const content = node('div', 'contacts-row-content');
+    content.append(node('span', 'contacts-row-name', name), node('span', 'contacts-row-hash', contact.address));
+    const contactAvatar = node('div', 'contacts-avatar'); contactAvatar.append(avatar(contact.address, 40));
+    row.append(contactAvatar, content);
+    row.addEventListener('click', () => openContactDetail(contact));
+    row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openContactDetail(contact); } });
+    $('contacts-list').append(row);
     if (contact.fid) {
       const card = document.createElement('li'), address = document.createElement('small');
       card.textContent = `FID ${contact.fid}${contact.handle ? ' · @' + contact.handle : ''}`;
@@ -59,6 +96,21 @@ function renderContacts() {
       card.append(address); $('contacts').append(card);
     }
   }
+  if (!$('conversation-list').childElementCount) {
+    const empty = node('div', 'empty-state');
+    empty.append(node('span', 'empty-state-primary', query ? 'No matching conversations' : 'No conversations yet'), node('span', 'empty-state-hint', 'Tap the compose button to start messaging'));
+    $('conversation-list').append(empty);
+  }
+  const contactQuery = $('contacts-search').value.toLowerCase();
+  let group = '';
+  for (const row of [...$('contacts-list').children].sort((a, b) => a.textContent.localeCompare(b.textContent))) {
+    if (!row.textContent.toLowerCase().includes(contactQuery)) { row.remove(); continue; }
+    const letter = row.querySelector('.contacts-row-name').textContent[0]?.toUpperCase() || '#';
+    if (letter !== group) { $('contacts-list').append(node('div', 'contacts-group-header', letter)); group = letter; }
+    $('contacts-list').append(row);
+  }
+  $('contacts-count').textContent = `${contacts.length} contacts`;
+  if (!$('contacts-list').childElementCount) $('contacts-list').append(node('div', 'empty-state', contacts.length ? 'No matching contacts' : 'No contacts yet'));
 }
 function addContact(contact) {
   contact.address = validateAddress(contact.address);
@@ -70,27 +122,42 @@ function addContact(contact) {
   contacts = next; renderContacts();
 }
 function selectContact(address) {
+  if (selected && selected !== address) drafts.set(selected, $('message-text').value);
+  if (selected !== address) $('message-text').value = drafts.get(address) || '';
   selected = address;
   const contact = contacts.find(item => item.address === address);
   $('recipient-name').textContent = contact?.name || contact?.handle || 'LXMF contact';
   $('recipient-address').textContent = address;
+  showView('message');
+  document.querySelector('.lxmf-layout').classList.add('view-chat-detail');
+  document.body.classList.add('view-chat-detail');
+  $('lxmf-contact-avatar').replaceChildren(avatar(address, 40));
   renderContacts(); renderMessages(); updateControls();
 }
 function renderMessages() {
   $('message-list').replaceChildren();
+  $('lxmf-chat-header').style.display = selected ? '' : 'none';
+  $('message-form').hidden = !selected;
   const items = messages.get(selected) || [];
   if (!items.length) {
-    const empty = document.createElement('p'); empty.className = 'empty-state';
-    empty.textContent = selected ? 'No messages in this tab yet.' : 'Select a contact to start an encrypted LXMF conversation.';
+    const empty = node('div', selected ? 'lxmf-empty-conv' : 'lxmf-empty');
+    if (selected) empty.append(avatar(selected, 48));
+    empty.append(node('span', selected ? 'lxmf-empty-conv-name' : 'empty-state-primary', selected ? $('recipient-name').textContent : 'Your messages'), node('span', selected ? 'lxmf-empty-conv-hint' : 'empty-state-hint', selected ? 'This is the beginning of your encrypted conversation.' : 'Select a conversation or start a new one'));
     $('message-list').append(empty);
   }
-  for (const item of items) {
-    const row = document.createElement('div'), body = document.createElement('div'), meta = document.createElement('span');
-    row.className = `msg-row ${item.outbound ? 'outbound' : 'inbound'}`;
-    body.className = 'lxmf-msg'; body.textContent = item.content;
-    meta.className = 'msg-meta' + (item.state === 'failed' ? ' error' : '');
-    meta.textContent = `${new Date(item.timestamp * 1000).toLocaleTimeString()} · ${item.label}`;
-    row.append(body, meta); $('message-list').append(row);
+  let date = '';
+  for (const [index, item] of items.entries()) {
+    const day = new Date(item.timestamp * 1000).toLocaleDateString();
+    if (day !== date) { const separator = node('div', 'msg-date-separator'); separator.append(node('span', '', day)); $('message-list').append(separator); date = day; }
+    const direction = item.outbound ? 'outbound' : 'inbound';
+    const adjacent = other => other && other.outbound === item.outbound && Math.abs(other.timestamp - item.timestamp) < 180 && new Date(other.timestamp * 1000).toLocaleDateString() === day;
+    const before = adjacent(items[index - 1]), after = adjacent(items[index + 1]);
+    const row = node('div', `msg-row ${direction}`), body = node('div', `lxmf-msg ${direction}`);
+    if (before || after) row.classList.add(before && after ? 'msg-group-middle' : before ? 'msg-group-last' : 'msg-group-first');
+    const meta = node('div', 'lxmf-msg-meta' + (item.state === 'failed' ? ' error' : ''));
+    meta.append(node('span', '', `${new Date(item.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${item.label}`));
+    body.append(node('div', 'lxmf-msg-content', item.content), meta);
+    row.append(body); $('message-list').append(row);
   }
   $('message-list').scrollTop = $('message-list').scrollHeight;
 }
@@ -100,6 +167,7 @@ function appendMessage(address, item) {
   items.push(item); if (items.length > 200) items.shift();
   messages.set(address, items);
   if (selected === address) renderMessages();
+  renderContacts();
 }
 async function activate(identity) {
   farcasterOnboarding?.reset();
@@ -122,6 +190,7 @@ async function activate(identity) {
       button.type = 'button'; button.textContent = `${item.name || 'LXMF peer'} · ${item.address}`;
       button.addEventListener('click', () => {
         $('contact-address').value = item.address; $('contact-name').value = item.name;
+        $('contact-dialog').showModal();
         status('contact-status', 'Review this address before adding.');
       });
       li.append(button); $('discovered').append(li);
@@ -157,7 +226,13 @@ $('create').addEventListener('click', () => identityAction(async () => {
 $('unlock').addEventListener('click', () => identityAction(async () => activate(await unlockIdentity($('passphrase').value))));
 $('lock').addEventListener('click', () => identityAction(async () => {
   farcasterOnboarding?.reset();
-  await client.close(); client = null; messages.clear(); peers.clear();
+  await client.close(); client = null; messages.clear(); peers.clear(); drafts.clear();
+  selected = ''; $('message-text').value = '';
+  $('recipient-name').textContent = ''; $('recipient-address').textContent = '';
+  status('message-status', '');
+  document.querySelector('.lxmf-layout').classList.remove('view-chat-detail');
+  document.body.classList.remove('view-chat-detail');
+  renderContacts();
   $('discovered').replaceChildren(); $('address').textContent = '';
   renderMessages(); status('status', 'Identity locked. Enter your passphrase to unlock it.');
 }));
@@ -202,7 +277,7 @@ $('contact-form').addEventListener('submit', event => {
   try {
     const address = validateAddress($('contact-address').value);
     addContact({ address, name: $('contact-name').value.trim().slice(0, 64) });
-    selectContact(address); status('contact-status', 'Contact saved locally. Verify the address out of band.');
+    selectContact(address); $('contact-dialog').close(); status('contact-status', 'Contact saved locally. Verify the address out of band.');
   } catch (error) { status('contact-status', error.message, true); }
 });
 $('message-form').addEventListener('submit', async event => {
@@ -214,7 +289,9 @@ $('message-form').addEventListener('submit', async event => {
   sending = true; updateControls(); appendMessage(address, item);
   try {
     await client.send(address, content); item.state = 'sent'; item.label = 'Sent to encrypted link · not delivery-confirmed';
-    $('message-text').value = ''; status('message-status', 'Sent. Waiting for a reply is not a delivery receipt.');
+    if (selected === address && $('message-text').value === content) $('message-text').value = '';
+    if (drafts.get(address) === content) drafts.delete(address);
+    status('message-status', 'Sent. Waiting for a reply is not a delivery receipt.');
   } catch (error) {
     item.state = 'failed'; item.label = `Not confirmed: ${error.message}`;
     status('message-status', 'Send failed or could not be confirmed. Check the gateway and recipient before retrying.', true);
@@ -274,3 +351,78 @@ try {
   status('status', saved ? 'Identity locked. Enter your passphrase to restore it.' : 'Create a locally protected identity to begin.');
 } catch (error) { status('status', `Identity storage unavailable: ${error.message}`, true); }
 updateControls();
+
+function showView(view) {
+  for (const el of document.querySelectorAll('.view')) el.classList.toggle('active', el.id === `view-${view}`);
+  for (const el of document.querySelectorAll('[data-view]')) el.classList.toggle('active', el.dataset.view === view);
+  $('sidebar').classList.remove('open'); $('sidebar-overlay').classList.remove('active');
+  $('bottom-sheet').classList.remove('open'); $('bottom-sheet-overlay').classList.remove('active');
+  document.body.classList.toggle('view-chat-detail', view === 'message' && Boolean(selected) && document.querySelector('.lxmf-layout').classList.contains('view-chat-detail'));
+}
+for (const el of document.querySelectorAll('[data-view]')) el.addEventListener('click', event => { event.preventDefault(); showView(el.dataset.view); });
+function newConversation() { $('contact-dialog').showModal(); $('contact-address').focus(); }
+for (const id of ['lxmf-send-message-btn', 'lxmf-send-fab', 'new-contact', 'contacts-add-fab']) $(id).addEventListener('click', newConversation);
+$('close-contact').addEventListener('click', () => $('contact-dialog').close());
+$('msg-search-input').addEventListener('input', renderContacts);
+$('msg-profile-name').addEventListener('click', () => showView('identity'));
+$('profile-address').addEventListener('click', () => client ? $('copy-address').click() : showView('identity'));
+$('sidebar-identity').addEventListener('click', () => showView('identity'));
+$('sidebar-identity').addEventListener('keydown', event => { if (event.key === 'Enter') showView('identity'); });
+$('lxmf-back-btn').addEventListener('click', () => { document.querySelector('.lxmf-layout').classList.remove('view-chat-detail'); document.body.classList.remove('view-chat-detail'); });
+function toggleSidebar(open) {
+  if (matchMedia('(max-width: 768px)').matches) { $('bottom-sheet').classList.toggle('open', open); $('bottom-sheet-overlay').classList.toggle('active', open); }
+  else { $('sidebar').classList.toggle('open', open); $('sidebar-overlay').classList.toggle('active', open); }
+}
+$('hamburger-btn').addEventListener('click', () => toggleSidebar(true));
+$('sidebar-close-btn').addEventListener('click', () => toggleSidebar(false));
+$('sidebar-overlay').addEventListener('click', () => toggleSidebar(false));
+$('sidebar-collapse-btn').addEventListener('click', () => $('sidebar').classList.toggle('collapsed'));
+$('message-text').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && matchMedia('(min-width: 769px)').matches) { event.preventDefault(); if (!$('send').disabled) $('message-form').requestSubmit(); } });
+$('message-text').addEventListener('input', event => { event.target.style.height = 'auto'; event.target.style.height = `${Math.min(event.target.scrollHeight, 160)}px`; });
+renderMessages();
+
+$('bottom-bar-hamburger').addEventListener('click', () => toggleSidebar(true));
+
+$('bottom-sheet-overlay').addEventListener('click', () => toggleSidebar(false));
+
+$('header-mobile-identity').addEventListener('click', () => showView('identity'));
+$('header-mobile-identity').addEventListener('keydown', event => { if (event.key === 'Enter') showView('identity'); });
+
+$('contacts-search').addEventListener('input', renderContacts);
+for (const button of document.querySelectorAll('[data-settings-panel]')) button.addEventListener('click', () => {
+  for (const nav of document.querySelectorAll('[data-settings-panel]')) { nav.classList.toggle('active', nav === button); if (nav === button) nav.setAttribute('aria-current', 'page'); else nav.removeAttribute('aria-current'); }
+  for (const panel of document.querySelectorAll('.settings-panel')) { const active = panel.id === button.dataset.settingsPanel; panel.hidden = !active; panel.classList.toggle('settings-panel-selected', active); }
+  $('settings-detail-title').textContent = button.dataset.settingsTitle; $('settings-mobile-detail-title').textContent = button.dataset.settingsTitle;
+  $('settings-detail-desc').textContent = button.dataset.settingsDesc;
+  document.querySelector('#view-settings .settings-page').classList.add('settings-detail-mode', 'settings-mobile-detail-active');
+});
+$('settings-mobile-back-btn').addEventListener('click', () => document.querySelector('#view-settings .settings-page').classList.remove('settings-mobile-detail-active'));
+
+// Adapted from dashboard/static/js/lxmf.js contact detail sheet; native-only actions omitted.
+function openContactDetail(contact) {
+  const previousFocus = document.activeElement;
+  const overlay = node('div', 'bottom-sheet-overlay'); overlay.id = 'contact-detail-overlay';
+  const sheet = node('div', 'bottom-sheet'); sheet.id = 'contact-detail-sheet';
+  sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', 'Contact details');
+  const body = node('div', 'bottom-sheet-body');
+  const close = node('button', 'bottom-sheet-close', '×'); close.type = 'button'; close.setAttribute('aria-label', 'Close contact details');
+  const icon = node('div', 'contact-detail-avatar'); icon.append(avatar(contact.address, 64));
+  const hashRow = node('div', 'contact-detail-hash-row'), copy = node('button', 'contact-detail-copy-btn'); copy.type = 'button'; copy.setAttribute('aria-label', 'Copy LXMF address');
+  copy.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+  hashRow.append(node('span', 'contact-detail-hash', contact.address), copy);
+  const actions = node('div', 'contact-detail-actions contact-detail-primary-actions entity-action-grid');
+  const message = node('button', 'nr-btn entity-action-btn'); message.type = 'button';
+  message.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Message</span>';
+  const feedback = node('p', 'notice'); feedback.setAttribute('role', 'status');
+  actions.append(message); body.append(close, icon, node('div', 'contact-detail-name', contact.name || contact.handle || contact.address.slice(0, 12)), hashRow, actions, feedback);
+  sheet.append(node('div', 'bottom-sheet-handle'), body); document.body.append(overlay, sheet);
+  function dismiss() { overlay.remove(); sheet.remove(); previousFocus?.focus(); }
+  close.addEventListener('click', dismiss); overlay.addEventListener('click', dismiss);
+  message.addEventListener('click', () => { dismiss(); selectContact(contact.address); });
+  copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(contact.address); feedback.textContent = 'Public LXMF address copied.'; } catch { feedback.textContent = 'Clipboard unavailable. Select and copy the address above.'; } });
+  sheet.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); dismiss(); }
+    if (event.key === 'Tab') { const buttons = [close, copy, message]; const index = buttons.indexOf(document.activeElement); if ((!event.shiftKey && index === 2) || (event.shiftKey && index === 0)) { event.preventDefault(); buttons[event.shiftKey ? 2 : 0].focus(); } }
+  });
+  void sheet.offsetHeight; overlay.classList.add('active'); sheet.classList.add('open'); close.focus();
+}

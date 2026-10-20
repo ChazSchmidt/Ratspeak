@@ -1,0 +1,92 @@
+body {
+    background: var(--surface-page);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--type-leading-body);
+    position: relative;
+}
+
+.type-app-title {
+    font-size: var(--type-app-title-size);
+    font-weight: var(--type-app-title-weight);
+    letter-spacing: var(--type-app-title-tracking);
+    text-transform: uppercase;
+}
+
+.type-panel-title {
+    font-size: var(--type-panel-title-size);
+    font-weight: var(--type-panel-title-weight);
+    letter-spacing: var(--type-panel-title-tracking);
+    text-transform: uppercase;
+}
+
+.type-section-label {
+    font-size: var(--type-section-label-size);
+    font-weight: var(--type-section-label-weight);
+    letter-spacing: var(--type-section-label-tracking);
+    text-transform: uppercase;
+}
+
+.type-row-title {
+    font-size: var(--type-row-title-size);
+    font-weight: var(--type-row-title-weight);
+    color: var(--text-primary);
+}
+
+.type-row-meta {
+    font-size: var(--type-row-meta-size);
+    color: var(--text-muted);
+}
+
+.type-row-detail {
+    font-size: var(--type-row-detail-size);
+    color: var(--text-muted);
+}
+
+.type-control-label {
+    font-size: var(--type-control-size);
+    font-weight: var(--type-control-weight);
+    letter-spacing: var(--type-control-tracking);
+}
+
+.type-empty-title {
+    font-size: var(--type-empty-title-size);
+    font-weight: var(--type-empty-title-weight);
+    color: var(--type-empty-title-color);
+}
+
+.type-empty-hint {
+    font-size: var(--type-empty-hint-size);
+    color: var(--type-empty-hint-color);
+    opacity: var(--state-empty-hint-opacity);
+}
+
+.type-hint {
+    font-size: var(--type-hint-size);
+    color: var(--text-muted);
+}
+
+.type-hint-sm {
+    font-size: var(--type-hint-sm-size);
+    color: var(--text-muted);
+}
+
+.type-mono-id {
+    font-family: var(--font-mono);
+    font-size: var(--type-id-size);
+    color: var(--type-id-color);
+}
+
+.type-mono-id-sm {
+    font-family: var(--font-mono);
+    font-size: var(--type-id-sm-size);
+    color: var(--type-id-color);
+}
+
+.type-badge-label {
+    font-size: var(--type-badge-size);
+    font-weight: var(--type-badge-weight);
+    letter-spacing: var(--type-badge-tracking);
+    text-transform: uppercase;
+}

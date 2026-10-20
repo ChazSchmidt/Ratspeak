@@ -1,0 +1,38 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+*:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+}
+
+.conn-filter:focus-visible, .log-filter:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+}
+.nav-item:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+}
+
+::selection {
+    background: var(--accent-bg);
+    color: var(--text-primary);
+}
+
+html[data-theme] body,
+html[data-theme] .header,
+html[data-theme] .sidebar,
+html[data-theme] .panel,
+html[data-theme] .bottom-bar {
+    transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}

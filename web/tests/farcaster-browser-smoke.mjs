@@ -2,6 +2,12 @@ import assert from 'node:assert/strict';
 
 // Negative UI boundary test only: never begin a consented relay request.
 export async function testFarcasterSmoke(browser, url) {
+  const navigate = async (page, view) => {
+    if (await page.locator('#bottom-bar-hamburger').isVisible()) {
+      await page.locator('#bottom-bar-hamburger').click();
+      await page.locator(`#bottom-sheet [data-view="${view}"]`).click();
+    } else await page.locator(`#sidebar [data-view="${view}"]`).click();
+  };
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const externalRequests = [], pageErrors = [];
   await context.route('**/*', route => {
@@ -16,11 +22,15 @@ export async function testFarcasterSmoke(browser, url) {
     page.on('pageerror', error => pageErrors.push(error.message));
     await page.goto(url);
     assert.equal(await page.locator('#farcaster-start').count(), 0, 'Optional UI must stay lazy before opening');
+    await navigate(page, 'identity');
     await page.locator('#passphrase').fill('disposable farcaster smoke password');
     await page.locator('#create').click();
     await page.waitForFunction(() => /^[0-9a-f]{32}$/.test(document.querySelector('#address').textContent));
     const address = await page.locator('#address').textContent();
     const open = async () => {
+      await navigate(page, 'settings');
+      if (await page.locator('#settings-mobile-back-btn').isVisible()) await page.locator('#settings-mobile-back-btn').click();
+      await page.locator('[data-settings-panel="panel-settings-browser"]').click();
       await page.locator('#open-farcaster').click();
       await page.locator('#farcaster-start').waitFor();
     };
@@ -49,6 +59,7 @@ export async function testFarcasterSmoke(browser, url) {
     await page.waitForFunction(() => document.querySelector('#address').textContent === '');
     await assertCleared();
     await page.locator('#close-farcaster').click();
+    await navigate(page, 'identity');
     await page.locator('#passphrase').fill('disposable farcaster smoke password');
     await page.locator('#unlock').click();
     await page.waitForFunction(expected => document.querySelector('#address').textContent === expected, address);

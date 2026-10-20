@@ -1,0 +1,691 @@
+:root {
+    color-scheme: light;
+
+    --theme-page-rgb: 250, 247, 243;
+    --theme-ink-rgb: 36, 31, 28;
+    --theme-border-rgb: 222, 212, 200;
+    --theme-strong-border-rgb: 146, 134, 124;
+    --theme-focus: #B14F24;
+
+    --bg-primary:    #FAF7F3;
+    --bg-secondary:  #F3EFEA;
+    --bg-tertiary:   #ECE6DE;
+    --bg-card:       #FFFFFF;
+    --bg-dark:       #2A2522;
+    --border:        #DED4C8;
+    --border-light:  #E1D5C6;
+    --border-subtle: #E6DDD2;
+    --border-card:   #E1D5C6;
+
+    --text-primary:  #241F1C;
+    --text-secondary:#5D554E;
+    --text-muted:    #746B62;
+    --text-disabled: #A79D94;
+
+    --accent:        #B14F24;
+    --accent-dim:    #963F1C;
+    --accent-dark:   #7E3115;
+    --accent-light:  #FBEFE6;
+    --accent-rgb:    177, 79, 36;
+    --on-accent:     #FFFFFF;
+    --accent-a05:    rgba(var(--accent-rgb), 0.05);
+    --accent-a12:    rgba(var(--accent-rgb), 0.12);
+    --accent-a15:    rgba(var(--accent-rgb), 0.15);
+    --accent-a18:    rgba(var(--accent-rgb), 0.18);
+    --accent-a20:    rgba(var(--accent-rgb), 0.20);
+    --accent-a25:    rgba(var(--accent-rgb), 0.25);
+    --accent-a40:    rgba(var(--accent-rgb), 0.40);
+    --accent-a45:    rgba(var(--accent-rgb), 0.45);
+
+    --status-online: #2E8B57;
+    --status-error:  #CF222E;
+    --status-warning:#D4A72C;
+    --status-info:   #3A76F0;
+    --status-purple: #8B5CF6;
+    --ble-accent:    #0E9AA7;
+    /* Status fills can stay vivid; status text needs stronger light-theme
+       contrast. Use the -fg aliases for text and icon strokes. */
+    --status-online-fg: #1F6F43;
+    --status-error-fg:  #B4232C;
+    --status-warning-fg:#765A00;
+    --status-info-fg:   #245FC4;
+    --status-purple-fg: #6E46C7;
+    --ble-accent-fg:    #08717B;
+    --status-online-rgb:  46, 139, 87;
+    --status-error-rgb:   207, 34, 46;
+    --status-warning-rgb: 212, 167, 44;
+    --status-info-rgb:    58, 118, 240;
+    --status-purple-rgb:  139, 92, 246;
+    --ble-accent-rgb:     14, 154, 167;
+
+    --font-mono:     'JetBrains Mono', 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+    --font-sans:     'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-ui:       -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+    --glass-bg:      rgba(250, 247, 243, 0.86);
+    --glass-border:  rgba(222, 212, 200, 0.82);
+
+    --surface-sunken:      rgba(236, 230, 222, 0.55);
+    --surface-overlay:     rgba(0, 0, 0, 0.35);
+    --on-overlay:          #FFFFFF;
+
+    /* Theme-static white-alpha overlays for dark glass components
+       (context menus, pickers, game chrome). */
+    --overlay-white-subtle: rgba(255, 255, 255, 0.04);
+    --overlay-white-faint:  rgba(255, 255, 255, 0.06);
+    --overlay-white-hover:  rgba(255, 255, 255, 0.1);
+
+    --surface-elevation-0: #F3EFEA;
+    --surface-elevation-1: #FAF7F3;
+    --surface-elevation-2: #F3EFEA;
+    --surface-elevation-3: #ECE6DE;
+    --surface-elevation-4: #E6DDD2;
+    --surface-elevation-5: #DED4C8;
+
+    --surface-page:         var(--bg-primary);
+    --surface-shell:        var(--bg-primary);
+    --surface-workspace:    var(--bg-secondary);
+    --surface-panel:        var(--bg-card);
+    --surface-panel-muted:  var(--surface-elevation-0);
+    --surface-card:         var(--bg-card);
+    --surface-card-muted:   var(--bg-tertiary);
+    --surface-control:      var(--surface-elevation-2);
+    --surface-control-hover: var(--hover-light);
+    --surface-control-active: var(--hover-medium);
+    --surface-row:          transparent;
+    --surface-row-hover:    var(--hover-subtle);
+    --surface-row-active:   var(--hover-light);
+    --surface-row-selected: var(--hover-medium);
+    --surface-inset:        var(--surface-sunken);
+    --surface-popover:      var(--bg-card);
+    --surface-dialog:       var(--bg-card);
+    --surface-sheet:        var(--sheet-bg);
+    --surface-scrim:        var(--surface-overlay);
+    --surface-inset-highlight: rgba(255, 255, 255, 0.03);
+    --border-surface:       var(--glass-border);
+    --border-surface-soft:  var(--divider);
+    --border-surface-strong: var(--divider-strong);
+    --border-row:           var(--divider);
+    --border-control:       #92867C;
+    --bg-elevated:          var(--surface-panel);
+
+    --control-height-xs:    28px;
+    --control-height-sm:    34px;
+    --control-height-md:    40px;
+    --control-height-lg:    46px;
+    --touch-target:         44px;
+    --row-height-compact:   38px;
+    --row-height-default:   44px;
+
+    --button-bg:            var(--accent-bg);
+    --button-bg-hover:      var(--accent-bg-strong);
+    --button-border:        var(--accent-border);
+    --button-border-hover:  var(--accent);
+    --button-color:         var(--accent);
+    --button-shadow-hover:  0 4px 16px var(--accent-bg);
+
+    --chip-bg:              var(--badge-neutral-bg);
+    --chip-border:          transparent;
+    --chip-color:           var(--text-muted);
+    --chip-height:          20px;
+    --chip-radius:          var(--radius-sm);
+    --chip-padding-x:       var(--space-3);
+    --chip-padding-y:       1px;
+
+    --divider:             rgba(222, 212, 200, 0.65);
+    --divider-strong:      rgba(222, 212, 200, 0.9);
+
+    --badge-neutral-bg:    rgba(42, 37, 34, 0.06);
+
+    --accent-bg:           rgba(var(--accent-rgb), 0.08);
+    --accent-bg-strong:    rgba(var(--accent-rgb), 0.12);
+    --accent-border:       rgba(var(--accent-rgb), 0.2);
+
+    --status-online-bg:        rgba(46, 139, 87, 0.08);
+    --status-online-bg-strong: rgba(46, 139, 87, 0.12);
+    --status-online-border:    rgba(46, 139, 87, 0.2);
+    --status-error-bg:         rgba(207, 34, 46, 0.08);
+    --status-error-border:     rgba(207, 34, 46, 0.2);
+    --status-info-bg:          rgba(58, 118, 240, 0.08);
+    --status-info-border:      rgba(58, 118, 240, 0.2);
+    --status-warning-bg:       rgba(212, 167, 44, 0.08);
+    --status-warning-border:   rgba(212, 167, 44, 0.2);
+    --status-purple-bg:        rgba(139, 92, 246, 0.12);
+    --status-purple-border:    rgba(139, 92, 246, 0.2);
+    --ble-bg:                  rgba(14, 154, 167, 0.08);
+    --ble-bg-strong:           rgba(14, 154, 167, 0.12);
+    --ble-border:              rgba(14, 154, 167, 0.2);
+
+    --gradient-header:     #FAF7F3;
+
+    --space-1: 2px;  --space-2: 4px;  --space-3: 6px;  --space-4: 8px;
+    --space-5: 10px; --space-6: 12px; --space-7: 14px; --space-8: 16px;
+    --space-10: 20px; --space-12: 24px; --space-16: 32px;
+
+    --radius-xs: 3px;  --radius-sm: 4px;  --radius-md: 6px;
+    --radius-lg: 8px;  --radius-lg-plus: 10px;
+    --radius-xl: 12px; --radius-2xl: 14px;
+
+    --shadow-sm: 0 1px 2px rgba(42,37,34,0.04), 0 4px 12px rgba(42,37,34,0.04);
+    --shadow-md: 0 2px 4px rgba(42,37,34,0.05), 0 12px 32px rgba(42,37,34,0.08);
+    --shadow-xl: 0 8px 28px rgba(42,37,34,0.10), 0 2px 8px rgba(42,37,34,0.06);
+    --shadow-modal: 0 18px 56px rgba(42,37,34,0.14), 0 4px 16px rgba(42,37,34,0.08);
+    --shadow-hover: 0 8px 24px rgba(42,37,34,0.12);
+    --shadow-panel: var(--shadow-sm);
+    --shadow-panel-hover: var(--shadow-sm);
+    --shadow-card: var(--shadow-sm);
+    --shadow-card-hover: var(--shadow-md);
+    --shadow-popover: var(--shadow-xl);
+
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+
+    --hover-subtle: rgba(42, 37, 34, 0.045);
+    --hover-light: rgba(42, 37, 34, 0.06);
+    --hover-medium: rgba(42, 37, 34, 0.08);
+
+    --z-base: 1;  --z-raised: 2;
+    --z-sticky: 10;  --z-header: 20;
+    --z-fab: 40;  --z-bottom-bar: 50;
+    --z-bottom-sheet: 60;  --z-bottom-sheet-content: 70;
+    --z-sidebar-overlay: 99;  --z-sidebar: 100;
+    --z-dropdown: 200;  --z-modal: 1000;
+    --z-tooltip: 5000;
+    --z-announce-ring: 9998;  --z-toast: 9999;
+    --z-overlay: 99999;
+
+    --opacity-disabled: 0.4;
+    --opacity-muted: 0.5;
+    --state-empty-icon-opacity: 0.28;
+    --state-empty-hint-opacity: 0.68;
+    --state-inactive-opacity: 0.62;
+    --state-inactive-hover-opacity: 0.84;
+    --state-inactive-filter: saturate(0.55);
+    --state-inactive-hover-filter: saturate(0.75);
+
+    --modal-width-sm: 340px;
+    --modal-width-md: 380px;
+    --modal-width-lg: 400px;
+
+    /* Text scales with the root size; geometry and touch targets stay px. */
+    --text-2xs: 0.6875rem;
+    --text-xs:  0.75rem;
+    --text-sm:  0.8125rem;
+    --text-base:0.9375rem;
+    --text-lg:  1.0625rem;
+    --text-xl:  1.125rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.75rem;
+
+    /* iOS env() reports real insets (contentInsetAdjustmentBehavior=.never);
+       Android injects --sat/--sab via evaluateJavascript; desktop falls back to 0. */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+
+    --chess-light:       #D4BC9E;
+    --chess-dark:        #9B8365;
+    --chess-border:      #8B7355;
+    --chess-coord-light: #9B8365;
+    --chess-coord-dark:  #D4BC9E;
+
+    --glass-dark-bg:       rgba(250, 247, 243, 0.88);
+    --glass-dark-bg-muted: rgba(250, 247, 243, 0.55);
+
+    --sheet-bg:      rgba(250, 247, 243, 0.92);
+    --sheet-handle:  rgba(42, 37, 34, 0.18);
+    --sheet-divider: var(--divider);
+    --sheet-border:  var(--border-card);
+    --sheet-shadow:  0 -4px 32px rgba(0, 0, 0, 0.08);
+
+    --status-discovered:     #7e8fa2;
+    --status-discovered-rgb: 126, 143, 162;
+
+    --surface-game-gradient: #F3EFEA;
+
+    --tracking-tight:   0;
+    --tracking-normal:  0;
+    --tracking-wide:    0;
+    --tracking-wider:   0;
+    --tracking-widest:  0;
+
+    --type-weight-regular:  400;
+    --type-weight-medium:   500;
+    --type-weight-semibold: 600;
+    --type-weight-bold:     700;
+
+    --type-leading-tight: 1.2;
+    --type-leading-body:  1.5;
+    --type-leading-copy:  1.45;
+
+    --type-app-title-size:      var(--text-base);
+    --type-app-title-weight:    var(--type-weight-bold);
+    --type-app-title-tracking:  var(--tracking-wide);
+
+    --type-panel-title-size:     var(--text-base);
+    --type-panel-title-weight:   var(--type-weight-semibold);
+    --type-panel-title-tracking: 0;
+
+    --type-section-label-size:     var(--text-2xs);
+    --type-section-label-weight:   var(--type-weight-semibold);
+    --type-section-label-tracking: var(--tracking-wide);
+
+    --type-row-title-size:   var(--text-base);
+    --type-row-title-weight: var(--type-weight-medium);
+    --type-row-meta-size:    var(--text-xs);
+    --type-row-detail-size:  var(--text-sm);
+
+    --type-control-size:     var(--text-sm);
+    --type-control-weight:   var(--type-weight-semibold);
+    --type-control-tracking: 0;
+
+    --type-empty-title-size:   var(--text-base);
+    --type-empty-title-weight: var(--type-weight-semibold);
+    --type-empty-title-color:  var(--text-secondary);
+    --type-empty-hint-size:    var(--text-sm);
+    --type-empty-hint-color:   var(--text-secondary);
+
+    --type-hint-size:    var(--text-xs);
+    --type-hint-sm-size: var(--text-2xs);
+
+    --type-id-size:    var(--text-xs);
+    --type-id-sm-size: var(--text-2xs);
+    --type-id-color:   var(--text-secondary);
+
+    --type-badge-size:     var(--text-2xs);
+    --type-badge-weight:   var(--type-weight-semibold);
+    --type-badge-tracking: var(--tracking-wide);
+
+    /* Compact machine states such as OFF / ON / AUTO. These stay distinct
+       from prose labels and mixed-value selector controls. */
+    --type-state-size:     var(--text-xs);
+    --type-state-weight:   var(--type-weight-semibold);
+    --type-state-tracking: 0.04em;
+
+    --radius-3xl:  16px;
+    --radius-pill: 20px;
+    --radius-full: 50%;
+
+    --input-bg:          var(--bg-primary);
+    --input-border:      var(--border);
+    --input-text:        var(--text-primary);
+    --input-placeholder: var(--text-muted);
+
+    --focus-ring:    var(--accent);
+    --focus-ring-bg: var(--accent-bg);
+
+    --text-link:       var(--accent);
+    --text-link-hover: var(--accent-dim);
+
+    --radius-bubble:      var(--radius-3xl);
+    --radius-bubble-tail: var(--radius-sm);
+}
+
+@media (min-width: 769px) {
+    :root {
+        --text-2xs: 0.75rem; --text-xs: 0.8125rem; --text-sm: 0.875rem; --text-base: 0.9375rem;
+        --text-lg: 1.0625rem; --text-xl: 1.125rem; --text-2xl: 1.5rem; --text-3xl: 1.75rem;
+    }
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+
+    --theme-page-rgb: 24, 23, 26;
+    --theme-ink-rgb: 242, 238, 234;
+    --theme-border-rgb: 50, 46, 48;
+    --theme-strong-border-rgb: 116, 105, 112;
+    --theme-focus: #D2693B;
+
+    --bg-primary:    #18171a;
+    --bg-secondary:  #1f1d20;
+    --bg-tertiary:   #26242a;
+    --bg-card:       #1d1b1e;
+    --bg-dark:       #e8e4e0;
+    --border:        #322e30;
+    --border-light:  #3b363a;
+    --border-subtle: #2a2629;
+    --border-card:   #2a2629;
+
+    --text-primary:  #F2EEEA;
+    --text-secondary:#C6BDB5;
+    --text-muted:    #9C928C;
+    --text-disabled: #6F6661;
+
+    --accent:        #D2693B;
+    --accent-dim:    #D9784B;
+    --accent-dark:   #B85829;
+    --accent-light:  #2a1f18;
+    --accent-rgb:    210, 105, 59;
+    --on-accent:     #18171A;
+    --accent-a05:    rgba(var(--accent-rgb), 0.05);
+    --accent-a12:    rgba(var(--accent-rgb), 0.12);
+    --accent-a15:    rgba(var(--accent-rgb), 0.15);
+    --accent-a18:    rgba(var(--accent-rgb), 0.18);
+    --accent-a20:    rgba(var(--accent-rgb), 0.20);
+    --accent-a25:    rgba(var(--accent-rgb), 0.25);
+    --accent-a40:    rgba(var(--accent-rgb), 0.40);
+    --accent-a45:    rgba(var(--accent-rgb), 0.45);
+
+    --status-online: #4ade80;
+    --status-error:  #e5534b;
+    --status-warning:#e0b83e;
+    --status-info:   #5b93f5;
+    --status-purple: #a78bfa;
+    --ble-accent:    #22D3EE;
+    --status-online-fg: var(--status-online);
+    --status-error-fg:  var(--status-error);
+    --status-warning-fg:var(--status-warning);
+    --status-info-fg:   var(--status-info);
+    --status-purple-fg: var(--status-purple);
+    --ble-accent-fg:    var(--ble-accent);
+    --status-online-rgb:  74, 222, 128;
+    --status-error-rgb:   229, 83, 75;
+    --status-warning-rgb: 224, 184, 62;
+    --status-info-rgb:    91, 147, 245;
+    --status-purple-rgb:  167, 139, 250;
+    --ble-accent-rgb:     34, 211, 238;
+
+    --glass-bg:      rgba(24, 23, 26, 0.78);
+    --glass-border:  rgba(58, 52, 56, 0.72);
+
+    --surface-sunken:      rgba(20, 19, 22, 0.62);
+    --surface-overlay:     rgba(0, 0, 0, 0.65);
+
+    --surface-elevation-0: #1f1d20;
+    --surface-elevation-1: #232126;
+    --surface-elevation-2: #26242a;
+    --surface-elevation-3: #2a2629;
+    --surface-elevation-4: #322e30;
+    --surface-elevation-5: #3a3438;
+
+    --surface-page:         var(--bg-primary);
+    --surface-shell:        var(--bg-primary);
+    --surface-workspace:    var(--bg-secondary);
+    --surface-panel:        var(--bg-card);
+    --surface-panel-muted:  var(--surface-elevation-0);
+    --surface-card:         var(--bg-card);
+    --surface-card-muted:   var(--bg-tertiary);
+    --surface-control:      var(--surface-elevation-2);
+    --surface-control-hover: var(--hover-light);
+    --surface-control-active: var(--hover-medium);
+    --surface-row:          transparent;
+    --surface-row-hover:    var(--hover-subtle);
+    --surface-row-active:   var(--hover-light);
+    --surface-row-selected: var(--hover-medium);
+    --surface-inset:        var(--surface-sunken);
+    --surface-popover:      var(--bg-card);
+    --surface-dialog:       var(--bg-card);
+    --surface-sheet:        var(--sheet-bg);
+    --surface-scrim:        var(--surface-overlay);
+    --surface-inset-highlight: rgba(255, 255, 255, 0.03);
+    --border-surface:       var(--glass-border);
+    --border-surface-soft:  var(--divider);
+    --border-surface-strong: var(--divider-strong);
+    --border-row:           var(--divider);
+    --border-control:       #746970;
+    --bg-elevated:          var(--surface-panel);
+
+    --divider:             rgba(50, 46, 48, 0.82);
+    --divider-strong:      rgba(58, 52, 56, 0.92);
+
+    --badge-neutral-bg:    rgba(232, 228, 224, 0.08);
+
+    --accent-bg:           rgba(var(--accent-rgb), 0.08);
+    --accent-bg-strong:    rgba(var(--accent-rgb), 0.12);
+    --accent-border:       rgba(var(--accent-rgb), 0.2);
+
+    --status-online-bg:        rgba(74, 222, 128, 0.08);
+    --status-online-bg-strong: rgba(74, 222, 128, 0.12);
+    --status-online-border:    rgba(74, 222, 128, 0.2);
+    --status-error-bg:         rgba(229, 83, 75, 0.08);
+    --status-error-border:     rgba(229, 83, 75, 0.2);
+    --status-info-bg:          rgba(91, 147, 245, 0.08);
+    --status-info-border:      rgba(91, 147, 245, 0.2);
+    --status-warning-bg:       rgba(224, 184, 62, 0.08);
+    --status-warning-border:   rgba(224, 184, 62, 0.2);
+    --status-purple-bg:        rgba(167, 139, 250, 0.12);
+    --status-purple-border:    rgba(167, 139, 250, 0.2);
+    --ble-bg:                  rgba(34, 211, 238, 0.08);
+    --ble-bg-strong:           rgba(34, 211, 238, 0.12);
+    --ble-border:              rgba(34, 211, 238, 0.2);
+
+    --gradient-header:     #18171a;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.34), 0 8px 22px rgba(0,0,0,0.18);
+    --shadow-md: 0 2px 4px rgba(0,0,0,0.38), 0 14px 34px rgba(0,0,0,0.24);
+    --shadow-xl: 0 8px 32px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.28);
+    --shadow-modal: 0 24px 80px rgba(0,0,0,0.5);
+    --shadow-hover: 0 4px 16px rgba(0,0,0,0.4);
+    --shadow-panel: var(--shadow-sm);
+    --shadow-panel-hover: var(--shadow-sm);
+    --shadow-card: var(--shadow-sm);
+    --shadow-card-hover: var(--shadow-md);
+    --shadow-popover: var(--shadow-xl);
+
+    --hover-subtle: rgba(232,228,224,0.05);
+    --hover-light: rgba(232,228,224,0.08);
+    --hover-medium: rgba(232,228,224,0.11);
+
+    --chess-light:       #C4AB8E;
+    --chess-dark:        #8B7355;
+    --chess-border:      #322e30;
+    --chess-coord-light: #8B7355;
+    --chess-coord-dark:  #C4AB8E;
+
+    --glass-dark-bg:       rgba(24, 23, 26, 0.88);
+    --glass-dark-bg-muted: rgba(24, 23, 26, 0.55);
+
+    --sheet-bg:      rgba(24, 23, 26, 0.92);
+    --sheet-handle:  rgba(232, 228, 224, 0.18);
+    --sheet-divider: var(--divider);
+    --sheet-border:  var(--border);
+    --sheet-shadow:  0 -4px 32px rgba(0, 0, 0, 0.4);
+
+    --status-discovered:     #8fa2b8;
+    --status-discovered-rgb: 143, 162, 184;
+
+    --surface-game-gradient: #26242a;
+
+    --radius-3xl:  16px;
+    --radius-pill: 20px;
+    --radius-full: 50%;
+
+    --input-bg:          var(--bg-primary);
+    --input-border:      var(--border);
+    --input-text:        var(--text-primary);
+    --input-placeholder: var(--text-muted);
+
+    --focus-ring:    var(--accent);
+    --focus-ring-bg: var(--accent-bg);
+
+    --text-link:       var(--accent);
+    --text-link-hover: var(--accent-dim);
+
+    --radius-bubble:      var(--radius-3xl);
+    --radius-bubble-tail: var(--radius-sm);
+}
+
+/* SYNC WARNING: must mirror [data-theme="dark"] above exactly — catches
+   the pre-JS paint when no data-theme attribute is set yet. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        color-scheme: dark;
+
+        --theme-page-rgb: 24, 23, 26;
+        --theme-ink-rgb: 242, 238, 234;
+        --theme-border-rgb: 50, 46, 48;
+        --theme-strong-border-rgb: 116, 105, 112;
+        --theme-focus: #D2693B;
+
+        --bg-primary:    #18171a;
+        --bg-secondary:  #1f1d20;
+        --bg-tertiary:   #26242a;
+        --bg-card:       #1d1b1e;
+        --bg-dark:       #e8e4e0;
+        --border:        #322e30;
+        --border-light:  #3b363a;
+        --border-subtle: #2a2629;
+        --border-card:   #2a2629;
+
+        --text-primary:  #F2EEEA;
+        --text-secondary:#C6BDB5;
+        --text-muted:    #9C928C;
+        --text-disabled: #6F6661;
+
+        --accent:        #D2693B;
+        --accent-dim:    #D9784B;
+        --accent-dark:   #B85829;
+        --accent-light:  #2a1f18;
+        --accent-rgb:    210, 105, 59;
+        --on-accent:     #18171A;
+        --accent-a05:    rgba(var(--accent-rgb), 0.05);
+        --accent-a12:    rgba(var(--accent-rgb), 0.12);
+        --accent-a15:    rgba(var(--accent-rgb), 0.15);
+        --accent-a18:    rgba(var(--accent-rgb), 0.18);
+        --accent-a20:    rgba(var(--accent-rgb), 0.20);
+        --accent-a25:    rgba(var(--accent-rgb), 0.25);
+        --accent-a40:    rgba(var(--accent-rgb), 0.40);
+        --accent-a45:    rgba(var(--accent-rgb), 0.45);
+
+        --status-online: #4ade80;
+        --status-error:  #e5534b;
+        --status-warning:#e0b83e;
+        --status-info:   #5b93f5;
+        --status-purple: #a78bfa;
+        --ble-accent:    #22D3EE;
+        --status-online-fg: var(--status-online);
+        --status-error-fg:  var(--status-error);
+        --status-warning-fg:var(--status-warning);
+        --status-info-fg:   var(--status-info);
+        --status-purple-fg: var(--status-purple);
+        --ble-accent-fg:    var(--ble-accent);
+        --status-online-rgb:  74, 222, 128;
+        --status-error-rgb:   229, 83, 75;
+        --status-warning-rgb: 224, 184, 62;
+        --status-info-rgb:    91, 147, 245;
+        --status-purple-rgb:  167, 139, 250;
+        --ble-accent-rgb:     34, 211, 238;
+
+        --glass-bg:      rgba(24, 23, 26, 0.78);
+        --glass-border:  rgba(58, 52, 56, 0.72);
+
+        --surface-sunken:      rgba(20, 19, 22, 0.62);
+        --surface-overlay:     rgba(0, 0, 0, 0.65);
+
+        --surface-elevation-0: #1f1d20;
+        --surface-elevation-1: #232126;
+        --surface-elevation-2: #26242a;
+        --surface-elevation-3: #2a2629;
+        --surface-elevation-4: #322e30;
+        --surface-elevation-5: #3a3438;
+
+        --surface-page:         var(--bg-primary);
+        --surface-shell:        var(--bg-primary);
+        --surface-workspace:    var(--bg-secondary);
+        --surface-panel:        var(--bg-card);
+        --surface-panel-muted:  var(--surface-elevation-0);
+        --surface-card:         var(--bg-card);
+        --surface-card-muted:   var(--bg-tertiary);
+        --surface-control:      var(--surface-elevation-2);
+        --surface-control-hover: var(--hover-light);
+        --surface-control-active: var(--hover-medium);
+        --surface-row:          transparent;
+        --surface-row-hover:    var(--hover-subtle);
+        --surface-row-active:   var(--hover-light);
+        --surface-row-selected: var(--hover-medium);
+        --surface-inset:        var(--surface-sunken);
+        --surface-popover:      var(--bg-card);
+        --surface-dialog:       var(--bg-card);
+        --surface-sheet:        var(--sheet-bg);
+        --surface-scrim:        var(--surface-overlay);
+        --surface-inset-highlight: rgba(255, 255, 255, 0.03);
+        --border-surface:       var(--glass-border);
+        --border-surface-soft:  var(--divider);
+        --border-surface-strong: var(--divider-strong);
+        --border-row:           var(--divider);
+        --border-control:       #746970;
+        --bg-elevated:          var(--surface-panel);
+
+        --divider:             rgba(50, 46, 48, 0.82);
+        --divider-strong:      rgba(58, 52, 56, 0.92);
+
+        --badge-neutral-bg:    rgba(232, 228, 224, 0.08);
+
+        --accent-bg:           rgba(var(--accent-rgb), 0.08);
+        --accent-bg-strong:    rgba(var(--accent-rgb), 0.12);
+        --accent-border:       rgba(var(--accent-rgb), 0.2);
+
+        --status-online-bg:        rgba(74, 222, 128, 0.08);
+        --status-online-bg-strong: rgba(74, 222, 128, 0.12);
+        --status-online-border:    rgba(74, 222, 128, 0.2);
+        --status-error-bg:         rgba(229, 83, 75, 0.08);
+        --status-error-border:     rgba(229, 83, 75, 0.2);
+        --status-info-bg:          rgba(91, 147, 245, 0.08);
+        --status-info-border:      rgba(91, 147, 245, 0.2);
+        --status-warning-bg:       rgba(224, 184, 62, 0.08);
+        --status-warning-border:   rgba(224, 184, 62, 0.2);
+        --status-purple-bg:        rgba(167, 139, 250, 0.12);
+        --status-purple-border:    rgba(167, 139, 250, 0.2);
+        --ble-bg:                  rgba(34, 211, 238, 0.08);
+        --ble-bg-strong:           rgba(34, 211, 238, 0.12);
+        --ble-border:              rgba(34, 211, 238, 0.2);
+
+        --gradient-header:     #18171a;
+
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.34), 0 8px 22px rgba(0,0,0,0.18);
+        --shadow-md: 0 2px 4px rgba(0,0,0,0.38), 0 14px 34px rgba(0,0,0,0.24);
+        --shadow-xl: 0 8px 32px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.28);
+        --shadow-modal: 0 24px 80px rgba(0,0,0,0.5);
+        --shadow-hover: 0 4px 16px rgba(0,0,0,0.4);
+        --shadow-panel: var(--shadow-sm);
+        --shadow-panel-hover: var(--shadow-sm);
+        --shadow-card: var(--shadow-sm);
+        --shadow-card-hover: var(--shadow-md);
+        --shadow-popover: var(--shadow-xl);
+
+        --hover-subtle: rgba(232,228,224,0.05);
+        --hover-light: rgba(232,228,224,0.08);
+        --hover-medium: rgba(232,228,224,0.11);
+
+        --chess-light:       #C4AB8E;
+        --chess-dark:        #8B7355;
+        --chess-border:      #322e30;
+        --chess-coord-light: #8B7355;
+        --chess-coord-dark:  #C4AB8E;
+
+        --glass-dark-bg:       rgba(24, 23, 26, 0.88);
+        --glass-dark-bg-muted: rgba(24, 23, 26, 0.55);
+
+        --sheet-bg:      rgba(24, 23, 26, 0.92);
+        --sheet-handle:  rgba(232, 228, 224, 0.18);
+        --sheet-divider: var(--divider);
+        --sheet-border:  var(--border);
+        --sheet-shadow:  0 -4px 32px rgba(0, 0, 0, 0.4);
+
+        --status-discovered:     #8fa2b8;
+        --status-discovered-rgb: 143, 162, 184;
+
+        --surface-game-gradient: #26242a;
+
+        --radius-3xl:  16px;
+        --radius-pill: 20px;
+        --radius-full: 50%;
+
+        --input-bg:          var(--bg-primary);
+        --input-border:      var(--border);
+        --input-text:        var(--text-primary);
+        --input-placeholder: var(--text-muted);
+
+        --focus-ring:    var(--accent);
+        --focus-ring-bg: var(--accent-bg);
+
+        --text-link:       var(--accent);
+        --text-link-hover: var(--accent-dim);
+
+        --radius-bubble:      var(--radius-3xl);
+        --radius-bubble-tail: var(--radius-sm);
+    }
+}

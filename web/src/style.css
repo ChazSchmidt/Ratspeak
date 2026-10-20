@@ -1,6 +1,38 @@
-/* Adapted from Ratspeak dashboard/static/css/00-tokens.css and 09-messaging.css
- * at 5e84740a. Retains its warm palette, sidebar/conversation layout and bubble roles.
- * Browser-only subset; no Tauri runtime dependency. AGPL-3.0-or-later. */
-:root{color-scheme:light;--bg-primary:#FAF7F3;--bg-secondary:#F3EFEA;--bg-card:#fff;--border:#DED4C8;--text-primary:#241F1C;--text-secondary:#5D554E;--accent:#B14F24;--accent-light:#FBEFE6;--status-online:#1F6F43;--status-error:#B4232C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--text-primary);background:var(--bg-primary)}
-*{box-sizing:border-box}body{margin:0}button,input,textarea{font:inherit}button{border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:white;padding:10px 12px;min-height:42px;cursor:pointer;font-weight:600}button:hover{filter:brightness(.94)}button:disabled{opacity:.5;cursor:not-allowed}button.secondary{background:transparent;color:var(--accent)}a{color:var(--accent)}button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}[hidden]{display:none!important}.header{height:70px;padding:12px 24px;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border)}.brand{font-size:24px;font-weight:700;text-decoration:none;color:var(--text-primary)}.brand small{color:var(--accent);font-size:11px;letter-spacing:.14em}.header .secondary{margin-left:auto}.pill{font-size:12px;border:1px solid var(--border);padding:5px 9px;border-radius:20px;color:var(--text-secondary)}.app-layout{display:grid;grid-template-columns:290px minmax(0,1fr);max-width:1600px;margin:auto;min-height:calc(100vh - 130px)}.sidebar{border-right:1px solid var(--border);background:var(--bg-secondary);padding:20px}.sidebar section+section{border-top:1px solid var(--border);padding-top:22px;margin-top:24px}h1{font-size:22px;margin:0}h2{font-size:16px;margin:0 0 12px}h3{font-size:15px}p{color:var(--text-secondary);font-size:14px;line-height:1.5}.notice,small{font-size:12px;line-height:1.5;color:var(--text-secondary)}label{display:block;font-size:13px;font-weight:600;margin:12px 0}input,textarea{display:block;width:100%;border:1px solid #92867C;background:var(--bg-card);color:var(--text-primary);border-radius:7px;padding:10px;margin-top:5px;min-width:0}textarea{resize:vertical}input[type=file]{font-size:11px}.actions{display:flex;flex-wrap:wrap;gap:8px}.actions button{flex:1;font-size:12px}.address{font:12px/1.6 ui-monospace,monospace;overflow-wrap:anywhere;color:var(--accent)}.lxmf-container{display:flex;flex-direction:column;min-width:0}.section-heading{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px}.section-heading span{font-size:13px;color:var(--text-secondary)}.lxmf-layout{display:flex;flex:1;min-height:600px}.lxmf-sidebar{width:250px;flex-shrink:0;border-right:1px solid var(--border);padding:20px}.lxmf-chat{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-card)}.chat-heading{padding:20px;border-bottom:1px solid var(--border)}.chat-heading h2{margin-bottom:0}.chat-heading p{margin-bottom:0}.lxmf-messages{flex:1;display:flex;flex-direction:column;gap:12px;padding:20px;max-height:65vh;min-height:280px;overflow-y:auto}.empty-state{margin:auto;text-align:center;max-width:350px}.msg-row{display:flex;flex-direction:column;align-items:flex-start}.msg-row.outbound{align-items:flex-end}.lxmf-msg{max-width:88%;padding:12px 16px;border-radius:14px;background:var(--bg-secondary);white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.5}.outbound .lxmf-msg{background:var(--accent-light)}.msg-meta{margin:4px 2px;font-size:11px;color:var(--text-secondary)}.error{color:var(--status-error)!important}.online{color:var(--status-online)!important}#message-form{padding:16px 20px;border-top:1px solid var(--border)}.composer-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px}.composer-footer small{max-width:380px}ul{padding:0;list-style:none}#conversation-list li{margin:6px 0}#conversation-list button{width:100%;text-align:left;background:transparent;color:var(--text-primary);border-color:var(--border);overflow-wrap:anywhere}#conversation-list button[aria-current=true]{background:var(--accent-light);border-color:var(--accent)}#conversation-list small{display:block;font-family:monospace;font-size:10px}#discovered button{background:transparent;color:var(--accent);font-size:11px;margin:4px 0;overflow-wrap:anywhere}details{margin-top:22px}summary{cursor:pointer;font-size:13px}footer{padding:16px 24px;border-top:1px solid var(--border);font-size:12px;color:var(--text-secondary)}dialog{color:var(--text-primary);background:var(--bg-primary);border:1px solid var(--border);border-radius:14px;width:min(600px,calc(100vw - 24px));max-height:90vh;padding:24px}dialog::backdrop{background:#241f1c99}.dialog-head{display:flex;justify-content:space-between;align-items:center}.dialog-head .close{background:transparent;color:var(--text-primary);border:0}hr{border:0;border-top:1px solid var(--border);margin:24px 0}#contacts li{padding:10px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}#contacts small{display:block}
-@media(max-width:1100px){.app-layout{grid-template-columns:250px minmax(0,1fr)}.lxmf-sidebar{width:210px;padding:14px}.sidebar{padding:14px}}@media(max-width:800px){.header{padding:12px 16px;height:auto;flex-wrap:wrap}.header .pill{display:none}.header .secondary{font-size:12px}.app-layout{display:block}.sidebar{border-right:0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:20px}.sidebar section+section{border:0;padding:0;margin:0}.lxmf-layout{min-height:600px}.lxmf-sidebar{width:200px}.section-heading{padding:16px}}@media(max-width:540px){.sidebar{display:block}.sidebar section+section{border-top:1px solid var(--border);padding-top:20px;margin-top:20px}.lxmf-layout{display:block}.lxmf-sidebar{width:auto;border-right:0;border-bottom:1px solid var(--border)}.lxmf-messages{max-height:50vh}.composer-footer{align-items:flex-end}.composer-footer small{font-size:10px}.chat-heading{padding:16px}.section-heading{flex-wrap:wrap}}
+/* Native Ratspeak CSS is copied unchanged; browser-only adapters follow. */
+@import './native/fonts/fonts.css';
+@import './native/css/00-tokens.css';
+@import './native/css/00-palettes.css';
+@import './native/css/01-reset.css';
+@import './native/css/02-typography.css';
+@import './native/css/03-scrollbar.css';
+@import './native/css/04-layout.css';
+@import './native/css/05-panels.css';
+@import './native/css/06-forms.css';
+@import './native/css/07-components.css';
+@import './native/css/08-modals.css';
+@import './native/css/09-messaging.css';
+@import './native/css/10-views.css';
+@import './native/css/13-responsive.css';
+[hidden] { display:none !important; }
+.browser-form { display:flex; flex-direction:column; gap:var(--space-5); }
+.browser-form label, #farcaster-dialog label { display:flex; flex-direction:column; gap:var(--space-2); }
+.browser-form .actions { display:flex; flex-wrap:wrap; gap:var(--space-3); }
+.browser-form p, .notice { font-size:var(--text-sm); color:var(--text-secondary); line-height:1.5; }
+.address { font-family:var(--font-mono); overflow-wrap:anywhere; }
+.browser-dialog, #farcaster-dialog { border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-panel); color:var(--text-primary); width:min(540px,calc(100vw - 24px)); max-height:calc(100dvh - 32px); margin:auto; overflow-y:auto; }
+dialog::backdrop { background:var(--surface-scrim); }
+#farcaster-dialog { padding:var(--space-8); }
+#farcaster-dialog > * + * { margin-top:var(--space-5); }
+#farcaster-dialog .dialog-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-5); }
+#farcaster-dialog button { font:inherit; }
+.error { color:var(--status-error-fg) !important; }
+.browser-message-status { color:var(--text-muted); font-size:var(--text-xs); padding:0 var(--space-6); overflow-wrap:anywhere; }
+.browser-message-status:empty { display:none; }
+#recipient-address { font-family:var(--font-mono); font-size:var(--text-xs); overflow-wrap:anywhere; }
+#conversation-list { display:contents; }
+#message-list .lxmf-msg-content { white-space:pre-wrap; overflow-wrap:anywhere; }
+#view-identity .settings-page, #view-settings .settings-page { overflow-y:auto; height:100%; }
+.contacts-page { padding:var(--space-7); height:100%; overflow:auto; }
+.contacts-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-6); }
+#discovered { list-style:none; }
+#discovered button { overflow-wrap:anywhere; text-align:left; }

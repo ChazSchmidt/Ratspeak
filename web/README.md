@@ -1,6 +1,6 @@
 # Ratspeak Web experiment
 
-Browser-first Reticulum/LXMF client in `ChazSchmidt/Ratspeak`, branch `experiment/ratspeak-web`. Only the independently deployable `web/` experiment changes. The messaging layout and warm theme adapt Ratspeak's own dashboard patterns; no third-party client implementation was forked. Farcaster remains an optional dialog.
+Browser-first Reticulum/LXMF client in `ChazSchmidt/Ratspeak`, branch `experiment/ratspeak-web`. Only the independently deployable `web/` experiment changes. The browser messaging shell now reuses Ratspeak's actual dashboard markup, SVGs, unmodified CSS/fonts and native avatar helper, with browser adapters for transport and encrypted identity storage. See [source provenance and explicit differences](src/native/SOURCE.md). Visual fidelity and browser integration of this new shell still require a fresh browser comparison; earlier test evidence below applies to the previous shell. No third-party client implementation was forked. Farcaster remains an optional Settings dialog.
 
 ## Run locally
 
@@ -14,10 +14,10 @@ npm test
 
 Serve `dist/` from an HTTPS static host. This does not provide a Reticulum gateway: configure a compatible **wss://** gateway in the client. For a local loopback test, HTTP and **ws://** work. See [transport operation and test instructions](tests/TRANSPORT.md) for the included minimal WS-to-Reticulum TCP bridge, reference native node setup, origin restrictions, and TLS deployment boundaries. No public gateway is assumed or contacted automatically.
 
-1. Create an identity with a passphrase of at least 12 characters, or unlock/import an existing one.
+1. Open Identity in navigation. Create an identity with a passphrase of at least 12 characters, or unlock/import an existing one.
 2. Export an encrypted backup. Losing both storage and backup means losing the identity; losing the passphrase makes its encrypted copies unusable.
-3. Enter a gateway URL and connect. The client announces its public delivery address and display name.
-4. Add a friend's 32-character LXMF address, select the contact, and send text. No Farcaster account is required.
+3. Open Settings. Enter a gateway URL and connect. The client announces its public delivery address and display name.
+4. In Messages, use the compose button to add a friend's 32-character LXMF address, select the contact, and send text. No Farcaster account is required.
 5. Disconnect before changing gateways. Lock closes the network connection and clears the visible, in-memory message history. Reload requires unlocking again.
 
 ## Implemented and verified separately
