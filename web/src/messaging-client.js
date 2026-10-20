@@ -105,13 +105,17 @@ export class MessagingClient extends EventTarget {
     clearInterval(this.announceTimer);
     const iface = this.interface;
     this.interface = null;
+    this.setState('disconnecting');
+    // Close incoming as well as outgoing links while the bearer can still
+    // deliver LINKCLOSE. Otherwise a peer can reuse its stale reply link after
+    // we reconnect, while our local link still points to the removed interface.
+    const links = new Set([...this.rns.transport.activeLinks.values(), ...this.router.directLinks.values()]);
+    for (const link of links) { try { await link.teardown(); } catch {} }
+    this.router.directLinks.clear();
     if (iface) {
       this.rns.removeInterface(iface);
       await iface.disconnect();
     }
-    // Do not retain cached links across a deliberate gateway change.
-    for (const link of this.router.directLinks.values()) { try { await link.teardown(); } catch {} }
-    this.router.directLinks.clear();
     this.setState('disconnected');
   }
   async close() { await this.disconnect(); await this.rns.stop(); }

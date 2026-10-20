@@ -85,9 +85,46 @@ Verified on 2026-10-20 with `@reticulum/core` and `@reticulum/lxmf` 0.9.13:
 This fixture uses Node, not browser sessions. It proves a bounded reference-
 implementation interoperability case, not full Ratspeak native interoperability,
 public-network reliability, general protocol compliance or browser UX readiness.
-The browser smoke test must be reported separately. A successful direct send
+The browser milestone is recorded separately in [BROWSER-VALIDATION.md](BROWSER-VALIDATION.md). A successful direct send
 means data was sent to an encrypted link; the library's small-message send
 promise does not itself wait for application delivery or a read receipt.
+
+## Browser milestone
+
+After `npm ci` and installing the pinned Python reference packages above, run:
+
+```sh
+PYTHON=/path/to/venv/bin/python CHROMIUM_EXECUTABLE_PATH=/path/to/chrome npm run test:browser
+CHROMIUM_EXECUTABLE_PATH=/path/to/chrome node tests/vault-browser.mjs
+```
+
+Windows PowerShell example (adjust the isolated virtual-environment path):
+
+```powershell
+$env:PYTHON = 'C:\path\to\venv\Scripts\python.exe'
+$env:CHROMIUM_EXECUTABLE_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+$env:HEADED = '1' # Optional: show the actual browser windows.
+$env:BROWSER_SCREENSHOT_DIR = 'C:\path\outside\checkout\browser-evidence' # Optional.
+npm run test:browser
+node tests/vault-browser.mjs
+```
+
+The full fixture uses Vite on loopback port 5173, the bridge on 18787 and native
+RNS TCP on 14242. It generates disposable identities in temporary storage and
+separate browser contexts, then closes processes and removes native test storage.
+No existing identity store or public gateway is used. It asserts bidirectional
+UI messaging, incoming signature verification, deliberate disconnect/reconnect,
+refresh/unlock address continuity, and actual encrypted backup download/import.
+The unique message marker must be absent from every captured raw bridge frame;
+frames are held only in test memory, not written to disk.
+
+The vault script also runs independently. By default it starts its own loopback
+Vite server on port 5178; set `VITE_TEST_URL` to reuse a running test server.
+It checks the actual encrypted IndexedDB record, wrong vault/backup passwords,
+malformed and bit-flipped ciphertext rejection, saved identity preservation,
+and independent-context import/save/refresh with the same LXMF address.
+Browser proof and desktop/mobile screenshot inspection are bounded local
+validation, not a security audit or public deployment approval.
 
 Primary protocol references:
 - https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/TCPInterface.py

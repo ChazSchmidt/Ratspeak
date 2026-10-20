@@ -20,15 +20,18 @@ test('send rejects disconnected, self, empty and oversized messages before trans
   await assert.rejects(MessagingClient.prototype.send.call(target, 'b'.repeat(32), ' '), /Write/);
   await assert.rejects(MessagingClient.prototype.send.call(target, 'b'.repeat(32), '🦀'.repeat(1025)), /4,096/);
 });
-test('disconnect invalidates pending connection and discards cached links', async () => {
-  let removed = false, disconnected = false, tornDown = false;
+test('disconnect closes incoming/outgoing links before removing the bearer', async () => {
+  let removed = false, disconnected = false, tornDown = 0;
+  const incoming = { async teardown() { assert.equal(removed, false); assert.equal(disconnected, false); tornDown++; } };
+  const outgoing = { async teardown() { assert.equal(removed, false); assert.equal(disconnected, false); tornDown++; } };
   const iface = { async disconnect() { disconnected = true; } };
   const target = { connectionGeneration: 3, interface: iface,
-    rns: { removeInterface(value) { assert.equal(value, iface); removed = true; } },
-    router: { directLinks: new Map([['peer', { async teardown() { tornDown = true; } }]]) },
+    rns: { transport: { activeLinks: new Map([['incoming', incoming], ['outgoing', outgoing]]) },
+      removeInterface(value) { assert.equal(value, iface); assert.equal(tornDown, 2); removed = true; } },
+    router: { directLinks: new Map([['peer', outgoing]]) },
     setState(state) { this.state = state; } };
   await MessagingClient.prototype.disconnect.call(target);
   assert.equal(target.connectionGeneration, 4); assert.equal(target.interface, null);
-  assert.ok(removed && disconnected && tornDown); assert.equal(target.router.directLinks.size, 0);
+  assert.ok(removed && disconnected); assert.equal(tornDown, 2); assert.equal(target.router.directLinks.size, 0);
   assert.equal(target.state, 'disconnected');
 });
