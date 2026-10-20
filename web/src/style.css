@@ -29,6 +29,8 @@ dialog::backdrop { background:var(--surface-scrim); }
 .browser-message-status { color:var(--text-muted); font-size:var(--text-xs); padding:0 var(--space-6); overflow-wrap:anywhere; }
 .browser-message-status:empty { display:none; }
 #recipient-address { font-family:var(--font-mono); font-size:var(--text-xs); overflow-wrap:anywhere; }
+/* Native presence is unavailable to the browser adapter. */
+#lxmf-contact-avatar::after { display:none; }
 #conversation-list { display:contents; }
 #message-list .lxmf-msg-content { white-space:pre-wrap; overflow-wrap:anywhere; }
 #view-identity .settings-page, #view-settings .settings-page { overflow-y:auto; height:100%; }

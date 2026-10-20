@@ -35,7 +35,7 @@ function updateControls() {
   $('msg-profile-avatar').replaceChildren(avatar(client?.address || '', 36));
   $('sidebar-identity-icon').replaceChildren(avatar(client?.address || '', 28));
   $('header-mobile-name').textContent = unlocked ? $('display-name').value : 'Identity locked';
-  $('header-mobile-avatar').replaceChildren(avatar(client?.address || '', 28));
+  $('header-mobile-avatar').replaceChildren(avatar(client?.address || '', 36));
   $('create').hidden = saved || unlocked;
   $('unlock').hidden = !saved || unlocked;
   $('create').disabled = busy; $('unlock').disabled = busy;
@@ -60,6 +60,13 @@ function avatar(address, size) {
   // The native helper receives only a validated public hexadecimal address, never HTML input.
   el.innerHTML = identityAvatar(/^[0-9a-f]{32}$/i.test(address) ? address : '', size);
   return el;
+}
+function messageEmptyIcon(strokeWidth = '1.5') {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  for (const [key, value] of Object.entries({ width: '48', height: '48', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': strokeWidth, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })) el.setAttribute(key, value);
+  const path = document.createElementNS(el.namespaceURI, 'path');
+  path.setAttribute('d', 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z');
+  el.append(path); return el;
 }
 function renderContacts() {
   $('conversation-list').replaceChildren(); $('contacts').replaceChildren(); $('contacts-list').replaceChildren();
@@ -98,6 +105,7 @@ function renderContacts() {
   }
   if (!$('conversation-list').childElementCount) {
     const empty = node('div', 'empty-state');
+    const icon = messageEmptyIcon(); icon.classList.add('empty-state-svg'); empty.append(icon);
     empty.append(node('span', 'empty-state-primary', query ? 'No matching conversations' : 'No conversations yet'), node('span', 'empty-state-hint', 'Tap the compose button to start messaging'));
     $('conversation-list').append(empty);
   }
@@ -141,7 +149,8 @@ function renderMessages() {
   const items = messages.get(selected) || [];
   if (!items.length) {
     const empty = node('div', selected ? 'lxmf-empty-conv' : 'lxmf-empty');
-    if (selected) empty.append(avatar(selected, 48));
+    if (selected) { const icon = avatar(selected, 48); icon.style.opacity = '0.6'; empty.append(icon); }
+    else { const icon = messageEmptyIcon('1'); icon.style.opacity = '0.15'; empty.append(icon); }
     empty.append(node('span', selected ? 'lxmf-empty-conv-name' : 'empty-state-primary', selected ? $('recipient-name').textContent : 'Your messages'), node('span', selected ? 'lxmf-empty-conv-hint' : 'empty-state-hint', selected ? 'This is the beginning of your encrypted conversation.' : 'Select a conversation or start a new one'));
     $('message-list').append(empty);
   }
@@ -405,7 +414,8 @@ function openContactDetail(contact) {
   const sheet = node('div', 'bottom-sheet'); sheet.id = 'contact-detail-sheet';
   sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', 'true'); sheet.setAttribute('aria-label', 'Contact details');
   const body = node('div', 'bottom-sheet-body');
-  const close = node('button', 'bottom-sheet-close', '×'); close.type = 'button'; close.setAttribute('aria-label', 'Close contact details');
+  const close = node('button', 'contact-detail-edit-btn'); close.type = 'button'; close.setAttribute('aria-label', 'Close contact details');
+  close.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   const icon = node('div', 'contact-detail-avatar'); icon.append(avatar(contact.address, 64));
   const hashRow = node('div', 'contact-detail-hash-row'), copy = node('button', 'contact-detail-copy-btn'); copy.type = 'button'; copy.setAttribute('aria-label', 'Copy LXMF address');
   copy.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';

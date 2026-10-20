@@ -1,6 +1,6 @@
 # Ratspeak Web experiment
 
-Browser-first Reticulum/LXMF client in `ChazSchmidt/Ratspeak`, branch `experiment/ratspeak-web`. Only the independently deployable `web/` experiment changes. The browser messaging shell now reuses Ratspeak's actual dashboard markup, SVGs, unmodified CSS/fonts and native avatar helper, with browser adapters for transport and encrypted identity storage. See [source provenance and explicit differences](src/native/SOURCE.md). Visual fidelity and browser integration of this new shell still require a fresh browser comparison; earlier test evidence below applies to the previous shell. No third-party client implementation was forked. Farcaster remains an optional Settings dialog.
+Browser-first Reticulum/LXMF client in `ChazSchmidt/Ratspeak`, branch `experiment/ratspeak-web`. Only the independently deployable `web/` experiment changes. The browser messaging shell now reuses Ratspeak's actual dashboard markup, SVGs, unmodified CSS/fonts and native avatar helper, with browser adapters for transport and encrypted identity storage. See [source provenance and explicit differences](src/native/SOURCE.md). The native shell passed a fresh desktop/mobile comparison and isolated browser regression on 2026-10-20; see [measured matches, explicit differences, and limits](tests/BROWSER-VALIDATION.md). No third-party client implementation was forked. Farcaster remains an optional Settings dialog.
 
 ## Run locally
 
@@ -32,7 +32,9 @@ Serve `dist/` from an HTTPS static host. This does not provide a Reticulum gatew
 
 Run `npm run test:browser` to start the native peer, loopback bridge, Vite, browser UI tests, and vault browser checks together. Set `CHROMIUM_EXECUTABLE_PATH` to an installed Chromium browser and `PYTHON` to the reference-test virtual environment. `HEADED=1` shows the browser; `BROWSER_SCREENSHOT_DIR` optionally captures only disposable test UI outside the source tree. `node tests/vault-browser.mjs` also runs independently, starting Vite on port 5178 unless `VITE_TEST_URL` points to an existing test server. See [platform-specific commands](tests/TRANSPORT.md#browser-milestone).
 
-**Still experimental:** interoperability with Ratspeak's Rust implementation, public deployment/security review, offline/propagated delivery, attachments, delivery receipts, and Farcaster authentication/social graph discovery. The current send label means written to an encrypted Reticulum link, **not recipient delivery or reading**. The UI distinguishes verified incoming signatures from unverified senders; names remain self-declared.
+**Still experimental:** broader interoperability with Ratspeak's Rust implementation, public deployment/security review, offline/propagated delivery, attachments, delivery receipts, and Farcaster authentication/social graph discovery. The current send label means written to an encrypted Reticulum link, **not recipient delivery or reading**. The UI distinguishes verified incoming signatures from unverified senders; names remain self-declared.
+
+A separate user-authorized short-text exchange with Ratspeak Android received a signature-verified reply on 2026-10-20. The installed phone version and broader interoperability remain unknown. This bounded result does not establish attachments, receipts, offline delivery, or general Android compatibility.
 
 ## Privacy and limitations
 
