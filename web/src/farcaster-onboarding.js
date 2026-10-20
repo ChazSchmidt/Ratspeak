@@ -19,14 +19,15 @@ export function mountFarcasterOnboarding(container, { getAddress, pageUrl = loca
   status.textContent = 'Optional. You can use encrypted messaging without a Farcaster account.';
   section.append(title, explanation, label, start, link, check, cancel, status); container.append(section);
   let requestAddress = '', generation = 0, expiryTimer;
-  function reset(message = 'Farcaster verification cleared locally. No directory listing was created.') {
+  function reset(message = 'Farcaster verification cleared locally. No directory listing was created.', preserveConsent = false) {
     generation++; auth.cancel(); clearTimeout(expiryTimer); requestAddress = '';
+    if (!preserveConsent) consent.checked = false;
     link.hidden = true; link.removeAttribute('href'); check.hidden = true; start.disabled = false; check.disabled = false; status.textContent = message;
   }
   cancel.addEventListener('click', () => reset());
   consent.addEventListener('change', () => { if (!consent.checked) reset(); });
   start.addEventListener('click', async () => {
-    reset('Preparing Farcaster sign-in…');
+    reset('Preparing Farcaster sign-in…', true);
     const current = generation; start.disabled = true;
     try {
       requestAddress = getAddress();

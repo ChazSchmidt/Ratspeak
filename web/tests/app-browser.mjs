@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startBridge } from '../scripts/reticulum-bridge.mjs';
 import { testVault } from './vault-browser.mjs';
+import { testFarcasterSmoke } from './farcaster-browser-smoke.mjs';
 const browser = await chromium.launch({ headless: process.env.HEADED !== '1', ...(process.env.CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.CHROMIUM_EXECUTABLE_PATH } : {}) });
 console.log(`Browser: Chromium ${browser.version()}`);
 let vite, bridge, native, directory;
@@ -121,6 +122,7 @@ try {
     assert.equal(await pages[0].page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Mobile UI must not overflow horizontally');
   }
   await testVault(browser, 'http://127.0.0.1:5173');
+  await testFarcasterSmoke(browser, 'http://127.0.0.1:5173');
   assert.deepEqual(pageErrors, [], 'No uncaught application errors');
   console.log(JSON.stringify({ pass: true, separateBrowserIdentities: true, refreshUnlock: true, wrongPassphraseLocked: true, bidirectionalNativeLXMF: true, incomingSignaturesVerified: true, reconnect: true, uiEncryptedExportImport: true, plaintextAbsentFromBridgeFrames: true, frameCount: frames.length, uncaughtPageErrors: pageErrors.length }));
 } finally {
