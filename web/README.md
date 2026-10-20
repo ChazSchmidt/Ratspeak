@@ -40,7 +40,11 @@ Run `npm run test:browser` to start the native peer, loopback bridge, Vite, brow
 - A gateway can observe source IPs, timing, traffic sizes, public announces/addresses, and network routing metadata. A malicious gateway can block or alter traffic. WSS protects the browser-to-gateway connection; LXMF encryption protects message content end to end.
 - The hosting origin and delivered JavaScript remain trusted. Compromised hosting, dependencies, browser extensions, or an unlocked device can expose decrypted keys/messages. Encryption at rest does not solve this. Locking drops references, but JavaScript cannot guarantee immediate memory erasure.
 - Messages are kept only in memory, not durable chat history. Contacts (including any self-declared FID binding) remain unencrypted localStorage metadata. Announcing makes the address/display name public on the connected network.
-- Farcaster invitations are opt-in, public, and **unverified**. New invitation data uses the URL fragment so ordinary HTTP requests do not send it to the static host; anyone receiving the invitation can read/forward it. Linking a FID to an LXMF identity is sensitive correlation metadata, not anonymity. No directory, social login, analytics, or private-key upload is implemented.
+- Farcaster invitations are opt-in, public, and **unverified**. New invitation data uses the URL fragment so ordinary HTTP requests do not send it to the static host; anyone receiving the invitation can read/forward it. Linking a FID to an LXMF identity is sensitive correlation metadata, not anonymity. No directory, persistent social login, analytics, or private-key upload is implemented. The separate optional SIWF experiment does not verify these invitation cards.
+
+## Optional Farcaster experiment
+
+The “Coming from Farcaster?” dialog includes a separate, lazy-loaded Sign In With Farcaster experiment. Explicit consent is required before any relay/RPC request. It verifies a short-lived account-signed association with the current LXMF address; it does not publish a directory entry or authenticate legacy invitation cards. Real-account end-to-end approval is **not yet verified**. Boundary tests and an official-SDK synthetic-signature test pass; these do not prove live account ownership. See [the auth protocol, privacy boundaries, and outstanding live test](docs/FARCASTER.md). No account sign-in is required for messaging.
 
 ## Licensing
 

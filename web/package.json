@@ -13,6 +13,7 @@
     "bridge": "node scripts/reticulum-bridge.mjs"
   },
   "dependencies": {
+    "@farcaster/auth-client": "0.7.1",
     "@reticulum/core": "^0.9.13",
     "@reticulum/lxmf": "^0.9.13"
   },

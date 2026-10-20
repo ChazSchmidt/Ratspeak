@@ -6,6 +6,7 @@ import './style.css';
 const $ = id => document.getElementById(id);
 const CONTACTS_KEY = 'ratspeak-web-contacts-v2';
 let client = null, selected = '', busy = false, sending = false, saved = false;
+let farcasterOnboarding = null, farcasterLoading = null;
 const messages = new Map(), peers = new Map();
 const normalizeFid = value => /^\d{1,12}$/.test(value.trim()) ? value.trim() : null;
 function status(id, text, error = false) {
@@ -101,6 +102,7 @@ function appendMessage(address, item) {
   if (selected === address) renderMessages();
 }
 async function activate(identity) {
+  farcasterOnboarding?.reset();
   client = await new MessagingClient(identity).init();
   const activeClient = client;
   $('address').textContent = client.address;
@@ -154,6 +156,7 @@ $('create').addEventListener('click', () => identityAction(async () => {
 }));
 $('unlock').addEventListener('click', () => identityAction(async () => activate(await unlockIdentity($('passphrase').value))));
 $('lock').addEventListener('click', () => identityAction(async () => {
+  farcasterOnboarding?.reset();
   await client.close(); client = null; messages.clear(); peers.clear();
   $('discovered').replaceChildren(); $('address').textContent = '';
   renderMessages(); status('status', 'Identity locked. Enter your passphrase to unlock it.');
@@ -249,7 +252,20 @@ $('add').addEventListener('click', () => {
 const incoming = new URLSearchParams(location.hash.slice(1)).get('contact') || new URL(location.href).searchParams.get('contact');
 if (incoming) { $('invite').value = location.href; status('feedback', 'Incoming public contact card. Review it before adding.'); }
 const dialog = $('farcaster-dialog');
-$('open-farcaster').addEventListener('click', () => dialog.showModal());
+$('open-farcaster').addEventListener('click', async () => {
+  dialog.showModal();
+  if (farcasterOnboarding) return;
+  try {
+    farcasterLoading ??= import('./farcaster-onboarding.js');
+    const { mountFarcasterOnboarding } = await farcasterLoading;
+    farcasterOnboarding ??= mountFarcasterOnboarding($('farcaster-verification'), { getAddress: () => client?.address });
+    if (!dialog.open) farcasterOnboarding.reset();
+  } catch {
+    farcasterLoading = null;
+    status('feedback', 'Optional Farcaster verification could not load. Messaging and self-declared invitations still work.', true);
+  }
+});
+dialog.addEventListener('close', () => farcasterOnboarding?.reset());
 $('close-farcaster').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
 renderContacts();
