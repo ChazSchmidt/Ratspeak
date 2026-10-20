@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@reticulum/core": "0.9.7",
-    "@reticulum/lxmf": "^0.9.7"
+    "@reticulum/core": "^0.9.13",
+    "@reticulum/lxmf": "^0.9.13"
   },
   "devDependencies": {
     "vite": "^7.1.0"
